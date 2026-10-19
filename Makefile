@@ -27,7 +27,7 @@ ENVTEST_INDEX ?= https://raw.githubusercontent.com/kubernetes-sigs/controller-to
 ENVTEST_BIN_DIR ?=
 
 .PHONY: build build-go test test-web-go vet fmt-check verify-go-mod check \
-	lint lint-golangci lint-qtlint lint-nolintguard lint-teststyle vulncheck \
+	web-storybook lint lint-golangci lint-qtlint lint-nolintguard lint-teststyle vulncheck \
 	web-install web-build web-lint web-test web-size web-check embed-smoke \
 	generate verify-generated buf-lint buf-breaking contract test-envtest verify
 
@@ -97,6 +97,9 @@ web-lint:
 
 web-test:
 	cd web && $(NPM) test
+
+web-storybook:
+	cd web && $(NPM) run build-storybook --workspace app
 
 web-size: web-build
 	cd web && $(NPM) run size

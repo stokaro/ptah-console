@@ -46,7 +46,14 @@ const primitivesInUi = [
 
 export default [
   {
-    ignores: ["**/node_modules/**", "**/dist/**", "**/coverage/**", "app/src/gen/**", "stub/**"],
+    ignores: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/coverage/**",
+      "app/src/gen/**",
+      "stub/**",
+      "**/storybook-static/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
