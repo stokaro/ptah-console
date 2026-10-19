@@ -1,3 +1,4 @@
+import { CSPProvider } from "@base-ui/react/csp-provider"
 import type { Transport } from "@connectrpc/connect"
 import { TransportProvider } from "@connectrpc/connect-query"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
@@ -15,11 +16,15 @@ export interface AppProvidersProps {
 export function AppProviders({ children, transport, queryClient }: AppProvidersProps) {
   const [defaultTransport] = useState(createApiTransport)
   const [defaultQueryClient] = useState(() => new QueryClient())
+  // The Content Security Policy allows no inline <style>; every style the
+  // components need comes from the stylesheet.
   return (
-    <TransportProvider transport={transport ?? defaultTransport}>
-      <QueryClientProvider client={queryClient ?? defaultQueryClient}>
-        {children}
-      </QueryClientProvider>
-    </TransportProvider>
+    <CSPProvider disableStyleElements>
+      <TransportProvider transport={transport ?? defaultTransport}>
+        <QueryClientProvider client={queryClient ?? defaultQueryClient}>
+          {children}
+        </QueryClientProvider>
+      </TransportProvider>
+    </CSPProvider>
   )
 }
