@@ -1,11 +1,17 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
+import { watchInteractions } from "./api/action"
 import { createApiTransport } from "./api/transport"
 import { App } from "./App"
 import { AppProviders } from "./AppProviders"
 import { exchangeLaunchToken } from "./launch"
+import { applyTheme, readTheme } from "./theme"
 import "./index.css"
+
+// Before the first render, so the page never paints in the wrong theme.
+applyTheme(readTheme())
+watchInteractions()
 
 const root = document.getElementById("root")
 if (!root) {
