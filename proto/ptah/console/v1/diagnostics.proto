@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package ptah.console.v1;
+
+import "google/protobuf/timestamp.proto";
+import "ptah/console/v1/decisions.proto";
+import "ptah/console/v1/resources.proto";
+
+option go_package = "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1";
+
+// DiagnosticsService shows the evidence Kubernetes still keeps about a
+// schema's or migration's operations: the Jobs its status names, their Pods,
+// the events about each, and the end of each container's log. Nothing is
+// found by searching: a Job is read only by the name and UID the status
+// records.
+service DiagnosticsService {
+  rpc GetDiagnostics(GetDiagnosticsRequest) returns (GetDiagnosticsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+// Evidence is whether a piece of evidence could be shown.
+enum Evidence {
+  EVIDENCE_UNSPECIFIED = 0;
+  EVIDENCE_SHOWN = 1;
+  // The identity may not read it.
+  EVIDENCE_NOT_GRANTED = 2;
+  // Kubernetes no longer keeps it, or keeps something else under the name.
+  EVIDENCE_NOT_RETAINED = 3;
+  // Reading it failed for another reason.
+  EVIDENCE_UNREADABLE = 4;
+}
+
+message GetDiagnosticsRequest {
+  ResourceKind kind = 1;
+  string namespace = 2;
+  string name = 3;
+  // The object as the person saw it; another object under the name is not
+  // diagnosed.
+  string uid = 4;
+  // Logs are read only when asked for.
+  bool include_logs = 5;
+}
+
+message GetDiagnosticsResponse {
+  // Events about the schema or migration itself.
+  EventList events = 1;
+  repeated JobEvidence jobs = 2;
+}
+
+message EventList {
+  Evidence evidence = 1;
+  string problem = 2;
+  repeated KubeEvent events = 3;
+}
+
+message KubeEvent {
+  string type = 1;
+  string reason = 2;
+  string message = 3;
+  int32 count = 4;
+  google.protobuf.Timestamp first_seen = 5;
+  google.protobuf.Timestamp last_seen = 6;
+  string reporter = 7;
+}
+
+// JobEvidence is one Job the status names, and why it names it.
+message JobEvidence {
+  // Which status field names the Job, such as "status.activeOperation".
+  string named_by = 1;
+  string name = 2;
+  string uid = 3;
+  Evidence evidence = 4;
+  string problem = 5;
+  JobState state = 6;
+  EventList events = 7;
+  Evidence pods_evidence = 8;
+  string pods_problem = 9;
+  repeated PodEvidence pods = 10;
+}
+
+message JobState {
+  int32 active = 1;
+  int32 succeeded = 2;
+  int32 failed = 3;
+  google.protobuf.Timestamp started_at = 4;
+  google.protobuf.Timestamp completed_at = 5;
+  repeated Condition conditions = 6;
+}
+
+message PodEvidence {
+  string name = 1;
+  string uid = 2;
+  string phase = 3;
+  string reason = 4;
+  string message = 5;
+  repeated ContainerEvidence containers = 6;
+  EventList events = 7;
+}
+
+message ContainerEvidence {
+  string name = 1;
+  bool ready = 2;
+  int32 restart_count = 3;
+  // waiting, running or terminated.
+  string state = 4;
+  string reason = 5;
+  string message = 6;
+  int32 exit_code = 7;
+  LogExcerpt log = 8;
+}
+
+// LogExcerpt is the end of a container's log, as plain text.
+message LogExcerpt {
+  Evidence evidence = 1;
+  string problem = 2;
+  string text = 3;
+  // More was logged than is shown.
+  bool truncated = 4;
+}
