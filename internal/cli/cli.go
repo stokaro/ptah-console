@@ -75,7 +75,7 @@ func newRoot(stdout, stderr io.Writer) *cobra.Command {
 		return fmt.Errorf("%w: %w", errUsage, err)
 	})
 	root.PersistentFlags().StringVar(&logLevel, "log-level", "info", "log level: debug, info, warn or error")
-	root.AddCommand(newVersion(stdout))
+	root.AddCommand(newVersion(stdout), newLocal(stdout))
 	return root
 }
 
