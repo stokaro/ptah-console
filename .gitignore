@@ -10,3 +10,4 @@ node_modules/
 .DS_Store
 /web/app/.lighthouseci/
 /.envtest/
+/web/app/storybook-static/

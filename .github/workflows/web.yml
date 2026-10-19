@@ -48,6 +48,9 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: make web-install
       - run: make web-test
+      # The stories are rendered and checked by the tests; building them
+      # proves the Storybook configuration still compiles.
+      - run: make web-storybook
 
   size:
     name: Web size

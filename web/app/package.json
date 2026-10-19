@@ -7,7 +7,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "size": "size-limit",
-    "lhci": "npx --yes @lhci/cli@0.15.1 autorun"
+    "lhci": "npx --yes @lhci/cli@0.15.1 autorun",
+    "storybook": "storybook dev --port 6006 --no-open",
+    "build-storybook": "storybook build --output-dir storybook-static"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
@@ -23,5 +25,10 @@
     "@tanstack/react-router": "1.170.42",
     "react": "19.3.1",
     "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "10.6.2",
+    "@storybook/react-vite": "10.6.2",
+    "storybook": "10.6.2"
   }
 }
