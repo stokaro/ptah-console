@@ -1,0 +1,7 @@
+# Generated code is owned by its generator.
+app/src/gen/
+app/dist/
+coverage/
+node_modules/
+package-lock.json
+stub/

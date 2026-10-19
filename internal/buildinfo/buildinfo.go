@@ -8,6 +8,8 @@ package buildinfo
 import (
 	"runtime"
 	"runtime/debug"
+
+	"github.com/stokaro/ptah-console/web"
 )
 
 // Set at link time by a release:
@@ -26,11 +28,14 @@ type Info struct {
 	GoVersion string `json:"goVersion"`
 	// Modified is true for a build from a checkout with uncommitted changes.
 	Modified bool `json:"modified"`
+	// WebApp is true when the binary carries the web app, which a build with
+	// the with_frontend tag does.
+	WebApp bool `json:"webApp"`
 }
 
 // Read returns the running build's identity.
 func Read() Info {
-	info := Info{Version: version, Commit: commit, GoVersion: runtime.Version()}
+	info := Info{Version: version, Commit: commit, GoVersion: runtime.Version(), WebApp: web.Built}
 	build, ok := debug.ReadBuildInfo()
 	if ok {
 		for _, setting := range build.Settings {

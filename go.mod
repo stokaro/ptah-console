@@ -18,6 +18,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
+	github.com/stokaro/ptah-console/web v0.0.0-00010101000000-000000000000
 	github.com/stokaro/teststyle v0.2.0 // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
@@ -33,3 +34,5 @@ tool (
 	github.com/stokaro/teststyle/cmd/teststyle
 	golang.org/x/vuln/cmd/govulncheck
 )
+
+replace github.com/stokaro/ptah-console/web => ./web
