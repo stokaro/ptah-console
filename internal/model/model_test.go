@@ -370,3 +370,36 @@ func TestGitOpsControllersAreRecognized(t *testing.T) {
 func contains(list []consolev1.AttentionKind, kind consolev1.AttentionKind) bool {
 	return slices.Contains(list, kind)
 }
+
+// Each interval the operator refreshes the source and plans again: for a while
+// ApprovalRequired stays true and status.plan is empty. The schema still waits
+// for an approval, and the next step says the plan comes back first. The
+// conditions are the ones the operator wrote in the demo lab (run 39330236712).
+func TestAWaitingSchemaBeingPlannedAgainSaysSo(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		plan *operatorv1alpha1.CurrentPlanStatus
+		next string
+	}{
+		{name: "with its plan published", plan: &operatorv1alpha1.CurrentPlanStatus{Name: "ptah-plan-32d8"}, next: "Review the plan and approve it"},
+		{name: "while the plan is prepared again", plan: nil, next: "The operator is planning again"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			schema := schemaWith(
+				condition("ApprovalRequired", metav1.ConditionTrue, "Waiting"),
+				condition("PlanReady", metav1.ConditionUnknown, "SourceRefreshPending"),
+				condition("Ready", metav1.ConditionFalse, "OperationInProgress"),
+			)
+			schema.Status.Plan = test.plan
+
+			attention := model.Schema(schema).GetAttention()
+
+			c.Assert(kinds(attention), qt.DeepEquals, []consolev1.AttentionKind{consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL})
+			c.Assert(attention[0].GetNextStep(), qt.Contains, test.next)
+		})
+	}
+}

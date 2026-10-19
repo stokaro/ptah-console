@@ -14,7 +14,7 @@ export function planSummary(resource: ResourceView) {
     return "Runs the pending migrations in order"
   }
   if (!plan) {
-    return "Waits for approval"
+    return "The operator is planning again; the plan can be approved once it is published"
   }
   const parts: string[] = []
   if (plan.destructive) {
@@ -38,7 +38,7 @@ export function ApproverQueue() {
   const [approving, setApproving] = useState<ResourceView>()
   const context = session.data?.context
   const waiting = resources
-    .filter((resource) => resource.plan && waitingForApproval(resource))
+    .filter((resource) => waitingForApproval(resource))
     .sort(
       (a, b) => Number(a.plan?.createdAt?.seconds ?? 0n) - Number(b.plan?.createdAt?.seconds ?? 0n)
     )
@@ -95,7 +95,7 @@ export function ApproverQueue() {
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                   <span className="flex min-w-0 flex-col gap-1">
                     <Link {...link} className="font-mono text-base font-semibold break-all text-fg">
-                      {resource.plan?.name}
+                      {resource.plan?.name ?? resource.name}
                     </Link>
                     <span className="text-[13.5px] text-fg2">{planSummary(resource)}</span>
                     <span className="text-xs text-mute">
@@ -113,7 +113,7 @@ export function ApproverQueue() {
                   risks={planRisks(resource).filter((risk) => risk.tone !== "off")}
                 />
                 <div className="flex flex-wrap gap-2">
-                  {approvable(resource) ? (
+                  {resource.plan && approvable(resource) ? (
                     <Button variant="primary" onClick={() => setApproving(resource)}>
                       Approve…
                     </Button>

@@ -44,15 +44,19 @@ export function PlanReview() {
   const resource = resources.find(
     (r) => r.kind === kind && r.namespace === params.namespace && r.name === params.name
   )
+  // While the operator plans again there is no current plan to read.
+  const hasPlan = Boolean(resource?.plan)
   const schemaPlan = useQuery(
     SchemaService.method.getSchemaPlan,
-    kind === "schema"
+    kind === "schema" && hasPlan
       ? { namespace: params.namespace, schema: params.name, selection: PlanSelection.CURRENT }
       : skipToken
   )
   const migrationPlan = useQuery(
     MigrationService.method.getMigrationPlan,
-    kind === "migration" ? { namespace: params.namespace, migration: params.name } : skipToken
+    kind === "migration" && hasPlan
+      ? { namespace: params.namespace, migration: params.name }
+      : skipToken
   )
 
   if (loading) {
@@ -106,11 +110,22 @@ export function PlanReview() {
             fingerprint {(sPlan ?? mPlan)?.fingerprint}
           </span>
         </Card>
-      ) : schemaPlan.isPending || migrationPlan.isPending ? (
+      ) : schemaPlan.isLoading || migrationPlan.isLoading ? (
         <Loading what="the plan's SQL" />
+      ) : !hasPlan ? (
+        <Card title="The plan">
+          <span className="text-sm leading-normal">
+            The operator is planning again, as it does each interval. The plan appears here once it
+            is published.
+          </span>
+        </Card>
       ) : null}
       <div className="sticky bottom-3 flex flex-wrap items-center gap-2 rounded-[18px] border border-line bg-card p-3 shadow-card">
-        {waiting ? (
+        {waiting && !hasPlan ? (
+          <span className="flex-auto p-2.5 text-sm text-fg2">
+            Nothing to approve until the operator publishes the plan again. This page follows it.
+          </span>
+        ) : waiting ? (
           mayApprove === "allowed" ? (
             <Button
               variant="primary"
