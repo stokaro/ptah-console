@@ -18,6 +18,8 @@ LAB_ENVIRONMENT=${LAB_ENVIRONMENT:-$OPERATOR_DIR/demo/.lab/environment}
 LAB="$OPERATOR_DIR/demo/bin/lab"
 APPROVER=demo-approver
 AUTHOR=demo-author
+VIEWER=demo-viewer
+OUTSIDER=demo-outsider
 SCHEMA=storefront
 
 say() {
@@ -109,6 +111,49 @@ subjects:
     namespace: $NAMESPACE
 YAML
 
+say "the viewer: a ServiceAccount that may read schemas and plans, and not the chunks a plan's SQL is stored in"
+admin -n "$NAMESPACE" apply -f - >/dev/null <<YAML
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: $VIEWER
+  namespace: $NAMESPACE
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: $VIEWER
+  namespace: $NAMESPACE
+rules:
+  - apiGroups: [operator.ptah.run]
+    resources: [ptahschemas, ptahschemaplans, ptahschemaapprovals]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: $VIEWER
+  namespace: $NAMESPACE
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: $VIEWER
+subjects:
+  - kind: ServiceAccount
+    name: $VIEWER
+    namespace: $NAMESPACE
+YAML
+
+# The outsider is a ServiceAccount with no grant at all in the namespace.
+say "the outsider: a ServiceAccount with no grant in $NAMESPACE"
+admin -n "$NAMESPACE" apply -f - >/dev/null <<YAML
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: $OUTSIDER
+  namespace: $NAMESPACE
+YAML
+
 SERVER=$(admin config view --minify -o jsonpath='{.clusters[0].cluster.server}')
 AUTHORITY=$(admin config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}')
 umask 077
@@ -142,6 +187,8 @@ YAML
 }
 write_kubeconfig "$APPROVER" approver.kubeconfig
 write_kubeconfig "$AUTHOR" author.kubeconfig
+write_kubeconfig "$VIEWER" viewer.kubeconfig
+write_kubeconfig "$OUTSIDER" outsider.kubeconfig
 
 if kubectl --kubeconfig "$OUT_DIR/approver.kubeconfig" -n "$NAMESPACE" auth can-i create ptahschemas.operator.ptah.run >/dev/null; then
 	fail 'the approver may create a schema, so the demo would not show an approver'
@@ -150,6 +197,12 @@ kubectl --kubeconfig "$OUT_DIR/approver.kubeconfig" -n "$NAMESPACE" auth can-i c
 	fail 'the approver may not approve'
 if kubectl --kubeconfig "$OUT_DIR/author.kubeconfig" -n "$NAMESPACE" auth can-i create ptahschemaapprovals.operator.ptah.run >/dev/null; then
 	fail 'the author may approve, so the refusal row would prove nothing'
+fi
+if kubectl --kubeconfig "$OUT_DIR/viewer.kubeconfig" -n "$NAMESPACE" auth can-i get ptahschemaplanchunks.operator.ptah.run >/dev/null; then
+	fail 'the viewer may read chunks, so the not-granted row would prove nothing'
+fi
+if kubectl --kubeconfig "$OUT_DIR/outsider.kubeconfig" -n "$NAMESPACE" auth can-i list ptahschemas.operator.ptah.run >/dev/null; then
+	fail 'the outsider may list schemas, so the no-access row would prove nothing'
 fi
 
 say 'publishing the desired schema as an artifact'
@@ -181,5 +234,7 @@ admin -n "$NAMESPACE" wait --for=condition=Ready --timeout=120s "ptahschemaplan/
 	printf 'PLAN=%s\n' "$PLAN"
 	printf 'APPROVER=system:serviceaccount:%s:%s\n' "$NAMESPACE" "$APPROVER"
 	printf 'AUTHOR=system:serviceaccount:%s:%s\n' "$NAMESPACE" "$AUTHOR"
+	printf 'VIEWER=system:serviceaccount:%s:%s\n' "$NAMESPACE" "$VIEWER"
+	printf 'OUTSIDER=system:serviceaccount:%s:%s\n' "$NAMESPACE" "$OUTSIDER"
 } >"$OUT_DIR/facts"
 say "ready: $SCHEMA waits for an approval of $PLAN"

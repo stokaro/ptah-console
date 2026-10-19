@@ -6,7 +6,5 @@ node_modules/
 package-lock.json
 stub/
 storybook-static/
-test-results/
-playwright-report/
-test-results-author/
-playwright-report-author/
+test-results*/
+playwright-report*/

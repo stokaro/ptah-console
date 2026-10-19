@@ -151,7 +151,8 @@ jobs:
           set -euo pipefail
           # shellcheck disable=SC1091
           . "$OUT_DIR/facts"
-          export DEMO_NAMESPACE="$NAMESPACE" DEMO_APPROVER="$APPROVER" DEMO_AUTHOR="$AUTHOR"
+          export DEMO_NAMESPACE="$NAMESPACE" DEMO_APPROVER="$APPROVER" DEMO_AUTHOR="$AUTHOR" \
+            DEMO_VIEWER="$VIEWER" DEMO_OUTSIDER="$OUTSIDER"
           consoles=()
           trap 'kill "${consoles[@]}" 2>/dev/null || true' EXIT
           # start_console runs ptah-console local as one person and prints the
@@ -170,9 +171,17 @@ jobs:
             [ -n "$link" ] || { cat "$OUT_DIR/$who.out" "$OUT_DIR/$who-audit.log" >&2; return 1; }
             printf '%s\n' "$link"
           }
-          link="$(start_console author)"
-          (cd web && DEMO_LINK="$link" DEMO_RESULTS_DIR=../test-results-author DEMO_REPORT_DIR=../playwright-report-author \
-            npx playwright test -c e2e/playwright.config.ts e2e/author.spec.ts)
+          # run_row signs one person in to a console of their own and runs
+          # their spec, keeping its results apart from the recorded run's.
+          run_row() {
+            local who=$1 link
+            link="$(start_console "$who")"
+            (cd web && DEMO_LINK="$link" DEMO_RESULTS_DIR="../test-results-$who" DEMO_REPORT_DIR="../playwright-report-$who" \
+              npx playwright test -c e2e/playwright.config.ts "e2e/$who.spec.ts")
+          }
+          run_row outsider
+          run_row viewer
+          run_row author
           link="$(start_console approver)"
           (cd web && DEMO_LINK="$link" npx playwright test -c e2e/playwright.config.ts e2e/demo.spec.ts)
       - name: Check the outcome against the cluster
@@ -192,7 +201,9 @@ jobs:
           ffmpeg -loglevel error -i "$video" -c:v libx264 -pix_fmt yuv420p -movflags +faststart \
             demo-video/ptah-console-demo.mp4
           cp "${{ runner.temp }}/demo/approver-audit.log" demo-video/approver-audit.log || true
-          cp "${{ runner.temp }}/demo/author-audit.log" demo-video/author-audit.log || true
+          for who in author viewer outsider; do
+            cp "${{ runner.temp }}/demo/$who-audit.log" "demo-video/$who-audit.log" || true
+          done
           printf 'operator %s\n' "${{ steps.operator.outputs.commit }}" > demo-video/versions.txt
       - name: Keep the recording
         if: always()
@@ -201,10 +212,8 @@ jobs:
           name: ptah-console-demo
           path: |
             demo-video/
-            web/test-results/
-            web/test-results-author/
-            web/playwright-report/
-            web/playwright-report-author/
+            web/test-results*/
+            web/playwright-report*/
           if-no-files-found: warn
           retention-days: 30
       - name: Remove the lab
