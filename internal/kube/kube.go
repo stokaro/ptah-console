@@ -104,7 +104,9 @@ func NewClient(config *rest.Config) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	c, err := client.New(own, client.Options{Scheme: scheme})
+	// A watching client, so the watch service can follow changes with the
+	// same identity.
+	c, err := client.NewWithWatch(own, client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, fmt.Errorf("kube: build client: %w", err)
 	}
