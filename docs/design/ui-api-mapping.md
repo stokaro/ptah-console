@@ -1,0 +1,105 @@
+# What each screen reads
+
+Every read and write below runs as the person, so what a screen shows is what
+their Kubernetes identity may read. A screen asks the API server for a hint
+first (`SelfSubjectAccessReview`) to decide what to offer; the request itself
+decides. A hint that cannot be computed is shown as unavailable.
+
+All operator kinds are in the group `operator.ptah.run`, version `v1alpha1`.
+
+## Kinds the console never reads
+
+Secrets, `PtahResultRecord` objects, ConfigMaps, `PtahRealm` objects, Leases
+and status subresources, whatever RBAC allows. A target is shown by its Secret
+reference, name and key, and never by its content. A plan's SQL is read only
+from `PtahSchemaPlanChunk` objects through the operator's `pkg/planread`, never
+from the ConfigMaps the operator projects for an Apply.
+
+## Focus: approver
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| Plans waiting for a decision | `ptahschemas`, `ptahmigrations` | list, watch |
+| Earlier approvals and whether they went stale | `ptahschemaapprovals`, `ptahmigrationapprovals` | list, watch |
+| A schema plan's manifest and findings | `ptahschemaplans` | get |
+| A schema plan's exact SQL | `ptahschemaplanchunks` | get, one request per chunk |
+| A migration plan's files and checksums | `ptahmigrationplans` | get |
+| Approve | `ptahschemaapprovals`, `ptahmigrationapprovals` | create |
+
+A migration plan names files and checksums; the operator API does not carry
+their SQL, and the screen says so instead of reaching for it elsewhere.
+
+Before it creates an approval, the server reads the owner again. If its
+current plan is no longer the one the person reviewed (owner UID, plan name
+and UID, fingerprint, contract version), nothing is created and the screen
+shows the plan that replaced it.
+
+The operator chart's `<release>-approver` ClusterRole grants all of the above.
+The operator's `examples/approver-plan-reader-role.yaml` grants `get` only: a
+reviewer bound to it can open a plan from a link, and sees no queue, because
+the queue is a list. The screen says which grant is missing rather than showing
+an empty queue.
+
+## Focus: developer
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| Releases and where each stands | `ptahschemas`, `ptahmigrations` | list, watch |
+| What happened | the resource's status, `events` for its UID | get; list with a field selector |
+| A link for approvers | nothing | none |
+
+The stage rail (Resolve, Plan, Approve, Apply, Verify for a schema; Resolve,
+Read history, Plan, Approve, Apply, Verify history for a migration) is derived
+from status and conditions only. The two families keep their own mappings: a
+schema converges, a migration advances.
+
+## Focus: on call
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| Incidents: failures, blocked resources, unknown outcomes, unresolved runs, stale data | `ptahschemas`, `ptahmigrations` | list, watch |
+| The Job an operation ran | `jobs` named by status, checked by UID | get |
+| Its Pods | `pods` with `batch.kubernetes.io/controller-uid` | list |
+| Events | `events` for the resource, Job and Pod UIDs | list |
+| A log excerpt | `pods/log`, at most 200 lines and 64 KiB | get |
+| Acknowledge an unresolved run | `ptahmigrationrunacknowledgments` | create |
+
+Jobs are found only through references in status, never by label scans. A Job
+whose UID differs from the reference is another object under the same name and
+is not shown. Evidence Kubernetes no longer keeps is marked "not retained",
+which is not the same as "never happened". Logs are diagnosis, not proof: a
+missing log does not change what status records.
+
+The operator's `examples/diagnostic-reader-role.yaml` grants the reads. It does
+not grant chunks, so an on-call reader sees findings and not SQL.
+
+There is no retry, rollback or force action: the operator has none.
+
+## Focus: auditor
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| Approvals and acknowledgments, by whom and when | the three decision kinds | list, watch |
+| The exact SQL approved, while the plan is retained | `ptahschemaplans`, `ptahschemaplanchunks` | get |
+
+Who decided is what admission stamped (`spec.approver`, `spec.acknowledgedBy`),
+never what the console sent. CSV export happens in the browser and neutralizes
+cells that start with `=`, `+`, `-` or `@`.
+
+## Suspend and resume
+
+| Does | Writes | Verbs |
+| --- | --- | --- |
+| Suspend or resume a schema or migration | `ptahschemas`, `ptahmigrations` | patch |
+
+The patch tests `metadata.uid` and `metadata.resourceVersion` and replaces
+`/spec/suspend`, nothing else. Before the person confirms, the screen says that
+a spec change retires the current plan and its approval binding, and that a
+GitOps controller managing the object will revert the change.
+
+## Namespaces
+
+The console never needs to list namespaces. In local mode the person names
+them (`--namespace`); in hosted mode the installation configures a ceiling. If
+the identity may list namespaces, those are offered as well. A namespace the
+identity cannot read is shown as "no access", never as zero resources.

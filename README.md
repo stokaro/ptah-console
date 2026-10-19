@@ -17,6 +17,8 @@ Under construction; there is no release yet. The plan and its steps are in
 [stokaro/ptah-operator#587](https://github.com/stokaro/ptah-operator/issues/587),
 and the architecture and security contract is
 [stokaro/ptah-operator#588](https://github.com/stokaro/ptah-operator/issues/588).
+[docs/design](docs/design/README.md) says what each screen reads, how the
+console authenticates, and which operator versions it works with.
 
 ## Modes
 
