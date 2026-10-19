@@ -136,6 +136,66 @@ func (DecisionState) EnumDescriptor() ([]byte, []int) {
 	return file_ptah_console_v1_decisions_proto_rawDescGZIP(), []int{1}
 }
 
+// PlanRetention is whether an approved plan can still be read.
+type PlanRetention int32
+
+const (
+	// Not an approval, or not checked.
+	PlanRetention_PLAN_RETENTION_UNSPECIFIED PlanRetention = 0
+	PlanRetention_PLAN_RETENTION_RETAINED    PlanRetention = 1
+	// The plan is gone, or another object holds its name.
+	PlanRetention_PLAN_RETENTION_NOT_RETAINED PlanRetention = 2
+	// The identity may not read the plan.
+	PlanRetention_PLAN_RETENTION_NOT_GRANTED PlanRetention = 3
+	// The API server did not say.
+	PlanRetention_PLAN_RETENTION_UNKNOWN PlanRetention = 4
+)
+
+// Enum value maps for PlanRetention.
+var (
+	PlanRetention_name = map[int32]string{
+		0: "PLAN_RETENTION_UNSPECIFIED",
+		1: "PLAN_RETENTION_RETAINED",
+		2: "PLAN_RETENTION_NOT_RETAINED",
+		3: "PLAN_RETENTION_NOT_GRANTED",
+		4: "PLAN_RETENTION_UNKNOWN",
+	}
+	PlanRetention_value = map[string]int32{
+		"PLAN_RETENTION_UNSPECIFIED":  0,
+		"PLAN_RETENTION_RETAINED":     1,
+		"PLAN_RETENTION_NOT_RETAINED": 2,
+		"PLAN_RETENTION_NOT_GRANTED":  3,
+		"PLAN_RETENTION_UNKNOWN":      4,
+	}
+)
+
+func (x PlanRetention) Enum() *PlanRetention {
+	p := new(PlanRetention)
+	*p = x
+	return p
+}
+
+func (x PlanRetention) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PlanRetention) Descriptor() protoreflect.EnumDescriptor {
+	return file_ptah_console_v1_decisions_proto_enumTypes[2].Descriptor()
+}
+
+func (PlanRetention) Type() protoreflect.EnumType {
+	return &file_ptah_console_v1_decisions_proto_enumTypes[2]
+}
+
+func (x PlanRetention) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PlanRetention.Descriptor instead.
+func (PlanRetention) EnumDescriptor() ([]byte, []int) {
+	return file_ptah_console_v1_decisions_proto_rawDescGZIP(), []int{2}
+}
+
 // DecisionOutcome is how a submission ended.
 type DecisionOutcome int32
 
@@ -185,11 +245,11 @@ func (x DecisionOutcome) String() string {
 }
 
 func (DecisionOutcome) Descriptor() protoreflect.EnumDescriptor {
-	return file_ptah_console_v1_decisions_proto_enumTypes[2].Descriptor()
+	return file_ptah_console_v1_decisions_proto_enumTypes[3].Descriptor()
 }
 
 func (DecisionOutcome) Type() protoreflect.EnumType {
-	return &file_ptah_console_v1_decisions_proto_enumTypes[2]
+	return &file_ptah_console_v1_decisions_proto_enumTypes[3]
 }
 
 func (x DecisionOutcome) Number() protoreflect.EnumNumber {
@@ -198,7 +258,7 @@ func (x DecisionOutcome) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use DecisionOutcome.Descriptor instead.
 func (DecisionOutcome) EnumDescriptor() ([]byte, []int) {
-	return file_ptah_console_v1_decisions_proto_rawDescGZIP(), []int{2}
+	return file_ptah_console_v1_decisions_proto_rawDescGZIP(), []int{3}
 }
 
 type ResourceKind int32
@@ -234,11 +294,11 @@ func (x ResourceKind) String() string {
 }
 
 func (ResourceKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_ptah_console_v1_decisions_proto_enumTypes[3].Descriptor()
+	return file_ptah_console_v1_decisions_proto_enumTypes[4].Descriptor()
 }
 
 func (ResourceKind) Type() protoreflect.EnumType {
-	return &file_ptah_console_v1_decisions_proto_enumTypes[3]
+	return &file_ptah_console_v1_decisions_proto_enumTypes[4]
 }
 
 func (x ResourceKind) Number() protoreflect.EnumNumber {
@@ -247,7 +307,7 @@ func (x ResourceKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ResourceKind.Descriptor instead.
 func (ResourceKind) EnumDescriptor() ([]byte, []int) {
-	return file_ptah_console_v1_decisions_proto_rawDescGZIP(), []int{3}
+	return file_ptah_console_v1_decisions_proto_rawDescGZIP(), []int{4}
 }
 
 type Decision struct {
@@ -267,8 +327,10 @@ type Decision struct {
 	State           DecisionState          `protobuf:"varint,12,opt,name=state,proto3,enum=ptah.console.v1.DecisionState" json:"state,omitempty"`
 	StateReason     string                 `protobuf:"bytes,13,opt,name=state_reason,json=stateReason,proto3" json:"state_reason,omitempty"`
 	Conditions      []*Condition           `protobuf:"bytes,14,rep,name=conditions,proto3" json:"conditions,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Whether the plan an approval names is still stored, under its UID.
+	PlanRetention PlanRetention `protobuf:"varint,15,opt,name=plan_retention,json=planRetention,proto3,enum=ptah.console.v1.PlanRetention" json:"plan_retention,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Decision) Reset() {
@@ -397,6 +459,13 @@ func (x *Decision) GetConditions() []*Condition {
 		return x.Conditions
 	}
 	return nil
+}
+
+func (x *Decision) GetPlanRetention() PlanRetention {
+	if x != nil {
+		return x.PlanRetention
+	}
+	return PlanRetention_PLAN_RETENTION_UNSPECIFIED
 }
 
 type ListDecisionsRequest struct {
@@ -1203,7 +1272,7 @@ var File_ptah_console_v1_decisions_proto protoreflect.FileDescriptor
 
 const file_ptah_console_v1_decisions_proto_rawDesc = "" +
 	"\n" +
-	"\x1fptah/console/v1/decisions.proto\x12\x0fptah.console.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1fptah/console/v1/resources.proto\"\xc8\x04\n" +
+	"\x1fptah/console/v1/decisions.proto\x12\x0fptah.console.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1fptah/console/v1/resources.proto\"\x8f\x05\n" +
 	"\bDecision\x121\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1d.ptah.console.v1.DecisionKindR\x04kind\x12,\n" +
 	"\x03ref\x18\x02 \x01(\v2\x1a.ptah.console.v1.ObjectRefR\x03ref\x12\x1d\n" +
@@ -1224,7 +1293,8 @@ const file_ptah_console_v1_decisions_proto_rawDesc = "" +
 	"\fstate_reason\x18\r \x01(\tR\vstateReason\x12:\n" +
 	"\n" +
 	"conditions\x18\x0e \x03(\v2\x1a.ptah.console.v1.ConditionR\n" +
-	"conditions\"6\n" +
+	"conditions\x12E\n" +
+	"\x0eplan_retention\x18\x0f \x01(\x0e2\x1e.ptah.console.v1.PlanRetentionR\rplanRetention\"6\n" +
 	"\x14ListDecisionsRequest\x12\x1e\n" +
 	"\n" +
 	"namespaces\x18\x01 \x03(\tR\n" +
@@ -1297,7 +1367,13 @@ const file_ptah_console_v1_decisions_proto_rawDesc = "" +
 	"\x17DECISION_STATE_ACCEPTED\x10\x02\x12\x1b\n" +
 	"\x17DECISION_STATE_CONSUMED\x10\x03\x12\x18\n" +
 	"\x14DECISION_STATE_STALE\x10\x04\x12\x1a\n" +
-	"\x16DECISION_STATE_REFUSED\x10\x05*\xcc\x01\n" +
+	"\x16DECISION_STATE_REFUSED\x10\x05*\xa9\x01\n" +
+	"\rPlanRetention\x12\x1e\n" +
+	"\x1aPLAN_RETENTION_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17PLAN_RETENTION_RETAINED\x10\x01\x12\x1f\n" +
+	"\x1bPLAN_RETENTION_NOT_RETAINED\x10\x02\x12\x1e\n" +
+	"\x1aPLAN_RETENTION_NOT_GRANTED\x10\x03\x12\x1a\n" +
+	"\x16PLAN_RETENTION_UNKNOWN\x10\x04*\xcc\x01\n" +
 	"\x0fDecisionOutcome\x12 \n" +
 	"\x1cDECISION_OUTCOME_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19DECISION_OUTCOME_ADMITTED\x10\x01\x12\x1c\n" +
@@ -1329,66 +1405,68 @@ func file_ptah_console_v1_decisions_proto_rawDescGZIP() []byte {
 	return file_ptah_console_v1_decisions_proto_rawDescData
 }
 
-var file_ptah_console_v1_decisions_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_ptah_console_v1_decisions_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
 var file_ptah_console_v1_decisions_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_ptah_console_v1_decisions_proto_goTypes = []any{
 	(DecisionKind)(0),                       // 0: ptah.console.v1.DecisionKind
 	(DecisionState)(0),                      // 1: ptah.console.v1.DecisionState
-	(DecisionOutcome)(0),                    // 2: ptah.console.v1.DecisionOutcome
-	(ResourceKind)(0),                       // 3: ptah.console.v1.ResourceKind
-	(*Decision)(nil),                        // 4: ptah.console.v1.Decision
-	(*ListDecisionsRequest)(nil),            // 5: ptah.console.v1.ListDecisionsRequest
-	(*ListDecisionsResponse)(nil),           // 6: ptah.console.v1.ListDecisionsResponse
-	(*GetDecisionRequest)(nil),              // 7: ptah.console.v1.GetDecisionRequest
-	(*GetDecisionResponse)(nil),             // 8: ptah.console.v1.GetDecisionResponse
-	(*ApproveSchemaPlanRequest)(nil),        // 9: ptah.console.v1.ApproveSchemaPlanRequest
-	(*ApproveMigrationPlanRequest)(nil),     // 10: ptah.console.v1.ApproveMigrationPlanRequest
-	(*AcknowledgeMigrationRunRequest)(nil),  // 11: ptah.console.v1.AcknowledgeMigrationRunRequest
-	(*DecisionResult)(nil),                  // 12: ptah.console.v1.DecisionResult
-	(*ApproveSchemaPlanResponse)(nil),       // 13: ptah.console.v1.ApproveSchemaPlanResponse
-	(*ApproveMigrationPlanResponse)(nil),    // 14: ptah.console.v1.ApproveMigrationPlanResponse
-	(*AcknowledgeMigrationRunResponse)(nil), // 15: ptah.console.v1.AcknowledgeMigrationRunResponse
-	(*SetSuspendedRequest)(nil),             // 16: ptah.console.v1.SetSuspendedRequest
-	(*SetSuspendedResponse)(nil),            // 17: ptah.console.v1.SetSuspendedResponse
-	(*ObjectRef)(nil),                       // 18: ptah.console.v1.ObjectRef
-	(*timestamppb.Timestamp)(nil),           // 19: google.protobuf.Timestamp
-	(*Condition)(nil),                       // 20: ptah.console.v1.Condition
-	(*NamespaceResult)(nil),                 // 21: ptah.console.v1.NamespaceResult
+	(PlanRetention)(0),                      // 2: ptah.console.v1.PlanRetention
+	(DecisionOutcome)(0),                    // 3: ptah.console.v1.DecisionOutcome
+	(ResourceKind)(0),                       // 4: ptah.console.v1.ResourceKind
+	(*Decision)(nil),                        // 5: ptah.console.v1.Decision
+	(*ListDecisionsRequest)(nil),            // 6: ptah.console.v1.ListDecisionsRequest
+	(*ListDecisionsResponse)(nil),           // 7: ptah.console.v1.ListDecisionsResponse
+	(*GetDecisionRequest)(nil),              // 8: ptah.console.v1.GetDecisionRequest
+	(*GetDecisionResponse)(nil),             // 9: ptah.console.v1.GetDecisionResponse
+	(*ApproveSchemaPlanRequest)(nil),        // 10: ptah.console.v1.ApproveSchemaPlanRequest
+	(*ApproveMigrationPlanRequest)(nil),     // 11: ptah.console.v1.ApproveMigrationPlanRequest
+	(*AcknowledgeMigrationRunRequest)(nil),  // 12: ptah.console.v1.AcknowledgeMigrationRunRequest
+	(*DecisionResult)(nil),                  // 13: ptah.console.v1.DecisionResult
+	(*ApproveSchemaPlanResponse)(nil),       // 14: ptah.console.v1.ApproveSchemaPlanResponse
+	(*ApproveMigrationPlanResponse)(nil),    // 15: ptah.console.v1.ApproveMigrationPlanResponse
+	(*AcknowledgeMigrationRunResponse)(nil), // 16: ptah.console.v1.AcknowledgeMigrationRunResponse
+	(*SetSuspendedRequest)(nil),             // 17: ptah.console.v1.SetSuspendedRequest
+	(*SetSuspendedResponse)(nil),            // 18: ptah.console.v1.SetSuspendedResponse
+	(*ObjectRef)(nil),                       // 19: ptah.console.v1.ObjectRef
+	(*timestamppb.Timestamp)(nil),           // 20: google.protobuf.Timestamp
+	(*Condition)(nil),                       // 21: ptah.console.v1.Condition
+	(*NamespaceResult)(nil),                 // 22: ptah.console.v1.NamespaceResult
 }
 var file_ptah_console_v1_decisions_proto_depIdxs = []int32{
 	0,  // 0: ptah.console.v1.Decision.kind:type_name -> ptah.console.v1.DecisionKind
-	18, // 1: ptah.console.v1.Decision.ref:type_name -> ptah.console.v1.ObjectRef
-	19, // 2: ptah.console.v1.Decision.decided_at:type_name -> google.protobuf.Timestamp
+	19, // 1: ptah.console.v1.Decision.ref:type_name -> ptah.console.v1.ObjectRef
+	20, // 2: ptah.console.v1.Decision.decided_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: ptah.console.v1.Decision.state:type_name -> ptah.console.v1.DecisionState
-	20, // 4: ptah.console.v1.Decision.conditions:type_name -> ptah.console.v1.Condition
-	4,  // 5: ptah.console.v1.ListDecisionsResponse.decisions:type_name -> ptah.console.v1.Decision
-	21, // 6: ptah.console.v1.ListDecisionsResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
-	0,  // 7: ptah.console.v1.GetDecisionRequest.kind:type_name -> ptah.console.v1.DecisionKind
-	4,  // 8: ptah.console.v1.GetDecisionResponse.decision:type_name -> ptah.console.v1.Decision
-	2,  // 9: ptah.console.v1.DecisionResult.outcome:type_name -> ptah.console.v1.DecisionOutcome
-	4,  // 10: ptah.console.v1.DecisionResult.decision:type_name -> ptah.console.v1.Decision
-	12, // 11: ptah.console.v1.ApproveSchemaPlanResponse.result:type_name -> ptah.console.v1.DecisionResult
-	12, // 12: ptah.console.v1.ApproveMigrationPlanResponse.result:type_name -> ptah.console.v1.DecisionResult
-	12, // 13: ptah.console.v1.AcknowledgeMigrationRunResponse.result:type_name -> ptah.console.v1.DecisionResult
-	3,  // 14: ptah.console.v1.SetSuspendedRequest.kind:type_name -> ptah.console.v1.ResourceKind
-	2,  // 15: ptah.console.v1.SetSuspendedResponse.outcome:type_name -> ptah.console.v1.DecisionOutcome
-	5,  // 16: ptah.console.v1.DecisionService.ListDecisions:input_type -> ptah.console.v1.ListDecisionsRequest
-	7,  // 17: ptah.console.v1.DecisionService.GetDecision:input_type -> ptah.console.v1.GetDecisionRequest
-	9,  // 18: ptah.console.v1.DecisionService.ApproveSchemaPlan:input_type -> ptah.console.v1.ApproveSchemaPlanRequest
-	10, // 19: ptah.console.v1.DecisionService.ApproveMigrationPlan:input_type -> ptah.console.v1.ApproveMigrationPlanRequest
-	11, // 20: ptah.console.v1.DecisionService.AcknowledgeMigrationRun:input_type -> ptah.console.v1.AcknowledgeMigrationRunRequest
-	16, // 21: ptah.console.v1.DecisionService.SetSuspended:input_type -> ptah.console.v1.SetSuspendedRequest
-	6,  // 22: ptah.console.v1.DecisionService.ListDecisions:output_type -> ptah.console.v1.ListDecisionsResponse
-	8,  // 23: ptah.console.v1.DecisionService.GetDecision:output_type -> ptah.console.v1.GetDecisionResponse
-	13, // 24: ptah.console.v1.DecisionService.ApproveSchemaPlan:output_type -> ptah.console.v1.ApproveSchemaPlanResponse
-	14, // 25: ptah.console.v1.DecisionService.ApproveMigrationPlan:output_type -> ptah.console.v1.ApproveMigrationPlanResponse
-	15, // 26: ptah.console.v1.DecisionService.AcknowledgeMigrationRun:output_type -> ptah.console.v1.AcknowledgeMigrationRunResponse
-	17, // 27: ptah.console.v1.DecisionService.SetSuspended:output_type -> ptah.console.v1.SetSuspendedResponse
-	22, // [22:28] is the sub-list for method output_type
-	16, // [16:22] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	21, // 4: ptah.console.v1.Decision.conditions:type_name -> ptah.console.v1.Condition
+	2,  // 5: ptah.console.v1.Decision.plan_retention:type_name -> ptah.console.v1.PlanRetention
+	5,  // 6: ptah.console.v1.ListDecisionsResponse.decisions:type_name -> ptah.console.v1.Decision
+	22, // 7: ptah.console.v1.ListDecisionsResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
+	0,  // 8: ptah.console.v1.GetDecisionRequest.kind:type_name -> ptah.console.v1.DecisionKind
+	5,  // 9: ptah.console.v1.GetDecisionResponse.decision:type_name -> ptah.console.v1.Decision
+	3,  // 10: ptah.console.v1.DecisionResult.outcome:type_name -> ptah.console.v1.DecisionOutcome
+	5,  // 11: ptah.console.v1.DecisionResult.decision:type_name -> ptah.console.v1.Decision
+	13, // 12: ptah.console.v1.ApproveSchemaPlanResponse.result:type_name -> ptah.console.v1.DecisionResult
+	13, // 13: ptah.console.v1.ApproveMigrationPlanResponse.result:type_name -> ptah.console.v1.DecisionResult
+	13, // 14: ptah.console.v1.AcknowledgeMigrationRunResponse.result:type_name -> ptah.console.v1.DecisionResult
+	4,  // 15: ptah.console.v1.SetSuspendedRequest.kind:type_name -> ptah.console.v1.ResourceKind
+	3,  // 16: ptah.console.v1.SetSuspendedResponse.outcome:type_name -> ptah.console.v1.DecisionOutcome
+	6,  // 17: ptah.console.v1.DecisionService.ListDecisions:input_type -> ptah.console.v1.ListDecisionsRequest
+	8,  // 18: ptah.console.v1.DecisionService.GetDecision:input_type -> ptah.console.v1.GetDecisionRequest
+	10, // 19: ptah.console.v1.DecisionService.ApproveSchemaPlan:input_type -> ptah.console.v1.ApproveSchemaPlanRequest
+	11, // 20: ptah.console.v1.DecisionService.ApproveMigrationPlan:input_type -> ptah.console.v1.ApproveMigrationPlanRequest
+	12, // 21: ptah.console.v1.DecisionService.AcknowledgeMigrationRun:input_type -> ptah.console.v1.AcknowledgeMigrationRunRequest
+	17, // 22: ptah.console.v1.DecisionService.SetSuspended:input_type -> ptah.console.v1.SetSuspendedRequest
+	7,  // 23: ptah.console.v1.DecisionService.ListDecisions:output_type -> ptah.console.v1.ListDecisionsResponse
+	9,  // 24: ptah.console.v1.DecisionService.GetDecision:output_type -> ptah.console.v1.GetDecisionResponse
+	14, // 25: ptah.console.v1.DecisionService.ApproveSchemaPlan:output_type -> ptah.console.v1.ApproveSchemaPlanResponse
+	15, // 26: ptah.console.v1.DecisionService.ApproveMigrationPlan:output_type -> ptah.console.v1.ApproveMigrationPlanResponse
+	16, // 27: ptah.console.v1.DecisionService.AcknowledgeMigrationRun:output_type -> ptah.console.v1.AcknowledgeMigrationRunResponse
+	18, // 28: ptah.console.v1.DecisionService.SetSuspended:output_type -> ptah.console.v1.SetSuspendedResponse
+	23, // [23:29] is the sub-list for method output_type
+	17, // [17:23] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_ptah_console_v1_decisions_proto_init() }
@@ -1402,7 +1480,7 @@ func file_ptah_console_v1_decisions_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ptah_console_v1_decisions_proto_rawDesc), len(file_ptah_console_v1_decisions_proto_rawDesc)),
-			NumEnums:      4,
+			NumEnums:      5,
 			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,

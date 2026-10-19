@@ -58,30 +58,63 @@ func (d *DecisionService) ListDecisions(ctx context.Context, request *consolev1.
 	return &consolev1.ListDecisionsResponse{Decisions: decisions, Namespaces: results}, nil
 }
 
-func listDecisions(ctx context.Context, c client.Client, namespace string) ([]*consolev1.Decision, error) {
-	schemaApprovals := &operatorv1alpha1.PtahSchemaApprovalList{}
-	if err := c.List(ctx, schemaApprovals, client.InNamespace(namespace)); err != nil {
-		return nil, err
-	}
+func listDecisions(ctx context.Context, c client.Client, namespace string, bound int) ([]*consolev1.Decision, bool, error) {
 	var out []*consolev1.Decision
-	for i := range schemaApprovals.Items {
-		out = append(out, model.SchemaApproval(&schemaApprovals.Items[i]))
+	truncated, err := pages(ctx, c, namespace, bound,
+		func() *operatorv1alpha1.PtahSchemaApprovalList { return &operatorv1alpha1.PtahSchemaApprovalList{} },
+		func(page *operatorv1alpha1.PtahSchemaApprovalList) {
+			for i := range page.Items {
+				approval := model.SchemaApproval(&page.Items[i])
+				approval.PlanRetention = planRetention(ctx, c, namespace, &operatorv1alpha1.PtahSchemaPlan{}, page.Items[i].Spec.PlanRef)
+				out = append(out, approval)
+			}
+		})
+	if err != nil {
+		return nil, false, err
 	}
 	// A reader may list schema approvals and not the migration family; what
 	// it may list still comes back.
-	migrationApprovals := &operatorv1alpha1.PtahMigrationApprovalList{}
-	if err := c.List(ctx, migrationApprovals, client.InNamespace(namespace)); err == nil {
-		for i := range migrationApprovals.Items {
-			out = append(out, model.MigrationApproval(&migrationApprovals.Items[i]))
-		}
+	if more, err := pages(ctx, c, namespace, bound,
+		func() *operatorv1alpha1.PtahMigrationApprovalList {
+			return &operatorv1alpha1.PtahMigrationApprovalList{}
+		},
+		func(page *operatorv1alpha1.PtahMigrationApprovalList) {
+			for i := range page.Items {
+				approval := model.MigrationApproval(&page.Items[i])
+				approval.PlanRetention = planRetention(ctx, c, namespace, &operatorv1alpha1.PtahMigrationPlan{}, page.Items[i].Spec.PlanRef)
+				out = append(out, approval)
+			}
+		}); err == nil {
+		truncated = truncated || more
 	}
-	acknowledgments := &operatorv1alpha1.PtahMigrationRunAcknowledgmentList{}
-	if err := c.List(ctx, acknowledgments, client.InNamespace(namespace)); err == nil {
-		for i := range acknowledgments.Items {
-			out = append(out, model.RunAcknowledgment(&acknowledgments.Items[i]))
-		}
+	if more, err := pages(ctx, c, namespace, bound,
+		func() *operatorv1alpha1.PtahMigrationRunAcknowledgmentList {
+			return &operatorv1alpha1.PtahMigrationRunAcknowledgmentList{}
+		},
+		func(page *operatorv1alpha1.PtahMigrationRunAcknowledgmentList) {
+			for i := range page.Items {
+				out = append(out, model.RunAcknowledgment(&page.Items[i]))
+			}
+		}); err == nil {
+		truncated = truncated || more
 	}
-	return out, nil
+	return out, truncated, nil
+}
+
+// planRetention says whether the plan an approval names is still stored
+// under the UID the approval recorded.
+func planRetention(ctx context.Context, c client.Client, namespace string, plan client.Object, ref operatorv1alpha1.ImmutableObjectReference) consolev1.PlanRetention {
+	err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, plan)
+	switch {
+	case err == nil && plan.GetUID() == ref.UID:
+		return consolev1.PlanRetention_PLAN_RETENTION_RETAINED
+	case err == nil, apierrors.IsNotFound(err):
+		return consolev1.PlanRetention_PLAN_RETENTION_NOT_RETAINED
+	case apierrors.IsForbidden(err):
+		return consolev1.PlanRetention_PLAN_RETENTION_NOT_GRANTED
+	default:
+		return consolev1.PlanRetention_PLAN_RETENTION_UNKNOWN
+	}
 }
 
 // GetDecision reads one decision back by kind and name.
@@ -107,13 +140,17 @@ func readDecision(ctx context.Context, c client.Client, kind consolev1.DecisionK
 		if err := c.Get(ctx, key, object); err != nil {
 			return nil, err
 		}
-		return model.SchemaApproval(object), nil
+		read := model.SchemaApproval(object)
+		read.PlanRetention = planRetention(ctx, c, key.Namespace, &operatorv1alpha1.PtahSchemaPlan{}, object.Spec.PlanRef)
+		return read, nil
 	case consolev1.DecisionKind_DECISION_KIND_MIGRATION_APPROVAL:
 		object := &operatorv1alpha1.PtahMigrationApproval{}
 		if err := c.Get(ctx, key, object); err != nil {
 			return nil, err
 		}
-		return model.MigrationApproval(object), nil
+		read := model.MigrationApproval(object)
+		read.PlanRetention = planRetention(ctx, c, key.Namespace, &operatorv1alpha1.PtahMigrationPlan{}, object.Spec.PlanRef)
+		return read, nil
 	case consolev1.DecisionKind_DECISION_KIND_RUN_ACKNOWLEDGMENT:
 		object := &operatorv1alpha1.PtahMigrationRunAcknowledgment{}
 		if err := c.Get(ctx, key, object); err != nil {

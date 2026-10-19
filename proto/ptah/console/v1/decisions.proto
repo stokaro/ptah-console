@@ -72,6 +72,21 @@ message Decision {
   DecisionState state = 12;
   string state_reason = 13;
   repeated Condition conditions = 14;
+  // Whether the plan an approval names is still stored, under its UID.
+  PlanRetention plan_retention = 15;
+}
+
+// PlanRetention is whether an approved plan can still be read.
+enum PlanRetention {
+  // Not an approval, or not checked.
+  PLAN_RETENTION_UNSPECIFIED = 0;
+  PLAN_RETENTION_RETAINED = 1;
+  // The plan is gone, or another object holds its name.
+  PLAN_RETENTION_NOT_RETAINED = 2;
+  // The identity may not read the plan.
+  PLAN_RETENTION_NOT_GRANTED = 3;
+  // The API server did not say.
+  PLAN_RETENTION_UNKNOWN = 4;
 }
 
 message ListDecisionsRequest {

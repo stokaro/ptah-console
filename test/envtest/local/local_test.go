@@ -164,3 +164,21 @@ func TestReadOnlyRefusesDecisions(t *testing.T) {
 	c.Assert(suspendBody["code"], qt.Equals, "permission_denied")
 	c.Assert(list.StatusCode, qt.Equals, http.StatusOK)
 }
+
+// A cluster without the operator's CRDs is said to be one: the console does
+// not show its namespaces as empty of schemas.
+func TestAClusterWithoutTheOperatorSaysSo(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	origin, link := console(t, "no-operator-person", false)
+	exchanged, _ := rpc(t, origin, "SessionService/ExchangeLaunchToken", `{"token":"`+link[strings.Index(link, "#t=")+3:]+`"}`)
+	c.Assert(exchanged.StatusCode, qt.Equals, http.StatusOK)
+
+	response, scope := rpc(t, origin, "ScopeService/ListNamespaces", `{}`, exchanged.Cookies()[0])
+
+	c.Assert(response.StatusCode, qt.Equals, http.StatusOK)
+	answer, ok := scope["operatorApi"].(map[string]any)
+	c.Assert(ok, qt.IsTrue, qt.Commentf("response: %v", scope))
+	c.Assert(answer["served"], qt.IsNil)
+	c.Assert(answer["problem"], qt.Contains, "does not serve operator.ptah.run/v1alpha1")
+}

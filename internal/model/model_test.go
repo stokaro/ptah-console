@@ -403,3 +403,92 @@ func TestAWaitingSchemaBeingPlannedAgainSaysSo(t *testing.T) {
 		})
 	}
 }
+
+// A decision's state comes from its own conditions, with the condition's
+// message as the reason; a stale approval says why it went stale.
+func TestADecisionSaysWhatTheOperatorMadeOfIt(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		conditions []metav1.Condition
+		state      consolev1.DecisionState
+		reason     string
+	}{
+		{name: "nothing read yet", conditions: nil, state: consolev1.DecisionState_DECISION_STATE_PENDING},
+		{
+			name:       "accepted",
+			conditions: []metav1.Condition{condition("Accepted", metav1.ConditionTrue, "Accepted")},
+			state:      consolev1.DecisionState_DECISION_STATE_ACCEPTED, reason: "Accepted Accepted",
+		},
+		{
+			name:       "refused by the operator",
+			conditions: []metav1.Condition{condition("Accepted", metav1.ConditionFalse, "PlanNoLongerCurrent")},
+			state:      consolev1.DecisionState_DECISION_STATE_REFUSED, reason: "Accepted PlanNoLongerCurrent",
+		},
+		{
+			name: "stale because a newer plan replaced it",
+			conditions: []metav1.Condition{
+				condition("Accepted", metav1.ConditionTrue, "Accepted"),
+				condition("Stale", metav1.ConditionTrue, "SupersededApproval"),
+			},
+			state: consolev1.DecisionState_DECISION_STATE_STALE, reason: "Stale SupersededApproval",
+		},
+		{
+			name: "consumed by an Apply",
+			conditions: []metav1.Condition{
+				condition("Accepted", metav1.ConditionTrue, "Accepted"),
+				condition("Consumed", metav1.ConditionTrue, "DispatchCommitted"),
+			},
+			state: consolev1.DecisionState_DECISION_STATE_CONSUMED, reason: "Consumed DispatchCommitted",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			approval := &operatorv1alpha1.PtahSchemaApproval{}
+			approval.Status.Conditions = test.conditions
+
+			decision := model.SchemaApproval(approval)
+
+			c.Assert(decision.GetState(), qt.Equals, test.state)
+			c.Assert(decision.GetStateReason(), qt.Equals, test.reason)
+		})
+	}
+}
+
+// Each attention carries the operator plugin's command that shows the same
+// state: the plan for a person deciding on it, the resource otherwise.
+func TestAttentionNamesTheCommandThatShowsIt(t *testing.T) {
+	t.Parallel()
+	waiting := schemaWith(condition("ApprovalRequired", metav1.ConditionTrue, "Waiting"))
+	waiting.Name, waiting.Namespace = "storefront", "application"
+	waiting.Status.Plan = &operatorv1alpha1.CurrentPlanStatus{Name: "ptah-plan-1"}
+	replanning := waiting.DeepCopy()
+	replanning.Status.Plan = nil
+	failed := schemaWith(condition("ReconciliationFailed", metav1.ConditionTrue, "OperationFailed"))
+	failed.Name, failed.Namespace = "storefront", "application"
+	unresolved := &operatorv1alpha1.PtahMigration{}
+	unresolved.Name, unresolved.Namespace = "billing", "application"
+	unresolved.Generation, unresolved.Status.ObservedGeneration = 1, 1
+	unresolved.Status.UnresolvedRun = &operatorv1alpha1.UnresolvedMigrationRunStatus{OperationID: "op-2"}
+	tests := []struct {
+		name      string
+		attention []*consolev1.Attention
+		want      string
+	}{
+		{name: "a plan waiting for approval", attention: model.Schema(waiting).GetAttention(), want: "kubectl ptah plan storefront -n application"},
+		{name: "a schema planning again", attention: model.Schema(replanning).GetAttention(), want: "kubectl ptah schema storefront -n application"},
+		{name: "a failed schema", attention: model.Schema(failed).GetAttention(), want: "kubectl ptah schema storefront -n application"},
+		{name: "an unresolved migration run", attention: model.Migration(unresolved).GetAttention(), want: "kubectl ptah migration billing -n application"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+
+			c.Assert(test.attention, qt.Not(qt.HasLen), 0)
+			c.Assert(test.attention[0].GetCommand(), qt.Equals, test.want)
+		})
+	}
+}

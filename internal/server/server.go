@@ -20,6 +20,7 @@ import (
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
+	"github.com/stokaro/ptah-operator/pkg/planread"
 
 	"github.com/stokaro/ptah-console/internal/api"
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
@@ -34,6 +35,10 @@ const (
 	DefaultMaxRequestBytes = 1 << 20
 	DefaultMaxInFlight     = 64
 	DefaultUnaryTimeout    = 30 * time.Second
+	// DefaultMaxResponseBytes fits the largest plan the operator stores in
+	// the JSON a browser reads, where a control character in the SQL takes
+	// six bytes, with room for the rest of the message.
+	DefaultMaxResponseBytes = 6*planread.MaxPlanBytes + 1<<20
 )
 
 // Options configure a console's HTTP surface.
@@ -52,6 +57,8 @@ type Options struct {
 
 	// MaxRequestBytes bounds a request body.
 	MaxRequestBytes int64
+	// MaxResponseBytes bounds one response message.
+	MaxResponseBytes int64
 	// MaxInFlight bounds the API requests served at once. Streams count
 	// while they are open.
 	MaxInFlight int
@@ -77,6 +84,9 @@ func New(options Options) (http.Handler, error) {
 	if options.MaxRequestBytes <= 0 {
 		options.MaxRequestBytes = DefaultMaxRequestBytes
 	}
+	if options.MaxResponseBytes <= 0 {
+		options.MaxResponseBytes = DefaultMaxResponseBytes
+	}
 	if options.MaxInFlight <= 0 {
 		options.MaxInFlight = DefaultMaxInFlight
 	}
@@ -100,6 +110,7 @@ func New(options Options) (http.Handler, error) {
 	services := http.NewServeMux()
 	connecthttp.Mount(services, rpc,
 		connecthttp.WithReadMaxBytes(int(options.MaxRequestBytes)),
+		connecthttp.WithSendMaxBytes(int(options.MaxResponseBytes)),
 		// A browser cannot send this header cross-origin without a preflight,
 		// which the console never answers, so a form or a simple fetch from
 		// another page never reaches a handler.

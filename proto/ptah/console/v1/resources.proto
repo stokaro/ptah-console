@@ -78,6 +78,9 @@ message NamespaceResult {
   string namespace = 1;
   Access access = 2;
   string reason = 3;
+  // The namespace holds more of the kind than one read returns; the list
+  // shows the first ones.
+  bool truncated = 4;
 }
 
 // Answer is a capability hint. Unknown is shown as unavailable.
@@ -115,6 +118,20 @@ message ListNamespacesRequest {}
 
 message ListNamespacesResponse {
   repeated NamespaceScope namespaces = 1;
+  // Whether the cluster serves the operator's API, as discovery tells the
+  // session's identity.
+  OperatorApi operator_api = 2;
+}
+
+// OperatorApi is what discovery says about operator.ptah.run/v1alpha1.
+message OperatorApi {
+  // The group version is served at all.
+  bool served = 1;
+  // Kinds the console reads or writes that the cluster does not serve, by
+  // resource name.
+  repeated string missing = 2;
+  // Why the answer is incomplete or negative, in words.
+  string problem = 3;
 }
 
 // StageState is where one stage of a resource's lifecycle stands.
@@ -153,6 +170,9 @@ message Attention {
   // The next step the operator supports, in words.
   string next_step = 3;
   google.protobuf.Timestamp since = 4;
+  // A read-only command that shows the same state from a terminal, with the
+  // operator's own kubectl plugin.
+  string command = 5;
 }
 
 // GitOps names the controller that manages an object, when its labels or
