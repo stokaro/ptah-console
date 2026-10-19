@@ -2,7 +2,7 @@ import { Button, EmptyState, RiskList } from "@ptah/console-ui"
 import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { canAnywhere, useResources, useSession } from "../api/resources"
+import { useOffer, useResources, useSession } from "../api/resources"
 import { age, planRisks, waitingForApproval, type ResourceView } from "../model/resource"
 import { Hero, Loading, ReadError, UnreadableNamespaces, useNow, where } from "./common"
 import { ApproveDialog } from "./ApproveDialog"
@@ -42,9 +42,16 @@ export function ApproverQueue() {
     .sort(
       (a, b) => Number(a.plan?.createdAt?.seconds ?? 0n) - Number(b.plan?.createdAt?.seconds ?? 0n)
     )
-  const mayApprove =
-    canAnywhere(scope.scopes, "approveSchemaPlans") ||
-    canAnywhere(scope.scopes, "approveMigrationPlans")
+  const offer = useOffer()
+  const approvable = (resource: ResourceView) =>
+    offer(
+      resource.namespace,
+      resource.kind === "schema" ? "approveSchemaPlans" : "approveMigrationPlans"
+    ) === "allowed"
+  const anywhere = [
+    offer(undefined, "approveSchemaPlans"),
+    offer(undefined, "approveMigrationPlans"),
+  ]
 
   return (
     <>
@@ -54,9 +61,11 @@ export function ApproverQueue() {
         label={waiting.length === 1 ? "plan waits for a decision" : "plans wait for a decision"}
         sub="Plans waiting for your decision"
         capability={
-          mayApprove
-            ? "create ptahschemaapprovals, ptahmigrationapprovals"
-            : "no approval verb in these namespaces"
+          anywhere.includes("read-only")
+            ? "nothing: this console runs read-only"
+            : anywhere.includes("allowed")
+              ? "create ptahschemaapprovals, ptahmigrationapprovals"
+              : "no approval verb in these namespaces"
         }
       />
       <UnreadableNamespaces scopes={scope.scopes} />
@@ -104,9 +113,11 @@ export function ApproverQueue() {
                   risks={planRisks(resource).filter((risk) => risk.tone !== "off")}
                 />
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="primary" onClick={() => setApproving(resource)}>
-                    Approve…
-                  </Button>
+                  {approvable(resource) ? (
+                    <Button variant="primary" onClick={() => setApproving(resource)}>
+                      Approve…
+                    </Button>
+                  ) : null}
                   <Link
                     {...link}
                     className="inline-flex min-h-11 items-center justify-center rounded-xl border border-line bg-card px-4 text-sm font-medium text-fg"

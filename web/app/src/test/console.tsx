@@ -169,6 +169,7 @@ export function storedPlan(change: (plan: SchemaPlan) => void = () => {}): Schem
 
 export interface Fixture {
   username?: string
+  readOnly?: boolean
   capabilities?: MessageInitShape<typeof CapabilitiesSchema>
   schemas?: Schema[]
   migrations?: Migration[]
@@ -200,6 +201,7 @@ export function consoleTransport(fixture: Fixture) {
         mode: Mode.LOCAL,
         context: "kind-ptah",
         kubernetesUsername: fixture.username ?? "alice",
+        readOnly: fixture.readOnly ?? false,
       }),
     })
     service(ScopeService, {
