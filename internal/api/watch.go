@@ -222,11 +222,11 @@ func (f follower) run(ctx context.Context) error {
 		case ctx.Err() != nil:
 			return ctx.Err()
 		case permanent(err):
-			f.lose(ctx, refusal(err))
+			f.lose(ctx, refusal(err), false)
 			return err
 		default:
 			// The page may now be behind; the next open window says so.
-			f.lose(ctx, "The watch stopped and is being opened again.")
+			f.lose(ctx, "The watch stopped and is being opened again.", true)
 			version, stale = "", true
 			if !sleep(ctx, f.window) {
 				return ctx.Err()
@@ -305,9 +305,9 @@ func (f follower) invalidate(ctx context.Context, name, version string) {
 	}}})
 }
 
-func (f follower) lose(ctx context.Context, reason string) {
+func (f follower) lose(ctx context.Context, reason string, reconnecting bool) {
 	f.send(ctx, &consolev1.SubscribeResponse{Event: &consolev1.SubscribeResponse_Lost{Lost: &consolev1.Lost{
-		Kind: f.kind, Namespace: f.namespace, Reason: reason,
+		Kind: f.kind, Namespace: f.namespace, Reason: reason, Reconnecting: reconnecting,
 	}}})
 }
 

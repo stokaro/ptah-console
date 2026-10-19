@@ -4,7 +4,15 @@ import { useState } from "react"
 
 import { useResources, useSession } from "../api/resources"
 import { say, steps, type ResourceView } from "../model/resource"
-import { Hero, Loading, ReadError, UnreadableNamespaces, useNow, where } from "./common"
+import {
+  Hero,
+  Loading,
+  ReadError,
+  TruncatedNotice,
+  UnreadableNamespaces,
+  useNow,
+  where,
+} from "./common"
 
 function matches(resource: ResourceView, query: string) {
   const q = query.trim().toLowerCase()
@@ -18,7 +26,7 @@ function matches(resource: ResourceView, query: string) {
 }
 
 export function Releases() {
-  const { resources, scope, loading, error } = useResources()
+  const { resources, scope, truncated, loading, error } = useResources()
   const session = useSession()
   const now = useNow()
   const [query, setQuery] = useState("")
@@ -36,6 +44,7 @@ export function Releases() {
         capability="get ptahschemas, ptahmigrations"
       />
       <UnreadableNamespaces scopes={scope.scopes} />
+      <TruncatedNotice namespaces={truncated} />
       <label className="flex h-[46px] items-center gap-2 rounded-[14px] border border-line bg-card px-3.5 text-mute">
         <span aria-hidden="true">⌕</span>
         <input

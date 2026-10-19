@@ -62,4 +62,8 @@ message Lost {
   WatchedKind kind = 1;
   string namespace = 2;
   string reason = 3;
+  // The console is opening the watch again: the API server did not answer,
+  // and the page is behind until it does. False when the identity may not
+  // watch the kind, which no retry changes.
+  bool reconnecting = 4;
 }

@@ -1,18 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 
-import { RiskList } from "./RiskList"
+import { FindingList } from "./FindingList"
 
 const meta = {
-  title: "Components/RiskList",
-  component: RiskList,
+  title: "Components/FindingList",
+  component: FindingList,
   args: {
-    risks: [
+    findings: [
       { tone: "bad", text: "Destructive: removes or rewrites data, as reported by the plan" },
       { tone: "unk", text: "Changes privileges: GRANT" },
       { tone: "ok", text: "SQL verified · 3 of 3 chunks · digests match" },
     ],
   },
-} satisfies Meta<typeof RiskList>
+} satisfies Meta<typeof FindingList>
 
 export default meta
 

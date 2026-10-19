@@ -1,7 +1,12 @@
 import { timestampDate } from "@bufbuild/protobuf/wkt"
 import { shortDigest, type Tone } from "@ptah/console-ui"
 
-import { DecisionKind, DecisionState, type Decision } from "../gen/ptah/console/v1/decisions_pb"
+import {
+  DecisionKind,
+  DecisionState,
+  PlanRetention,
+  type Decision,
+} from "../gen/ptah/console/v1/decisions_pb"
 import { csvField } from "./resource"
 
 export type DecisionSegment = "schema-approval" | "migration-approval" | "run-acknowledgment"
@@ -41,9 +46,30 @@ export function decisionWhat(decision: Decision) {
   return `Approved ${decision.planName} for ${decision.ownerName}`
 }
 
+const retention: Record<number, string> = {
+  [PlanRetention.NOT_RETAINED]: "plan no longer retained",
+  [PlanRetention.NOT_GRANTED]: "plan not readable here",
+}
+
 export function decisionNote(decision: Decision) {
-  const state = decisionState(decision.state).label
-  return decision.planFingerprint ? `${shortDigest(decision.planFingerprint)} · ${state}` : state
+  const parts = [
+    decision.planFingerprint ? shortDigest(decision.planFingerprint) : "",
+    decisionState(decision.state).label,
+    retention[decision.planRetention] ?? "",
+  ]
+  return parts.filter(Boolean).join(" · ")
+}
+
+/** Why the approved SQL cannot be shown, when the plan says so itself. */
+export function retentionText(decision: Decision) {
+  switch (decision.planRetention) {
+    case PlanRetention.NOT_RETAINED:
+      return "The plan is no longer retained: Kubernetes keeps no object with the name and UID this approval recorded."
+    case PlanRetention.NOT_GRANTED:
+      return "This identity may not read the plan."
+    default:
+      return ""
+  }
 }
 
 /** Newest first. */

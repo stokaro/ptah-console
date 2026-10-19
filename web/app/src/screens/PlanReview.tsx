@@ -2,9 +2,11 @@ import { skipToken, useQuery } from "@connectrpc/connect-query"
 import { timestampDate } from "@bufbuild/protobuf/wkt"
 import {
   BindingTable,
+  Fingerprint,
+  SequenceTable,
   Button,
   Card,
-  RiskList,
+  FindingList,
   SqlView,
   shortDigest,
   type Binding,
@@ -12,7 +14,7 @@ import {
 import { getRouteApi, Link } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { readOnlyText, useOffer, useResources, useSession } from "../api/resources"
+import { offerText, useOffer, useResources, useSession } from "../api/resources"
 import {
   MigrationService,
   PlanSelection,
@@ -98,7 +100,7 @@ export function PlanReview() {
         sub={waiting ? planSummary(resource) : "This plan is not waiting for approval now."}
       />
       <Card title="What this changes">
-        <RiskList risks={planRisks(resource, sPlan)} />
+        <FindingList findings={planRisks(resource, sPlan)} />
       </Card>
       {planError ? <ReadError error={planError} what="the plan" /> : null}
       {sPlan ? <SchemaSql plan={sPlan} /> : null}
@@ -106,9 +108,7 @@ export function PlanReview() {
       {sPlan || mPlan ? (
         <Card title="Bound to">
           <BindingTable rows={bindings(resource, sPlan, mPlan)} />
-          <span className="font-mono text-xs break-all text-mute">
-            fingerprint {(sPlan ?? mPlan)?.fingerprint}
-          </span>
+          <Fingerprint value={(sPlan ?? mPlan)?.fingerprint ?? ""} />
         </Card>
       ) : schemaPlan.isLoading || migrationPlan.isLoading ? (
         <Loading what="the plan's SQL" />
@@ -137,9 +137,10 @@ export function PlanReview() {
             </Button>
           ) : (
             <span className="flex-auto p-2.5 text-sm text-fg2">
-              {mayApprove === "read-only"
-                ? readOnlyText
-                : `This identity may not approve plans in ${resource.namespace}. Share the link with an approver.`}
+              {offerText(
+                mayApprove,
+                `This identity may not approve plans in ${resource.namespace}. Share the link with an approver.`
+              )}
             </span>
           )
         ) : (
@@ -190,18 +191,14 @@ function SchemaSql({ plan }: { plan: SchemaPlan }) {
 function MigrationSteps({ plan }: { plan: MigrationPlan }) {
   return (
     <Card title="Steps in order">
-      <ol className="m-0 list-none overflow-hidden rounded-xl border border-line2 p-0">
-        {plan.migrations.map((step) => (
-          <li
-            key={step.versionKey || String(step.version)}
-            className="grid grid-cols-[64px_minmax(0,1fr)_96px] gap-2 border-b border-line2 px-2.5 py-2 font-mono text-[12.5px] last:border-b-0"
-          >
-            <span>{step.versionKey || String(step.version)}</span>
-            <span className="truncate">{step.description}</span>
-            <span className="text-mute">{step.checksum.slice(0, 9)}</span>
-          </li>
-        ))}
-      </ol>
+      <SequenceTable
+        caption="Steps in order"
+        rows={plan.migrations.map((step) => ({
+          version: step.versionKey || String(step.version),
+          name: step.description,
+          note: step.checksum.slice(0, 9),
+        }))}
+      />
       <span className="text-[13px] leading-normal text-fg2">
         This operator API publishes files and checksums, not their SQL. Read the files in the
         artifact&apos;s repository.

@@ -1,12 +1,19 @@
 import { timestampDate } from "@bufbuild/protobuf/wkt"
 import { Code, ConnectError, createClient } from "@connectrpc/connect"
 import { skipToken, useMutation, useQuery, useTransport } from "@connectrpc/connect-query"
-import { Button, Card, EventList, Terminal, type TimelineEvent } from "@ptah/console-ui"
+import {
+  Button,
+  Card,
+  CommandBlock,
+  EventList,
+  Terminal,
+  type TimelineEvent,
+} from "@ptah/console-ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { getRouteApi } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { can, readOnlyText, useOffer, useResources, useSession } from "../api/resources"
+import { can, offerText, useOffer, useResources, useSession } from "../api/resources"
 import { DecisionKind, DecisionService, ResourceKind } from "../gen/ptah/console/v1/decisions_pb"
 import {
   DiagnosticsService,
@@ -98,6 +105,9 @@ export function IncidentDetail() {
         <span className="text-[15px] leading-normal">
           {attention?.nextStep || "Nothing to do."}
         </span>
+        {attention?.command ? (
+          <CommandBlock label="Command that shows the same state" command={attention.command} />
+        ) : null}
         {unresolved ? (
           mayAcknowledge === "allowed" ? (
             <Button
@@ -109,9 +119,10 @@ export function IncidentDetail() {
             </Button>
           ) : (
             <span className="text-[13px] text-fg2">
-              {mayAcknowledge === "read-only"
-                ? readOnlyText
-                : `This identity may not acknowledge runs in ${resource.namespace}.`}
+              {offerText(
+                mayAcknowledge,
+                `This identity may not acknowledge runs in ${resource.namespace}.`
+              )}
             </span>
           )
         ) : null}

@@ -5,7 +5,7 @@ import { getRouteApi } from "@tanstack/react-router"
 import { useResources, useSession } from "../api/resources"
 import { DecisionKind, DecisionService } from "../gen/ptah/console/v1/decisions_pb"
 import { PlanSelection, SchemaService, SqlAccess } from "../gen/ptah/console/v1/resources_pb"
-import { decisionKind, decisionState, decisionWhat } from "../model/decision"
+import { decisionKind, decisionState, decisionWhat, retentionText } from "../model/decision"
 import { BackButton, DetailHeading, Loading, ReadError, where } from "./common"
 import { decidedAt } from "./IncidentDetail"
 
@@ -93,11 +93,12 @@ export function DecisionDetail() {
             <Terminal label="Approved SQL" text={sql} />
           ) : (
             <span className="text-sm text-fg2">
-              {plan.isFetching
-                ? "Reading the plan…"
-                : selection
-                  ? plan.data?.plan?.sqlProblem || "The SQL is not shown."
-                  : "The plan is no longer retained by the schema."}
+              {retentionText(decision) ||
+                (plan.isFetching
+                  ? "Reading the plan…"
+                  : selection
+                    ? plan.data?.plan?.sqlProblem || "The SQL is not shown."
+                    : "The schema no longer names this plan as current or applied, so its SQL is not shown here.")}
             </span>
           )}
         </Card>

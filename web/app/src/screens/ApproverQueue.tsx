@@ -1,10 +1,18 @@
-import { Button, EmptyState, RiskList } from "@ptah/console-ui"
+import { Button, EmptyState, FindingList } from "@ptah/console-ui"
 import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 
 import { useOffer, useResources, useSession } from "../api/resources"
 import { age, planRisks, waitingForApproval, type ResourceView } from "../model/resource"
-import { Hero, Loading, ReadError, UnreadableNamespaces, useNow, where } from "./common"
+import {
+  Hero,
+  Loading,
+  ReadError,
+  TruncatedNotice,
+  UnreadableNamespaces,
+  useNow,
+  where,
+} from "./common"
 import { ApproveDialog } from "./ApproveDialog"
 
 /** What a plan does, in a few words, from what the plan reports. */
@@ -32,7 +40,7 @@ export function planSummary(resource: ResourceView) {
 }
 
 export function ApproverQueue() {
-  const { resources, scope, loading, error } = useResources()
+  const { resources, scope, truncated, loading, error } = useResources()
   const session = useSession()
   const now = useNow()
   const [approving, setApproving] = useState<ResourceView>()
@@ -69,6 +77,7 @@ export function ApproverQueue() {
         }
       />
       <UnreadableNamespaces scopes={scope.scopes} />
+      <TruncatedNotice namespaces={truncated} />
       {loading ? (
         <Loading what="the plans" />
       ) : error ? (
@@ -108,9 +117,9 @@ export function ApproverQueue() {
                     ›
                   </span>
                 </div>
-                <RiskList
+                <FindingList
                   size="sm"
-                  risks={planRisks(resource).filter((risk) => risk.tone !== "off")}
+                  findings={planRisks(resource).filter((risk) => risk.tone !== "off")}
                 />
                 <div className="flex flex-wrap gap-2">
                   {resource.plan && approvable(resource) ? (

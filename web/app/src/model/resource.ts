@@ -1,6 +1,6 @@
 import type { Timestamp } from "@bufbuild/protobuf/wkt"
 import { timestampDate } from "@bufbuild/protobuf/wkt"
-import type { Risk, Step, Tone } from "@ptah/console-ui"
+import type { Finding, Step, Tone } from "@ptah/console-ui"
 
 import {
   AttentionKind,
@@ -193,6 +193,10 @@ export function say(resource: ResourceView, now: Date): { tone: Tone; text: stri
   if (first) {
     return { tone: attentionTone(first.kind), text: first.reason }
   }
+  const failed = resource.stages.find((s) => s.state === StageState.FAILED)
+  if (failed) {
+    return { tone: "bad", text: sentence(failed.detail) || `${failed.name} failed.` }
+  }
   const active = resource.stages.find((s) => s.state === StageState.ACTIVE)
   if (active) {
     return { tone: "run", text: sentence(active.detail) || `${active.name} is in progress.` }
@@ -215,8 +219,8 @@ export function say(resource: ResourceView, now: Date): { tone: Tone; text: stri
 }
 
 /** What a plan changes, as the plan itself reports it. */
-export function planRisks(resource: ResourceView, plan?: SchemaPlan): Risk[] {
-  const risks: Risk[] = []
+export function planRisks(resource: ResourceView, plan?: SchemaPlan): Finding[] {
+  const risks: Finding[] = []
   const destructive = plan?.destructive ?? resource.plan?.destructive ?? false
   const privileges = plan?.privilegeChanges ?? resource.plan?.privilegeChanges ?? []
   if (destructive) {
@@ -242,7 +246,7 @@ export function planRisks(resource: ResourceView, plan?: SchemaPlan): Risk[] {
   return risks
 }
 
-function sqlRisk(plan: SchemaPlan): Risk {
+function sqlRisk(plan: SchemaPlan): Finding {
   switch (plan.sqlAccess) {
     case SqlAccess.AVAILABLE: {
       const chunks = plan.chunks.length
