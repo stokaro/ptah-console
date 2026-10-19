@@ -139,7 +139,7 @@ contract: buf-lint buf-breaking verify-generated
 test-envtest:
 	@assets="$$($(GO) run sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VERSION) \
 		use $(ENVTEST_KUBERNETES_VERSION) --index "$(ENVTEST_INDEX)" \
-		$(if $(ENVTEST_BIN_DIR),--bin-dir "$(ENVTEST_BIN_DIR)") -p path)" || exit $$?; \
+		$(if $(ENVTEST_BIN_DIR),--bin-dir "$(abspath $(ENVTEST_BIN_DIR))") -p path)" || exit $$?; \
 	KUBEBUILDER_ASSETS="$$assets" PTAH_CONSOLE_REQUIRE_ENVTEST=1 $(GO) test -count=1 -timeout=10m ./test/envtest/...
 
 # Everything CI runs.
