@@ -26,6 +26,7 @@ import (
 	"github.com/stokaro/ptah-console/internal/audit"
 	"github.com/stokaro/ptah-console/internal/auth/launch"
 	"github.com/stokaro/ptah-console/internal/auth/session"
+	"github.com/stokaro/ptah-console/internal/decision"
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/v1/consolev1connect"
 	"github.com/stokaro/ptah-console/internal/kube"
@@ -128,6 +129,7 @@ func Run(ctx context.Context, options Options) error {
 			consolev1connect.RegisterScopeServiceHandler(rpc, api.NewScopeService(factory, scope))
 			consolev1connect.RegisterSchemaServiceHandler(rpc, api.NewSchemaService(factory, scope))
 			consolev1connect.RegisterMigrationServiceHandler(rpc, api.NewMigrationService(factory, scope))
+			consolev1connect.RegisterDecisionServiceHandler(rpc, api.NewDecisionService(factory, scope, decision.NewLedger(), options.Audit))
 		}},
 	})
 	if err != nil {

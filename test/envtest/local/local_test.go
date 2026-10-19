@@ -28,7 +28,7 @@ func TestMain(m *testing.M) {
 
 // console runs ptah-console local for a certificate-authenticated user and
 // returns the launch link it would have opened.
-func console(t *testing.T, user string) (origin, link string) {
+func console(t *testing.T, user string, readOnly bool) (origin, link string) {
 	t.Helper()
 	c := qt.New(t)
 	config, err := plane.User(user)
@@ -47,6 +47,7 @@ func console(t *testing.T, user string) (origin, link string) {
 	go func() {
 		done <- local.Run(ctx, local.Options{
 			Kubeconfig: path,
+			ReadOnly:   readOnly,
 			StatePath:  filepath.Join(t.TempDir(), "state.json"),
 			Assets:     fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}},
 			Stdout:     io.Discard,
@@ -92,7 +93,7 @@ func rpc(t *testing.T, origin, procedure, body string, cookies ...*http.Cookie) 
 func TestTheLaunchLinkSignsInOnceAsTheKubeconfigsUser(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
-	origin, link := console(t, "local-person")
+	origin, link := console(t, "local-person", false)
 	token := link[strings.Index(link, "#t=")+3:]
 
 	exchanged, _ := rpc(t, origin, "SessionService/ExchangeLaunchToken", `{"token":"`+token+`"}`)
@@ -127,7 +128,7 @@ func TestTheLaunchLinkSignsInOnceAsTheKubeconfigsUser(t *testing.T) {
 func TestOnlyTheLinkSignsIn(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
-	origin, _ := console(t, "careful-person")
+	origin, _ := console(t, "careful-person", false)
 
 	guessed, _ := rpc(t, origin, "SessionService/ExchangeLaunchToken", `{"token":"guess"}`)
 	c.Assert(guessed.StatusCode, qt.Equals, http.StatusForbidden)
@@ -139,4 +140,27 @@ func TestOnlyTheLinkSignsIn(t *testing.T) {
 	c.Assert(err, qt.IsNil)
 	_ = rebound.Body.Close()
 	c.Assert(rebound.StatusCode, qt.Equals, http.StatusMisdirectedRequest)
+}
+
+// --read-only refuses every decision on the server, whatever the page sends,
+// and still answers reads.
+func TestReadOnlyRefusesDecisions(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	origin, link := console(t, "read-only-person", true)
+	exchanged, _ := rpc(t, origin, "SessionService/ExchangeLaunchToken", `{"token":"`+link[strings.Index(link, "#t=")+3:]+`"}`)
+	c.Assert(exchanged.StatusCode, qt.Equals, http.StatusOK)
+	cookie := exchanged.Cookies()[0]
+
+	approve, approveBody := rpc(t, origin, "DecisionService/ApproveSchemaPlan",
+		`{"namespace":"default","schemaName":"storefront","schemaUid":"u","planName":"p","planUid":"u","planFingerprint":"f"}`, cookie)
+	suspend, suspendBody := rpc(t, origin, "DecisionService/SetSuspended",
+		`{"kind":"RESOURCE_KIND_SCHEMA","namespace":"default","name":"storefront","uid":"u","resourceVersion":"1","suspended":true}`, cookie)
+	list, _ := rpc(t, origin, "DecisionService/ListDecisions", `{"namespaces":["default"]}`, cookie)
+
+	c.Assert(approve.StatusCode, qt.Equals, http.StatusForbidden)
+	c.Assert(approveBody["code"], qt.Equals, "permission_denied")
+	c.Assert(suspend.StatusCode, qt.Equals, http.StatusForbidden)
+	c.Assert(suspendBody["code"], qt.Equals, "permission_denied")
+	c.Assert(list.StatusCode, qt.Equals, http.StatusOK)
 }
