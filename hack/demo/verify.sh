@@ -40,7 +40,7 @@ APPROVED=$(admin get ptahschemaapprovals -o json |
 case "$APPROVED" in
 *,*) fail "$APPROVER approved more than one plan: $APPROVED" ;;
 esac
-APPLIED=$(admin get "ptahschema/$SCHEMA" -o jsonpath='{.status.applied.planName}')
+APPLIED=$(admin get "ptahschema/$SCHEMA" -o jsonpath='{.status.applied.planRef.name}')
 [ "$APPLIED" = "$APPROVED" ] || fail "the schema applied $APPLIED, not the approved $APPROVED"
 
 OTHERS=$(admin get ptahschemaapprovals -o json |
