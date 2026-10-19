@@ -38,6 +38,9 @@ import (
 type Options struct {
 	Kubeconfig string
 	Context    string
+	// Namespaces are the namespaces offered. Empty offers the context's
+	// namespace, or the namespaces the identity may list.
+	Namespaces []string
 	ReadOnly   bool
 	// Port is the loopback port; zero picks a free one.
 	Port int
@@ -89,6 +92,11 @@ func Run(ctx context.Context, options Options) error {
 	}
 	origins := origins(listeners, port)
 
+	scope := api.Scope{Candidates: options.Namespaces}
+	if len(scope.Candidates) == 0 && resolved.Namespace != "" {
+		scope.Candidates = []string{resolved.Namespace}
+	}
+
 	store := session.NewStore(session.Options{})
 	launcher := launch.New(launch.DefaultTTL)
 	cookies := session.Cookies{Secure: false}
@@ -117,6 +125,9 @@ func Run(ctx context.Context, options Options) error {
 		Interceptors: interceptors,
 		Services: []func(*connect.Server){func(rpc *connect.Server) {
 			consolev1connect.RegisterSessionServiceHandler(rpc, sessions)
+			consolev1connect.RegisterScopeServiceHandler(rpc, api.NewScopeService(factory, scope))
+			consolev1connect.RegisterSchemaServiceHandler(rpc, api.NewSchemaService(factory, scope))
+			consolev1connect.RegisterMigrationServiceHandler(rpc, api.NewMigrationService(factory, scope))
 		}},
 	})
 	if err != nil {

@@ -15,7 +15,13 @@ require (
 	sigs.k8s.io/controller-runtime v0.25.2
 )
 
-require k8s.io/apiextensions-apiserver v0.37.1 // indirect
+require (
+	github.com/opencontainers/go-digest v1.0.0 // indirect
+	github.com/opencontainers/image-spec v1.1.1 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
+	k8s.io/apiextensions-apiserver v0.37.1 // indirect
+	oras.land/oras-go/v2 v2.6.4 // indirect
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect

@@ -1,0 +1,461 @@
+syntax = "proto3";
+
+package ptah.console.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1";
+
+// ScopeService says which namespaces the session can see and what it may do
+// in each.
+service ScopeService {
+  // ListNamespaces returns the candidate namespaces with access and hints.
+  rpc ListNamespaces(ListNamespacesRequest) returns (ListNamespacesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+// SchemaService reads PtahSchema resources and their plans.
+service SchemaService {
+  rpc ListSchemas(ListSchemasRequest) returns (ListSchemasResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // GetSchemaPlan reads a plan through the operator's plan reader. SQL is
+  // returned only when every check held.
+  rpc GetSchemaPlan(GetSchemaPlanRequest) returns (GetSchemaPlanResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+// MigrationService reads PtahMigration resources and their plans.
+service MigrationService {
+  rpc ListMigrations(ListMigrationsRequest) returns (ListMigrationsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc GetMigration(GetMigrationRequest) returns (GetMigrationResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc GetMigrationPlan(GetMigrationPlanRequest) returns (GetMigrationPlanResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+// ---- Shared ----
+
+// ObjectRef identifies one object as it was read.
+message ObjectRef {
+  string namespace = 1;
+  string name = 2;
+  string uid = 3;
+  int64 generation = 4;
+  string resource_version = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message Condition {
+  string type = 1;
+  string status = 2;
+  string reason = 3;
+  string message = 4;
+  google.protobuf.Timestamp last_transition = 5;
+  int64 observed_generation = 6;
+}
+
+// Access is what the session got when it read a namespace.
+enum Access {
+  ACCESS_UNSPECIFIED = 0;
+  ACCESS_OK = 1;
+  // The API server refused the read. Not the same as having nothing in it.
+  ACCESS_FORBIDDEN = 2;
+  ACCESS_ERROR = 3;
+}
+
+// NamespaceResult is how a read of one namespace went.
+message NamespaceResult {
+  string namespace = 1;
+  Access access = 2;
+  string reason = 3;
+}
+
+// Answer is a capability hint. Unknown is shown as unavailable.
+enum Answer {
+  ANSWER_UNSPECIFIED = 0;
+  ANSWER_ALLOWED = 1;
+  ANSWER_DENIED = 2;
+  ANSWER_UNKNOWN = 3;
+}
+
+message Capabilities {
+  Answer list_schemas = 1;
+  Answer list_migrations = 2;
+  Answer read_plan_sql = 3;
+  Answer approve_schema_plans = 4;
+  Answer approve_migration_plans = 5;
+  Answer acknowledge_runs = 6;
+  Answer suspend_schemas = 7;
+  Answer suspend_migrations = 8;
+  Answer list_decisions = 9;
+  Answer read_jobs = 10;
+  Answer read_pods = 11;
+  Answer read_logs = 12;
+  Answer read_events = 13;
+}
+
+message NamespaceScope {
+  string name = 1;
+  Access access = 2;
+  string reason = 3;
+  Capabilities capabilities = 4;
+}
+
+message ListNamespacesRequest {}
+
+message ListNamespacesResponse {
+  repeated NamespaceScope namespaces = 1;
+}
+
+// StageState is where one stage of a resource's lifecycle stands.
+enum StageState {
+  STAGE_STATE_UNSPECIFIED = 0;
+  STAGE_STATE_DONE = 1;
+  STAGE_STATE_ACTIVE = 2;
+  STAGE_STATE_WAITING = 3;
+  STAGE_STATE_FAILED = 4;
+  STAGE_STATE_UNKNOWN = 5;
+  STAGE_STATE_NOT_APPLICABLE = 6;
+}
+
+message Stage {
+  string name = 1;
+  StageState state = 2;
+  string detail = 3;
+}
+
+// AttentionKind is why a resource needs a person.
+enum AttentionKind {
+  ATTENTION_KIND_UNSPECIFIED = 0;
+  ATTENTION_KIND_WAITING_FOR_APPROVAL = 1;
+  ATTENTION_KIND_FAILED = 2;
+  ATTENTION_KIND_BLOCKED = 3;
+  ATTENTION_KIND_OUTCOME_UNKNOWN = 4;
+  ATTENTION_KIND_UNRESOLVED_RUN = 5;
+  ATTENTION_KIND_DRIFT = 6;
+  ATTENTION_KIND_SUSPENDED = 7;
+  ATTENTION_KIND_STALE_STATUS = 8;
+}
+
+message Attention {
+  AttentionKind kind = 1;
+  string reason = 2;
+  // The next step the operator supports, in words.
+  string next_step = 3;
+  google.protobuf.Timestamp since = 4;
+}
+
+// GitOps names the controller that manages an object, when its labels or
+// annotations say so. A change made in the console is reverted by it.
+message GitOps {
+  string controller = 1;
+  string application = 2;
+}
+
+message Source {
+  string requested = 1;
+  string resolved = 2;
+  string digest = 3;
+  bool verified = 4;
+  google.protobuf.Timestamp resolved_at = 5;
+  google.protobuf.Timestamp verified_at = 6;
+}
+
+message DriftFinding {
+  string category = 1;
+  int32 count = 2;
+  string severity = 3;
+}
+
+// Target is the database a resource manages, by reference only.
+message Target {
+  string engine = 1;
+  string secret_name = 2;
+  string secret_key = 3;
+  string realm = 4;
+  google.protobuf.Timestamp last_observed_at = 5;
+  string highest_drift_severity = 6;
+  int32 drift_finding_count = 7;
+  repeated DriftFinding drift_findings = 8;
+}
+
+message Operation {
+  string type = 1;
+  string id = 2;
+  string job_name = 3;
+  string job_uid = 4;
+  google.protobuf.Timestamp started_at = 5;
+  int32 attempt = 6;
+}
+
+// ---- Schemas ----
+
+message ConsumedApproval {
+  string name = 1;
+  string uid = 2;
+  string approver = 3;
+  google.protobuf.Timestamp approved_at = 4;
+}
+
+message SchemaPlanSummary {
+  string name = 1;
+  string uid = 2;
+  string fingerprint = 3;
+  string artifact_digest = 4;
+  bool destructive = 5;
+  repeated string privilege_changes = 6;
+  int32 statement_count = 7;
+  google.protobuf.Timestamp created_at = 8;
+  ConsumedApproval approval = 9;
+}
+
+message SchemaApplied {
+  string plan_name = 1;
+  string plan_uid = 2;
+  string plan_fingerprint = 3;
+  string artifact_digest = 4;
+  google.protobuf.Timestamp completed_at = 5;
+}
+
+message PendingObservation {
+  string outcome = 1;
+  string apply_job_name = 2;
+  string apply_job_uid = 3;
+  google.protobuf.Timestamp observe_after = 4;
+}
+
+message Schema {
+  ObjectRef ref = 1;
+  string phase = 2;
+  // False when the status was written for an older generation of the spec.
+  bool status_current = 3;
+  bool suspended = 4;
+  string apply_policy = 5;
+  bool allow_destructive = 6;
+  repeated Condition conditions = 7;
+  Source source = 8;
+  Target target = 9;
+  SchemaPlanSummary current_plan = 10;
+  SchemaApplied applied = 11;
+  Operation active_operation = 12;
+  PendingObservation pending_observation = 13;
+  google.protobuf.Timestamp last_attempt = 14;
+  google.protobuf.Timestamp last_successful_reconciliation = 15;
+  google.protobuf.Timestamp next_reconciliation = 16;
+  repeated Stage stages = 17;
+  repeated Attention attention = 18;
+  GitOps gitops = 19;
+}
+
+message ListSchemasRequest {
+  repeated string namespaces = 1;
+}
+
+message ListSchemasResponse {
+  repeated Schema schemas = 1;
+  repeated NamespaceResult namespaces = 2;
+}
+
+message GetSchemaRequest {
+  string namespace = 1;
+  string name = 2;
+}
+
+message GetSchemaResponse {
+  Schema schema = 1;
+}
+
+// SqlAccess says whether a plan's SQL came back, and if not, why not.
+enum SqlAccess {
+  SQL_ACCESS_UNSPECIFIED = 0;
+  SQL_ACCESS_AVAILABLE = 1;
+  // The identity may read the plan manifest but not its chunks.
+  SQL_ACCESS_NOT_GRANTED = 2;
+  // The stored plan failed a check; nothing of its SQL is shown.
+  SQL_ACCESS_INTEGRITY_FAILED = 3;
+  // The plan was written under a contract or format this console does not read.
+  SQL_ACCESS_UNSUPPORTED = 4;
+}
+
+enum PlanSelection {
+  PLAN_SELECTION_UNSPECIFIED = 0;
+  PLAN_SELECTION_CURRENT = 1;
+  PLAN_SELECTION_APPLIED = 2;
+}
+
+message Statement {
+  int32 index = 1;
+  string sql = 2;
+  string severity = 3;
+  string reason = 4;
+}
+
+message PlanChunk {
+  string name = 1;
+  int32 index = 2;
+  int32 size = 3;
+  string digest = 4;
+}
+
+message SchemaPlan {
+  string namespace = 1;
+  string schema = 2;
+  string schema_uid = 3;
+  PlanSelection selection = 4;
+  string name = 5;
+  string uid = 6;
+  string fingerprint = 7;
+  string content_digest = 8;
+  string dialect = 9;
+  int32 contract_version = 10;
+  bool contract_supported = 11;
+  bool destructive = 12;
+  repeated string privilege_changes = 13;
+  repeated string unrecorded_privilege_changes = 14;
+  int32 statement_count = 15;
+  repeated Statement statements = 16;
+  repeated PlanChunk chunks = 17;
+  string artifact_digest = 18;
+  string policy_fingerprint = 19;
+  string execution_binding_id = 20;
+  string ptah_version = 21;
+  google.protobuf.Timestamp created_at = 22;
+  google.protobuf.Timestamp completed_at = 23;
+  SqlAccess sql_access = 24;
+  string sql_problem = 25;
+}
+
+message GetSchemaPlanRequest {
+  string namespace = 1;
+  string schema = 2;
+  PlanSelection selection = 3;
+}
+
+message GetSchemaPlanResponse {
+  SchemaPlan plan = 1;
+}
+
+// ---- Migrations ----
+
+message MigrationHistory {
+  google.protobuf.Timestamp observed_at = 1;
+  int64 current_version = 2;
+  int64 checkpoint_version = 3;
+  int32 applied_count = 4;
+  int32 pending_count = 5;
+  bool dirty = 6;
+  repeated int64 modified_versions = 7;
+  repeated int64 out_of_order_versions = 8;
+}
+
+message MigrationRun {
+  string outcome = 1;
+  string job_name = 2;
+  string job_uid = 3;
+  google.protobuf.Timestamp started_at = 4;
+  google.protobuf.Timestamp finished_at = 5;
+  repeated int64 applied_versions = 6;
+  string message = 7;
+}
+
+message UnresolvedRun {
+  string outcome = 1;
+  string operation_id = 2;
+  string job_name = 3;
+  string job_uid = 4;
+  string plan_name = 5;
+  string plan_uid = 6;
+  google.protobuf.Timestamp recorded_at = 7;
+}
+
+message ResolvedRun {
+  string operation_id = 1;
+  string outcome = 2;
+  string resolution = 3;
+  string acknowledged_by = 4;
+  google.protobuf.Timestamp resolved_at = 5;
+}
+
+message Migration {
+  ObjectRef ref = 1;
+  string phase = 2;
+  bool status_current = 3;
+  bool suspended = 4;
+  string apply_policy = 5;
+  repeated Condition conditions = 6;
+  Source source = 7;
+  Target target = 8;
+  MigrationHistory history = 9;
+  string plan_name = 10;
+  string plan_uid = 11;
+  MigrationRun last_run = 12;
+  UnresolvedRun unresolved_run = 13;
+  ResolvedRun resolved_run = 14;
+  Operation active_operation = 15;
+  google.protobuf.Timestamp next_reconciliation = 16;
+  repeated Stage stages = 17;
+  repeated Attention attention = 18;
+  GitOps gitops = 19;
+}
+
+message ListMigrationsRequest {
+  repeated string namespaces = 1;
+}
+
+message ListMigrationsResponse {
+  repeated Migration migrations = 1;
+  repeated NamespaceResult namespaces = 2;
+}
+
+message GetMigrationRequest {
+  string namespace = 1;
+  string name = 2;
+}
+
+message GetMigrationResponse {
+  Migration migration = 1;
+}
+
+message PlannedMigration {
+  int64 version = 1;
+  string version_key = 2;
+  string description = 3;
+  string checksum = 4;
+  bool checkpoint = 5;
+  string transaction_mode = 6;
+}
+
+message MigrationPlan {
+  string namespace = 1;
+  string migration = 2;
+  string migration_uid = 3;
+  string name = 4;
+  string uid = 5;
+  string fingerprint = 6;
+  int32 contract_version = 7;
+  string history_fingerprint = 8;
+  int64 current_version = 9;
+  string artifact_digest = 10;
+  string policy_fingerprint = 11;
+  repeated PlannedMigration migrations = 12;
+  google.protobuf.Timestamp created_at = 13;
+}
+
+message GetMigrationPlanRequest {
+  string namespace = 1;
+  string migration = 2;
+}
+
+message GetMigrationPlanResponse {
+  MigrationPlan plan = 1;
+}
