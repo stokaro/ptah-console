@@ -3,13 +3,9 @@ name: npm audit
 on:
   push:
     branches: [main]
+  # Every pull request, not only those that touch a manifest: the check is
+  # required on main, and a required check that never reports blocks a merge.
   pull_request:
-    paths:
-      - "web/package.json"
-      - "web/package-lock.json"
-      - "web/*/package.json"
-      - "web/packages/*/package.json"
-      - ".github/workflows/npm-audit.yml"
   schedule:
     # A new advisory can name a package nothing here changed.
     - cron: "41 5 * * 1"
