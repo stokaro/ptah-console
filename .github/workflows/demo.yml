@@ -1,0 +1,202 @@
+name: Demo
+
+# The basic scenario, recorded against a real operator: an approver signs in
+# to `ptah-console local` with a kubeconfig of their own, reviews the plan
+# the operator made, approves it, and follows it until the database holds
+# it. The lab is the operator's own demonstration lab, from the operator
+# commit this module requires, so the console is shown against the
+# environment the operator proves rather than one built for the video.
+#
+# It runs on request, and on a pull request that changes the demo itself: a
+# run takes a cluster and about half an hour.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/demo.yml
+      - hack/demo/**
+      - web/e2e/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  record:
+    name: Record the demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out the console
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: web/package.json
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # The operator commit is the one go.mod requires: the console is shown
+      # against the operator it is built against, not whatever master holds.
+      - name: Check out the operator this module requires
+        id: operator
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(go list -m -f '{{.Version}}' github.com/stokaro/ptah-operator)"
+          revision="${version##*-}"
+          [[ "$revision" =~ ^[0-9a-f]{12}$ ]] || { echo "cannot read a commit from $version" >&2; exit 1; }
+          git clone --quiet --filter=blob:none https://github.com/stokaro/ptah-operator.git "$RUNNER_TEMP/operator"
+          git -C "$RUNNER_TEMP/operator" checkout --quiet "$revision"
+          printf 'dir=%s\n' "$RUNNER_TEMP/operator" >> "$GITHUB_OUTPUT"
+          printf 'commit=%s\n' "$(git -C "$RUNNER_TEMP/operator" rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      # Read from the operator checkout, as its own demo workflow does.
+      - name: Read the operator's support window and Ptah commit
+        id: support
+        working-directory: ${{ steps.operator.outputs.dir }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          newest="$(go run ./hack/verify-kubernetes-support.go -output=matrix | jq -c '[.[]] | last')"
+          for field in minor_slug kind_version kubernetes_version; do
+            printf '%s=%s\n' "$field" "$(printf '%s' "$newest" | jq -er --arg field "$field" '.[$field]')" >> "$GITHUB_OUTPUT"
+          done
+          printf 'ptah_commit=%s\n' "$(go run ./hack/verifyptahsupport -output=commit)" >> "$GITHUB_OUTPUT"
+      - name: Set up Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4
+        with:
+          version: v4.3.0
+      - name: Install kind and kubectl
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install "sigs.k8s.io/kind@${{ steps.support.outputs.kind_version }}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          install_dir="$RUNNER_TEMP/bin"
+          mkdir -p "$install_dir"
+          base_url="https://dl.k8s.io/release/v${{ steps.support.outputs.kubernetes_version }}/bin/linux/amd64"
+          curl --fail --location --silent --show-error --output "$install_dir/kubectl" "$base_url/kubectl"
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/kubectl.sha256" "$base_url/kubectl.sha256"
+          echo "$(<"$RUNNER_TEMP/kubectl.sha256")  $install_dir/kubectl" | sha256sum --check
+          chmod 0755 "$install_dir/kubectl"
+          echo "$install_dir" >> "$GITHUB_PATH"
+      # The operator's harness refuses an implicit Docker daemon; it is given
+      # an explicit context over SSH to this runner, as in its own workflow.
+      - name: Configure an explicit Docker context
+        id: docker-context
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes apache2-utils openssh-server ffmpeg
+          ssh_key="$RUNNER_TEMP/ptah-demo-ssh"
+          known_hosts="$RUNNER_TEMP/ptah-demo-known-hosts"
+          install -d -m 0700 "$HOME/.ssh"
+          ssh-keygen -q -t ed25519 -N '' -f "$ssh_key"
+          install -m 0600 "$ssh_key.pub" "$HOME/.ssh/authorized_keys"
+          sudo systemctl restart ssh
+          ssh-keyscan -H 127.0.0.1 > "$known_hosts"
+          {
+            printf '%s\n' 'Host ptah-demo-docker'
+            printf '%s\n' '  HostName 127.0.0.1'
+            printf '  User %s\n' "$USER"
+            printf '  IdentityFile %s\n' "$ssh_key"
+            printf '%s\n' '  IdentitiesOnly yes'
+            printf '%s\n' '  StrictHostKeyChecking yes'
+            printf '  UserKnownHostsFile %s\n' "$known_hosts"
+          } > "$HOME/.ssh/config"
+          chmod 0600 "$HOME/.ssh/config"
+          context_name="ptah-console-demo-${{ steps.support.outputs.minor_slug }}"
+          docker context create "$context_name" --docker host=ssh://ptah-demo-docker
+          docker --context "$context_name" info >/dev/null
+          printf 'name=%s\n' "$context_name" >> "$GITHUB_OUTPUT"
+      - name: Bring the operator's lab up
+        working-directory: ${{ steps.operator.outputs.dir }}
+        env:
+          DOCKER_CONTEXT: ${{ steps.docker-context.outputs.name }}
+          E2E_DIRECT_HOST_ACCESS: "1"
+          E2E_PTAH_REVISION: ${{ steps.support.outputs.ptah_commit }}
+          DEMO_KUBERNETES_VERSION: ${{ steps.support.outputs.kubernetes_version }}
+          DEMO_RUN_ID: console-demo-${{ github.run_id }}-${{ github.run_attempt }}
+        run: make demo-up
+      - name: Put a schema in front of an approver
+        env:
+          OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
+          OUT_DIR: ${{ runner.temp }}/demo
+        run: ./hack/demo/prepare.sh
+      - name: Build the console with its web app
+        run: |
+          (cd web && npm ci)
+          make build
+      - name: Install the browser
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      # The console runs as the approver's kubeconfig, and prints its sign-in
+      # link; the browser opens that link and nothing else.
+      - name: Record the scenario
+        env:
+          OUT_DIR: ${{ runner.temp }}/demo
+        shell: bash
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC1091
+          . "$OUT_DIR/facts"
+          ./bin/ptah-console local --kubeconfig "$OUT_DIR/approver.kubeconfig" --namespace "$NAMESPACE" \
+            --no-open > "$OUT_DIR/console.out" 2> "$OUT_DIR/audit.log" &
+          console=$!
+          trap 'kill "$console" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 60); do
+            link="$(sed -n 's|^  \(http://[^ ]*/#t=[A-Za-z0-9_-]*\)$|\1|p' "$OUT_DIR/console.out" | head -n 1)"
+            [ -n "$link" ] && break
+            sleep 1
+          done
+          [ -n "${link:-}" ] || { cat "$OUT_DIR/console.out" "$OUT_DIR/audit.log" >&2; exit 1; }
+          cd web
+          DEMO_LINK="$link" DEMO_PLAN="$PLAN" DEMO_APPROVER="$APPROVER" \
+            npx playwright test -c e2e/playwright.config.ts
+      - name: Check the outcome against the cluster
+        env:
+          OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
+          OUT_DIR: ${{ runner.temp }}/demo
+        run: ./hack/demo/verify.sh
+      - name: Convert the video
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$(find web/test-results -name 'video.webm' | head -n 1)"
+          [ -n "$video" ] || exit 0
+          mkdir -p demo-video
+          cp "$video" demo-video/ptah-console-demo.webm
+          ffmpeg -loglevel error -i "$video" -c:v libx264 -pix_fmt yuv420p -movflags +faststart \
+            demo-video/ptah-console-demo.mp4
+          cp "${{ runner.temp }}/demo/audit.log" demo-video/console-audit.log || true
+          printf 'operator %s\n' "${{ steps.operator.outputs.commit }}" > demo-video/versions.txt
+      - name: Keep the recording
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ptah-console-demo
+          path: |
+            demo-video/
+            web/test-results/
+            web/playwright-report/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Remove the lab
+        if: always()
+        working-directory: ${{ steps.operator.outputs.dir }}
+        run: make demo-down
+      - name: Remove the Docker context
+        if: always() && steps.docker-context.outputs.name != ''
+        run: docker context rm --force "${{ steps.docker-context.outputs.name }}"
