@@ -1,12 +1,22 @@
 // Package server is the console's HTTP surface: the Connect API under /api/
 // and the web app everywhere else.
+//
+// Every request passes the same gates in the same order. The Host has to be
+// one the console was configured to answer to, which is what stops a page
+// that rebinds its DNS name to the loopback listener. A request to the API
+// that changes anything has to come from the console's own origin. Responses
+// carry a Content Security Policy that allows nothing from another origin and
+// no inline script, and API responses are never cached.
 package server
 
 import (
+	"errors"
+	"fmt"
 	"io/fs"
+	"log/slog"
 	"net/http"
-	"path"
-	"strings"
+	"net/url"
+	"time"
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
@@ -19,43 +29,111 @@ import (
 // APIPrefix is where the Connect services are served.
 const APIPrefix = "/api"
 
+// Defaults for the limits Options leaves at zero.
+const (
+	DefaultMaxRequestBytes = 1 << 20
+	DefaultMaxInFlight     = 64
+	DefaultUnaryTimeout    = 30 * time.Second
+)
+
 // Options configure a console's HTTP surface.
 type Options struct {
 	Mode     consolev1.Mode
 	ReadOnly bool
 	// Assets is the built web app, rooted where its index.html is.
 	Assets fs.FS
+	// Origins are the exact origins the console is served from, such as
+	// "http://127.0.0.1:8443". A request's Host has to be one of their hosts,
+	// and a cross-origin request that changes anything is refused. At least
+	// one is required.
+	Origins []string
+	// Logger receives the access log. Nil discards it.
+	Logger *slog.Logger
+
+	// MaxRequestBytes bounds a request body.
+	MaxRequestBytes int64
+	// MaxInFlight bounds the API requests served at once. Streams count
+	// while they are open.
+	MaxInFlight int
+	// UnaryTimeout bounds one unary call, whatever the client asked for.
+	UnaryTimeout time.Duration
 }
 
 // New returns the console's HTTP handler.
-func New(options Options) http.Handler {
-	rpc := connect.NewServer()
+func New(options Options) (http.Handler, error) {
+	if options.Assets == nil {
+		return nil, errors.New("server: the web app's assets are required")
+	}
+	hosts, crossOrigin, err := originGates(options.Origins)
+	if err != nil {
+		return nil, err
+	}
+	if options.MaxRequestBytes <= 0 {
+		options.MaxRequestBytes = DefaultMaxRequestBytes
+	}
+	if options.MaxInFlight <= 0 {
+		options.MaxInFlight = DefaultMaxInFlight
+	}
+	if options.UnaryTimeout <= 0 {
+		options.UnaryTimeout = DefaultUnaryTimeout
+	}
+	logger := options.Logger
+	if logger == nil {
+		logger = slog.New(slog.DiscardHandler)
+	}
+
+	rpc := connect.NewServer(recoverInterceptor(logger), unaryTimeoutInterceptor(options.UnaryTimeout))
 	consolev1connect.RegisterInfoServiceHandler(rpc, api.NewInfo(options.Mode, options.ReadOnly))
 
 	services := http.NewServeMux()
-	connecthttp.Mount(services, rpc)
+	connecthttp.Mount(services, rpc,
+		connecthttp.WithReadMaxBytes(int(options.MaxRequestBytes)),
+		// A browser cannot send this header cross-origin without a preflight,
+		// which the console never answers, so a form or a simple fetch from
+		// another page never reaches a handler.
+		connecthttp.WithRequireConnectProtocolHeader(),
+	)
+
+	var apiHandler http.Handler = services
+	apiHandler = limitBody(apiHandler, options.MaxRequestBytes)
+	apiHandler = crossOrigin.Handler(apiHandler)
+	apiHandler = limitInFlight(apiHandler, options.MaxInFlight)
+	apiHandler = noStore(apiHandler)
 
 	mux := http.NewServeMux()
-	mux.Handle(APIPrefix+"/", http.StripPrefix(APIPrefix, services))
+	mux.Handle(APIPrefix+"/", http.StripPrefix(APIPrefix, apiHandler))
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte("ok\n"))
+	})
 	mux.Handle("/", app(options.Assets))
-	return mux
+
+	var handler http.Handler = mux
+	handler = securityHeaders(handler)
+	handler = recoverHTTP(handler, logger)
+	handler = requireHost(handler, hosts)
+	handler = accessLog(handler, logger)
+	return handler, nil
 }
 
-// app serves the web app's files, and index.html for any other path without
-// a file extension, which is a route the app resolves in the browser. A
-// missing asset stays a 404 rather than a page that parses as broken script.
-func app(assets fs.FS) http.Handler {
-	files := http.FileServerFS(assets)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		name := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
-		if name == "" {
-			files.ServeHTTP(w, r)
-			return
+// originGates turns the configured origins into the set of acceptable Host
+// headers and a cross-origin protection that trusts exactly those origins.
+func originGates(origins []string) (map[string]bool, *http.CrossOriginProtection, error) {
+	if len(origins) == 0 {
+		return nil, nil, errors.New("server: at least one origin is required")
+	}
+	hosts := make(map[string]bool, len(origins))
+	protection := http.NewCrossOriginProtection()
+	for _, origin := range origins {
+		parsed, err := url.Parse(origin)
+		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" ||
+			parsed.Path != "" || parsed.RawQuery != "" || parsed.User != nil {
+			return nil, nil, fmt.Errorf("server: %q is not an origin of the form scheme://host[:port]", origin)
 		}
-		if _, err := fs.Stat(assets, name); err == nil || path.Ext(name) != "" {
-			files.ServeHTTP(w, r)
-			return
+		hosts[parsed.Host] = true
+		if err := protection.AddTrustedOrigin(origin); err != nil {
+			return nil, nil, fmt.Errorf("server: trust origin %q: %w", origin, err)
 		}
-		http.ServeFileFS(w, r, assets, "index.html")
-	})
+	}
+	return hosts, protection, nil
 }
