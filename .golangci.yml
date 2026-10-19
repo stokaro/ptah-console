@@ -267,6 +267,12 @@ linters:
         text: 'unused-parameter:'
       - path: '_test\.go$'
         text: 'unchecked-type-assertion:'
+      # Tests write fixtures under t.TempDir(); gosec's taint analysis reads
+      # that as a path from outside.
+      - path: '_test\.go$'
+        linters:
+          - gosec
+        text: 'G(304|703):'
       # A command line writes to the streams it was handed.
       - path: '(cli|cmd)/.*\.go$'
         text: 'use of `fmt\..*` forbidden by pattern'

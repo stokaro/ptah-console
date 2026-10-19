@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package ptah.console.v1;
+
+import "ptah/console/v1/info.proto";
+
+option go_package = "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1";
+
+// SessionService signs a browser in and says whom its requests act for.
+service SessionService {
+  // ExchangeLaunchToken trades the single-use token ptah-console local put in
+  // the URL fragment for a session cookie.
+  rpc ExchangeLaunchToken(ExchangeLaunchTokenRequest) returns (ExchangeLaunchTokenResponse) {}
+
+  // GetSession says whom the session's requests act for, as the API server
+  // sees it.
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Logout ends the session and every stream bound to it.
+  rpc Logout(LogoutRequest) returns (LogoutResponse) {}
+}
+
+message ExchangeLaunchTokenRequest {
+  string token = 1;
+}
+
+message ExchangeLaunchTokenResponse {}
+
+message GetSessionRequest {}
+
+message GetSessionResponse {
+  Mode mode = 1;
+  // The kubeconfig context in local mode, the connection in hosted mode.
+  string context = 2;
+  // Who the API server says the requests run as.
+  string kubernetes_username = 3;
+  repeated string kubernetes_groups = 4;
+  // The Console account in hosted mode.
+  string account_id = 5;
+  string display_name = 6;
+  bool read_only = 7;
+  // Set when the kubeconfig itself asks to impersonate someone; the console
+  // shows it rather than adding or dropping it.
+  string kubeconfig_impersonates = 8;
+  // True when the kubeconfig turns off verification of the API server's
+  // certificate.
+  bool insecure_tls = 9;
+}
+
+message LogoutRequest {}
+
+message LogoutResponse {}

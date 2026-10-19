@@ -9,11 +9,11 @@ LDFLAGS := -X github.com/stokaro/ptah-console/internal/buildinfo.version=$(VERSI
 
 QTLINT_RULES := -require-qt-c-receiver -require-data-rows -require-testing-run
 
-# buf runs at a pinned version through go run, so its dependency graph stays
-# out of go.mod. The code generators it calls are pinned in go.mod and
-# web/package-lock.json.
-BUF_VERSION := v1.74.0
-BUF := $(GO) run github.com/bufbuild/buf/cmd/buf@$(BUF_VERSION)
+# buf is a tool of its own module, tools/buf, so its dependency graph stays out
+# of go.mod and its go.sum pins every module it needs: a build verifies them
+# against that file instead of asking the checksum database each time. The
+# code generators it calls are pinned in go.mod and web/package-lock.json.
+BUF := $(GO) tool -modfile=tools/buf/go.mod buf
 # The contract a change is compared with.
 BUF_BASE ?= origin/main
 GENERATED := internal/gen web/app/src/gen
@@ -60,6 +60,7 @@ fmt-check:
 verify-go-mod:
 	$(GO) mod tidy -diff
 	cd web && $(GO) mod tidy -diff
+	cd tools/buf && $(GO) mod tidy -diff
 
 # What the Verify job runs.
 check: fmt-check verify-go-mod vet build-go test

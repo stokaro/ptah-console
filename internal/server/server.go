@@ -57,6 +57,12 @@ type Options struct {
 	MaxInFlight int
 	// UnaryTimeout bounds one unary call, whatever the client asked for.
 	UnaryTimeout time.Duration
+
+	// Interceptors run on every call, in order, after panic recovery and the
+	// unary timeout. Authentication goes here.
+	Interceptors []connect.ServerInterceptor
+	// Services register the console's services beside InfoService.
+	Services []func(*connect.Server)
 }
 
 // New returns the console's HTTP handler.
@@ -82,8 +88,14 @@ func New(options Options) (http.Handler, error) {
 		logger = slog.New(slog.DiscardHandler)
 	}
 
-	rpc := connect.NewServer(recoverInterceptor(logger), unaryTimeoutInterceptor(options.UnaryTimeout))
+	interceptors := append([]connect.ServerInterceptor{
+		recoverInterceptor(logger), unaryTimeoutInterceptor(options.UnaryTimeout),
+	}, options.Interceptors...)
+	rpc := connect.NewServer(interceptors...)
 	consolev1connect.RegisterInfoServiceHandler(rpc, api.NewInfo(options.Mode, options.ReadOnly))
+	for _, register := range options.Services {
+		register(rpc)
+	}
 
 	services := http.NewServeMux()
 	connecthttp.Mount(services, rpc,
