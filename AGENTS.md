@@ -56,13 +56,17 @@ a change to #588 first.
 ## Building and testing
 
 ```bash
-make build          # the ptah-console binary
-make test           # unit tests
-make vet            # go vet
-make verify         # the checks CI runs
+make build          # the ptah-console binary, into bin/
+make test           # unit tests, with the race detector
+make check          # gofmt, go mod tidy, vet, build, test: the Verify job
+make lint           # golangci-lint, qtlint, nolintguard, teststyle
+make vulncheck      # govulncheck
+make verify         # everything CI runs
 ```
 
-Each later step adds its targets here as it lands.
+The Go lint setup is stokaro/ptah's: change `.golangci.yml` the way you would
+there, and give every `//nolint` and `#nosec` a reason. Each later step adds
+its targets here as it lands.
 
 ## What a proof owes
 
