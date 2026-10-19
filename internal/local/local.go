@@ -23,6 +23,7 @@ import (
 	"connectrpc.com/connect/v2"
 
 	"github.com/stokaro/ptah-console/internal/api"
+	"github.com/stokaro/ptah-console/internal/audit"
 	"github.com/stokaro/ptah-console/internal/auth/launch"
 	"github.com/stokaro/ptah-console/internal/auth/session"
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
@@ -48,6 +49,8 @@ type Options struct {
 
 	Assets fs.FS
 	Logger *slog.Logger
+	// Audit receives one line per action. Nil discards them.
+	Audit *audit.Logger
 
 	// Stdin is read for answers and for Enter, when Interactive is true.
 	Stdin       io.Reader
@@ -62,6 +65,9 @@ type Options struct {
 func Run(ctx context.Context, options Options) error {
 	if options.Logger == nil {
 		options.Logger = slog.New(slog.DiscardHandler)
+	}
+	if options.Audit == nil {
+		options.Audit = audit.Discard()
 	}
 	resolved, err := localkube.Resolve(options.Kubeconfig, options.Context)
 	if err != nil {
@@ -91,7 +97,7 @@ func Run(ctx context.Context, options Options) error {
 		ReadOnly:     options.ReadOnly,
 		Impersonates: resolved.Impersonates,
 		InsecureTLS:  resolved.InsecureTLS,
-	})
+	}, options.Audit)
 	interceptors := []connect.ServerInterceptor{
 		session.Interceptor(store, cookies,
 			consolev1connect.InfoServiceGetInfoProcedure,

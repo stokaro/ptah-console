@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/stokaro/ptah-console/internal/audit"
 	"github.com/stokaro/ptah-console/internal/local"
 	"github.com/stokaro/ptah-console/web"
 )
@@ -24,6 +25,7 @@ func newLocal(stdout io.Writer) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			options.Assets = web.Assets()
 			options.Logger = slog.Default()
+			options.Audit = audit.New(os.Stderr)
 			options.Stdout = stdout
 			options.Stdin = os.Stdin
 			options.Interactive = isTerminal(os.Stdin)

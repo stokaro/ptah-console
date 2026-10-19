@@ -9,6 +9,7 @@ package kube
 import (
 	"errors"
 	"fmt"
+	"net/http"
 
 	operatorv1alpha1 "github.com/stokaro/ptah-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -98,6 +99,7 @@ func NewClient(config *rest.Config) (*Client, error) {
 		return nil, errors.New("kube: a REST configuration is required")
 	}
 	own := rest.CopyConfig(config)
+	own.Wrap(func(next http.RoundTripper) http.RoundTripper { return auditIDTransport{next: next} })
 	scheme, err := Scheme()
 	if err != nil {
 		return nil, err
