@@ -131,6 +131,7 @@ func Run(ctx context.Context, options Options) error {
 			consolev1connect.RegisterMigrationServiceHandler(rpc, api.NewMigrationService(factory, scope))
 			consolev1connect.RegisterDecisionServiceHandler(rpc, api.NewDecisionService(factory, scope, decision.NewLedger(), options.Audit))
 			consolev1connect.RegisterWatchServiceHandler(rpc, api.NewWatchService(factory, scope, api.WatchOptions{}))
+			consolev1connect.RegisterDiagnosticsServiceHandler(rpc, api.NewDiagnosticsService(factory, scope, nil))
 		}},
 	})
 	if err != nil {
