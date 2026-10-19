@@ -1,0 +1,42 @@
+name: Bug report
+description: The console shows, sends or allows something it should not.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Redact credentials.** Kubeconfigs, tokens, passwords and database
+        URLs never belong in an issue.
+  - type: input
+    id: console-version
+    attributes:
+      label: Console version
+      description: The output of `ptah-console version`, or the chart version.
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options: ["local", "hosted"]
+    validations:
+      required: true
+  - type: input
+    id: operator-version
+    attributes:
+      label: Operator version
+    validations:
+      required: true
+  - type: input
+    id: kubernetes
+    attributes:
+      label: Kubernetes version and distribution
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what you expected
+      description: The screen or request, what it showed or did, and what it should have done.
+    validations:
+      required: true

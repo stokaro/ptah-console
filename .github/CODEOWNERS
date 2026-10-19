@@ -1,0 +1,2 @@
+# Workflows decide what CI accepts, so a change to them needs a review from their owner.
+/.github/ @denisvmedia

@@ -1,0 +1,4 @@
+* text=auto eol=lf
+# Generated code: collapsed in reviews, excluded from language statistics.
+/internal/gen/** linguist-generated=true
+/web/app/src/gen/** linguist-generated=true

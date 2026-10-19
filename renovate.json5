@@ -1,0 +1,36 @@
+{
+  // Renovate does nothing until the GitHub App is installed on the repository;
+  // this file is what it reads once it is.
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
+    ':dependencyDashboard',
+    ':semanticCommitsDisabled',
+    'helpers:pinGitHubActionDigests',
+  ],
+  // Plain imperative subjects, as `git log` shows.
+  commitMessageAction: 'Update',
+  timezone: 'Europe/Prague',
+  schedule: ['before 6am on monday'],
+  prConcurrentLimit: 4,
+  postUpdateOptions: ['gomodTidy'],
+  packageRules: [
+    {
+      matchManagers: ['github-actions'],
+      groupName: 'GitHub Actions',
+    },
+    {
+      // The console reads the operator's API types and plan reader, so the
+      // operator module and the Kubernetes libraries move together, at the
+      // versions the operator's own go.mod uses.
+      matchManagers: ['gomod'],
+      matchPackageNames: ['github.com/stokaro/ptah-operator', 'k8s.io/**', 'sigs.k8s.io/**'],
+      groupName: 'operator and Kubernetes libraries',
+    },
+    {
+      matchManagers: ['npm'],
+      matchUpdateTypes: ['minor', 'patch'],
+      groupName: 'web dependencies',
+    },
+  ],
+}
