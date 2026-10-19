@@ -343,10 +343,14 @@ func (x *Heartbeat) GetObservedAt() *timestamppb.Timestamp {
 // Lost says a watch stopped. What the page shows for that namespace and kind
 // may be stale from here on.
 type Lost struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Kind          WatchedKind            `protobuf:"varint,1,opt,name=kind,proto3,enum=ptah.console.v1.WatchedKind" json:"kind,omitempty"`
-	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Kind      WatchedKind            `protobuf:"varint,1,opt,name=kind,proto3,enum=ptah.console.v1.WatchedKind" json:"kind,omitempty"`
+	Namespace string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Reason    string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	// The console is opening the watch again: the API server did not answer,
+	// and the page is behind until it does. False when the identity may not
+	// watch the kind, which no retry changes.
+	Reconnecting  bool `protobuf:"varint,4,opt,name=reconnecting,proto3" json:"reconnecting,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -402,6 +406,13 @@ func (x *Lost) GetReason() string {
 	return ""
 }
 
+func (x *Lost) GetReconnecting() bool {
+	if x != nil {
+		return x.Reconnecting
+	}
+	return false
+}
+
 var File_ptah_console_v1_watch_proto protoreflect.FileDescriptor
 
 const file_ptah_console_v1_watch_proto_rawDesc = "" +
@@ -426,11 +437,12 @@ const file_ptah_console_v1_watch_proto_rawDesc = "" +
 	"\x10resource_version\x18\x04 \x01(\tR\x0fresourceVersion\"H\n" +
 	"\tHeartbeat\x12;\n" +
 	"\vobserved_at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"observedAt\"n\n" +
+	"observedAt\"\x92\x01\n" +
 	"\x04Lost\x120\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1c.ptah.console.v1.WatchedKindR\x04kind\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x16\n" +
-	"\x06reason\x18\x03 \x01(\tR\x06reason*\xcc\x01\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\x12\"\n" +
+	"\freconnecting\x18\x04 \x01(\bR\freconnecting*\xcc\x01\n" +
 	"\vWatchedKind\x12\x1c\n" +
 	"\x18WATCHED_KIND_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13WATCHED_KIND_SCHEMA\x10\x01\x12\x1a\n" +

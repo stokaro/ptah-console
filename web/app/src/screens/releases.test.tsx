@@ -4,7 +4,8 @@ import { axe } from "jest-axe"
 import { describe, expect, it } from "vitest"
 
 import { DecisionOutcome, type SetSuspendedRequest } from "../gen/ptah/console/v1/decisions_pb"
-import { renderConsole, waitingSchema } from "../test/console"
+import { Evidence } from "../gen/ptah/console/v1/diagnostics_pb"
+import { minutesAgo, renderConsole, waitingSchema } from "../test/console"
 
 describe("Developer", () => {
   it("shows where a release stands, step by step", async () => {
@@ -54,5 +55,49 @@ describe("Developer", () => {
       resourceVersion: "41",
       suspended: true,
     })
+  })
+})
+
+describe("What happened", () => {
+  it("puts the Events about the resource among its conditions", async () => {
+    renderConsole("/releases/application/schema/storefront", {
+      schemas: [waitingSchema()],
+      diagnostics: {
+        events: {
+          evidence: Evidence.SHOWN,
+          events: [
+            {
+              type: "Normal",
+              reason: "PlanPublished",
+              message: "plan ptah-plan-1 stored",
+              count: 1,
+              lastSeen: minutesAgo(11),
+            },
+          ],
+        },
+      },
+    })
+
+    const timeline = await screen.findByRole("list", { name: "What happened to storefront" })
+    expect(await within(timeline).findByText("Event · PlanPublished")).toBeInTheDocument()
+    expect(within(timeline).getByText("ApprovalRequired · AwaitingApproval")).toBeInTheDocument()
+  })
+
+  it("says when Events are not shown, and why", async () => {
+    renderConsole("/releases/application/schema/storefront", {
+      schemas: [waitingSchema()],
+      diagnostics: {
+        events: {
+          evidence: Evidence.NOT_GRANTED,
+          problem: 'User "dev" cannot list resource "events"',
+        },
+      },
+    })
+
+    expect(
+      await screen.findByText(
+        /Kubernetes Events are not shown: User "dev" cannot list resource "events"/
+      )
+    ).toBeInTheDocument()
   })
 })

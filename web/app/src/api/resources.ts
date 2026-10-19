@@ -1,6 +1,7 @@
 import { skipToken, useQuery } from "@connectrpc/connect-query"
 
 import { DecisionService } from "../gen/ptah/console/v1/decisions_pb"
+import { useLive } from "./live"
 import {
   Access,
   Answer,
@@ -39,10 +40,19 @@ export function canAnywhere(scopes: NamespaceScope[], capability: Capability) {
 }
 
 /** Whether a page offers a decision, and if not, why not. */
-export type Offer = "allowed" | "read-only" | "denied"
+export type Offer = "allowed" | "read-only" | "denied" | "offline"
 
 /** The text a page shows in place of a decision a read-only console refuses. */
 export const readOnlyText = "This console runs read-only: it sends no decision."
+
+/** The text a page shows in place of a decision while the cluster is out of reach. */
+export const offlineText =
+  "The console lost touch with the cluster. Decisions wait until it is back; this page reconnects on its own."
+
+/** What a page shows in place of a decision it does not offer, or nothing. */
+export function offerText(offer: Offer, denied: string) {
+  return { allowed: "", "read-only": readOnlyText, offline: offlineText, denied }[offer]
+}
 
 /**
  * Says whether a page should offer a decision: not in a read-only console,
@@ -52,9 +62,13 @@ export const readOnlyText = "This console runs read-only: it sends no decision."
 export function useOffer() {
   const session = useSession()
   const scope = useScope()
+  const live = useLive()
   return (namespace: string | undefined, capability: Capability): Offer => {
     if (session.data?.readOnly) {
       return "read-only"
+    }
+    if (live.status === "lost") {
+      return "offline"
     }
     const allowed =
       namespace === undefined
@@ -74,9 +88,13 @@ export function useResources() {
     ...(schemas.data?.schemas ?? []).map(fromSchema),
     ...(migrations.data?.migrations ?? []).map(fromMigration),
   ]
+  const truncated = [...(schemas.data?.namespaces ?? []), ...(migrations.data?.namespaces ?? [])]
+    .filter((result) => result.truncated)
+    .map((result) => result.namespace)
   return {
     scope,
     resources,
+    truncated: [...new Set(truncated)],
     loading:
       scope.isPending || (scope.readable.length > 0 && (schemas.isPending || migrations.isPending)),
     error: scope.error ?? schemas.error ?? migrations.error,

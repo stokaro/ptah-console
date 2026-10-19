@@ -140,3 +140,19 @@ describe("On call", () => {
     expect(screen.getByText(/Retry, rollback and force apply are not offered/)).toBeInTheDocument()
   })
 })
+
+describe("The next supported step", () => {
+  it("offers the operator plugin's command that shows the same state", async () => {
+    const withCommand = create(MigrationSchema, unresolved)
+    withCommand.attention[0].command = "kubectl ptah migration billing -n application"
+    renderConsole("/incidents/application/migration/billing", {
+      migrations: [withCommand],
+      diagnostics,
+    })
+
+    expect(await screen.findByLabelText("Command that shows the same state")).toHaveTextContent(
+      "kubectl ptah migration billing -n application"
+    )
+    expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument()
+  })
+})

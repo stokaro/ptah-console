@@ -35,12 +35,13 @@ import {
   SqlAccess,
   StageState,
   type CapabilitiesSchema,
+  type OperatorApiSchema,
   type Migration,
   type Schema,
   type SchemaPlan,
 } from "../gen/ptah/console/v1/resources_pb"
 import { SessionService } from "../gen/ptah/console/v1/session_pb"
-import { WatchService } from "../gen/ptah/console/v1/watch_pb"
+import { WatchService, type SubscribeResponseSchema } from "../gen/ptah/console/v1/watch_pb"
 
 export const minutesAgo = (minutes: number) =>
   timestampFromDate(new Date(Date.now() - minutes * 60_000))
@@ -182,6 +183,22 @@ export interface Fixture {
     request: SetSuspendedRequest
   ) => MessageInitShape<typeof SetSuspendedResponseSchema>
   diagnostics?: MessageInitShape<typeof GetDiagnosticsResponseSchema>
+  /** What discovery says; served in full by default. */
+  operatorApi?: MessageInitShape<typeof OperatorApiSchema>
+  /** Namespaces whose lists stopped short. */
+  truncated?: string[]
+  /** The live stream; one heartbeat, then quiet, by default. */
+  watch?: (signal: AbortSignal) => AsyncIterable<MessageInitShape<typeof SubscribeResponseSchema>>
+}
+
+/** A watch that says it is live once and then stays quiet. */
+async function* quietWatch(signal: AbortSignal) {
+  yield heartbeat()
+  await new Promise((resolve) => signal.addEventListener("abort", resolve))
+}
+
+export function heartbeat(): MessageInitShape<typeof SubscribeResponseSchema> {
+  return { event: { case: "heartbeat", value: { observedAt: timestampFromDate(new Date()) } } }
 }
 
 export function result(init: MessageInitShape<typeof DecisionResultSchema>) {
@@ -209,10 +226,20 @@ export function consoleTransport(fixture: Fixture) {
         namespaces: [
           { name: "application", access: Access.OK, capabilities: fixture.capabilities ?? allowed },
         ],
+        operatorApi: fixture.operatorApi ?? { served: true },
       }),
     })
     service(SchemaService, {
-      listSchemas: () => ({ schemas: fixture.schemas ?? [] }),
+      listSchemas: () => ({
+        schemas: fixture.schemas ?? [],
+        namespaces: [
+          {
+            namespace: "application",
+            access: Access.OK,
+            truncated: (fixture.truncated ?? []).includes("application"),
+          },
+        ],
+      }),
       getSchemaPlan: () => ({ plan: fixture.plan ?? storedPlan() }),
     })
     service(MigrationService, {
@@ -227,10 +254,7 @@ export function consoleTransport(fixture: Fixture) {
     })
     service(DiagnosticsService, { getDiagnostics: () => fixture.diagnostics ?? {} })
     service(WatchService, {
-      async *subscribe(_request, context) {
-        yield { event: { case: "heartbeat", value: { observedAt: timestampFromDate(new Date()) } } }
-        await new Promise((resolve) => context.signal.addEventListener("abort", resolve))
-      },
+      subscribe: (_request, context) => (fixture.watch ?? quietWatch)(context.signal),
     })
   })
 }

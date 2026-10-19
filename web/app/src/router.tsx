@@ -3,11 +3,12 @@ import {
   createRoute,
   createRouter,
   lazyRouteComponent,
-  redirect,
   type RouterHistory,
 } from "@tanstack/react-router"
 
+import { Home, Launch, Login } from "./screens/Auth"
 import { Loading } from "./screens/common"
+import { RouteError } from "./screens/RouteError"
 import { Shell } from "./screens/Shell"
 
 // Each screen is its own chunk: the first page loads the shell and the one
@@ -38,13 +39,9 @@ function ShellRoute() {
   return <Shell launchError={launchError} />
 }
 
-const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/",
-  beforeLoad: () => {
-    throw redirect({ to: "/approve", replace: true })
-  },
-})
+const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: Home })
+const launch = createRoute({ getParentRoute: () => rootRoute, path: "launch", component: Launch })
+const login = createRoute({ getParentRoute: () => rootRoute, path: "login", component: Login })
 
 const approve = createRoute({
   getParentRoute: () => rootRoute,
@@ -89,6 +86,8 @@ const decision = createRoute({
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
+  launch,
+  login,
   approve,
   review,
   releases,
@@ -108,6 +107,7 @@ export function createAppRouter(
     context: options.context ?? {},
     scrollRestoration: true,
     defaultPendingComponent: () => <Loading what="the page" />,
+    defaultErrorComponent: RouteError,
     defaultPendingMs: 300,
   })
 }

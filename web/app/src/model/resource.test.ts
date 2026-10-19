@@ -65,3 +65,49 @@ describe("say", () => {
     })
   })
 })
+
+// One sentence for each combination of stages a schema passes through.
+describe("say across stage combinations", () => {
+  const stages = (...states: StageState[]) =>
+    fromSchema(
+      waitingSchema((schema) => {
+        schema.attention = []
+        schema.stages.forEach((stage, index) => {
+          stage.state = states[index] ?? StageState.NOT_APPLICABLE
+          stage.detail = ""
+        })
+      })
+    )
+
+  it.each([
+    { name: "planning", states: [StageState.DONE, StageState.ACTIVE], tone: "run" },
+    {
+      name: "applying",
+      states: [StageState.DONE, StageState.DONE, StageState.DONE, StageState.ACTIVE],
+      tone: "run",
+    },
+    {
+      name: "verified",
+      states: [StageState.DONE, StageState.DONE, StageState.DONE, StageState.DONE, StageState.DONE],
+      tone: "ok",
+    },
+    {
+      name: "nothing to apply",
+      states: [
+        StageState.DONE,
+        StageState.DONE,
+        StageState.NOT_APPLICABLE,
+        StageState.NOT_APPLICABLE,
+        StageState.DONE,
+      ],
+      tone: "ok",
+    },
+    {
+      name: "an Apply that failed",
+      states: [StageState.DONE, StageState.DONE, StageState.DONE, StageState.FAILED],
+      tone: "bad",
+    },
+  ])("$name", ({ states, tone }) => {
+    expect(say(stages(...states), new Date()).tone).toBe(tone)
+  })
+})

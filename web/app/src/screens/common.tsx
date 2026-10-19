@@ -65,6 +65,25 @@ export function UnreadableNamespaces({ scopes }: { scopes: NamespaceScope[] }) {
   )
 }
 
+/** Namespaces holding more than one read returns, said rather than hidden. */
+export function TruncatedNotice({ namespaces }: { namespaces: string[] }) {
+  if (namespaces.length === 0) {
+    return null
+  }
+  return (
+    <p className="m-0 rounded-xl border border-line bg-card px-4 py-3 text-[13px] text-fg2">
+      These namespaces hold more than the console reads at once; only the first are shown:{" "}
+      {namespaces.map((namespace, index) => (
+        <span key={namespace}>
+          {index > 0 ? ", " : ""}
+          <code className="font-mono">{namespace}</code>
+        </span>
+      ))}
+      .
+    </p>
+  )
+}
+
 export function Loading({ what }: { what: string }) {
   return (
     <p role="status" className="m-0 flex items-center gap-3 p-4 text-sm text-fg2">

@@ -8,7 +8,13 @@ import { DiagnosticsService } from "../gen/ptah/console/v1/diagnostics_pb"
 import { MigrationService, SchemaService } from "../gen/ptah/console/v1/resources_pb"
 import { WatchService, WatchedKind } from "../gen/ptah/console/v1/watch_pb"
 
-export type LiveStatus = "connecting" | "live" | "lost" | "ended"
+/**
+ * Where live updates stand. "lost" is a connection the console is getting
+ * back, and decisions wait for it; "denied" is an identity that may not
+ * watch, which waiting does not change, and decisions still go to the
+ * server, which checks them anyway.
+ */
+export type LiveStatus = "connecting" | "live" | "lost" | "denied" | "ended"
 
 export interface LiveState {
   status: LiveStatus
@@ -103,7 +109,7 @@ export function LiveUpdates({
               setState({ status: "live", lastHeartbeat: new Date() })
             } else if (event.case === "invalidate") {
               invalidate(queryClient, event.value.kind)
-            } else if (event.case === "lost") {
+            } else if (event.case === "lost" && event.value.reconnecting) {
               behind = true
               const reason = event.value.reason
               setState((previous) => ({
@@ -123,6 +129,14 @@ export function LiveUpdates({
             setState({ status: "ended", reason: failure.rawMessage })
             void queryClient.invalidateQueries()
             return
+          }
+          if (failure.code === Code.PermissionDenied) {
+            // The identity may not watch here. Grants change rarely; ask
+            // again at the slowest pace.
+            setState({ status: "denied", reason: failure.rawMessage })
+            attempt = 6
+            await sleep(backoff(attempt), abort.signal)
+            continue
           }
           behind = true
           setState((previous) => ({

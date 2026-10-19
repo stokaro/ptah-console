@@ -135,6 +135,17 @@ func lost(events []*consolev1.SubscribeResponse) []consolev1.WatchedKind {
 	return kinds
 }
 
+// reconnecting counts the lost watches the console said it is reopening.
+func reconnecting(events []*consolev1.SubscribeResponse) int {
+	count := 0
+	for _, event := range events {
+		if event.GetLost().GetReconnecting() {
+			count++
+		}
+	}
+	return count
+}
+
 // A change made after the stream says it is live reaches it, across
 // windows.
 func TestAChangeReachesTheStream(t *testing.T) {
@@ -177,6 +188,8 @@ func TestTheStreamEndsWhenTheGrantDoes(t *testing.T) {
 	events, err := until(stream, never)
 
 	c.Assert(connect.CodeOf(err), qt.Equals, connect.CodePermissionDenied)
+	// A refusal is not a connection to wait for: no retry changes it.
+	c.Assert(reconnecting(events), qt.Equals, 0)
 	c.Assert(lost(events), qt.ContentEquals, []consolev1.WatchedKind{
 		consolev1.WatchedKind_WATCHED_KIND_SCHEMA,
 		consolev1.WatchedKind_WATCHED_KIND_MIGRATION,

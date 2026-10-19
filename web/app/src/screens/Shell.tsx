@@ -1,12 +1,13 @@
 import { Code, ConnectError } from "@connectrpc/connect"
-import { EmptyState, Wordmark } from "@ptah/console-ui"
-import { Link, Outlet, useRouterState } from "@tanstack/react-router"
+import { Freshness, Pill, Wordmark } from "@ptah/console-ui"
+import { Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router"
 
 import { LiveUpdates, useLive } from "../api/live"
 import { useScope, useSession } from "../api/resources"
 import { BuildFooter } from "../BuildFooter"
 import { Mode } from "../gen/ptah/console/v1/info_pb"
 import { useTheme, type ThemeChoice } from "../theme"
+import { useNow } from "./common"
 
 const roles = [
   { to: "/approve", label: "Approver" },
@@ -30,32 +31,60 @@ export function Shell({ launchError }: ShellProps) {
   const session = useSession()
   const scope = useScope()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const onAuthPage = pathname === "/launch" || pathname === "/login"
   const onList = pathname.split("/").filter(Boolean).length <= 1
   const signedOut = session.error && ConnectError.from(session.error).code === Code.Unauthenticated
 
+  if (signedOut && !onAuthPage) {
+    return <Navigate to="/launch" replace />
+  }
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      {launchError ? (
-        <p role="alert" className="m-0 border-b border-line bg-redbg px-5 py-3 text-sm text-red">
-          {launchError}
-        </p>
-      ) : null}
-      <main className="mx-auto box-border flex w-full max-w-[820px] flex-1 flex-col gap-4 px-5 pt-[22px] pb-[72px]">
-        {signedOut ? (
-          <EmptyState tone="warn" title="This page is not signed in">
-            Open the link ptah-console printed in your terminal. Press Enter there for a new one.
-          </EmptyState>
-        ) : (
-          <LiveUpdates namespaces={scope.readable}>
-            <LiveBanner />
-            {onList ? <RoleNav /> : null}
+    <LiveUpdates namespaces={signedOut ? [] : scope.readable}>
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        {launchError ? (
+          <p role="alert" className="m-0 border-b border-line bg-redbg px-5 py-3 text-sm text-red">
+            {launchError}
+          </p>
+        ) : null}
+        <main className="mx-auto box-border flex w-full max-w-[820px] flex-1 flex-col gap-4 px-5 pt-[22px] pb-[72px]">
+          {onAuthPage ? (
             <Outlet />
-          </LiveUpdates>
-        )}
-      </main>
-      <BuildFooter />
-    </div>
+          ) : (
+            <>
+              <OperatorApiBanner />
+              <LiveBanner />
+              {onList ? <RoleNav /> : null}
+              <Outlet />
+            </>
+          )}
+        </main>
+        <BuildFooter />
+      </div>
+    </LiveUpdates>
+  )
+}
+
+/** Says when the cluster does not serve the operator's API, or not all of it. */
+function OperatorApiBanner() {
+  const scope = useScope()
+  const answer = scope.data?.operatorApi
+  if (!answer || (answer.served && answer.missing.length === 0)) {
+    return null
+  }
+  return (
+    <p
+      role="alert"
+      className="m-0 rounded-xl border border-line bg-redbg px-4 py-3 text-sm text-fg"
+    >
+      {answer.problem}
+      {answer.missing.length > 0 ? (
+        <>
+          {" "}
+          Not served: <code className="font-mono">{answer.missing.join(", ")}</code>.
+        </>
+      ) : null}
+    </p>
   )
 }
 
@@ -77,9 +106,8 @@ function Header() {
           </span>
         </span>
       ) : null}
-      {identity?.readOnly ? (
-        <span className="rounded-full bg-greybg px-2.5 py-1 text-xs text-fg2">Read-only</span>
-      ) : null}
+      {identity?.readOnly ? <Pill>Read-only</Pill> : null}
+      <HeaderFreshness />
       {identity?.kubeconfigImpersonates ? (
         <span className="text-xs text-amber">
           the kubeconfig impersonates {identity.kubeconfigImpersonates}
@@ -134,6 +162,17 @@ function RoleNav() {
   )
 }
 
+/** How current the page is, while there is anything to follow. */
+function HeaderFreshness() {
+  const live = useLive()
+  const scope = useScope()
+  const now = useNow(5_000)
+  if (scope.readable.length === 0) {
+    return null
+  }
+  return <Freshness state={live.status} at={live.lastHeartbeat} now={now} />
+}
+
 function LiveBanner() {
   const live = useLive()
   if (live.status === "ended") {
@@ -159,8 +198,8 @@ function LiveBanner() {
       role="status"
       className="m-0 rounded-xl border border-line bg-violetbg px-4 py-3 text-sm text-fg"
     >
-      Live updates stopped at {since}. What you see may be behind; reconnecting. Every decision is
-      checked against the cluster again before it is sent.
+      Live updates stopped at {since}. What you see may be behind, and decisions wait until the
+      console is in touch with the cluster again; it reconnects on its own.
     </p>
   )
 }

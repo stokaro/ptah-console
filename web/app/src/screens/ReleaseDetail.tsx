@@ -1,11 +1,16 @@
 import { create } from "@bufbuild/protobuf"
-import { useMutation } from "@connectrpc/connect-query"
-import { Button, Card, EventList, StepRail } from "@ptah/console-ui"
+import { skipToken, useMutation, useQuery } from "@connectrpc/connect-query"
+import { Button, Card, EventList, StepRail, Toast, type TimelineEvent } from "@ptah/console-ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { getRouteApi } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { useOffer, useResources, useSession } from "../api/resources"
+import { can, useOffer, useResources, useSession } from "../api/resources"
+import {
+  DiagnosticsService,
+  Evidence,
+  type EventList as EventListMessage,
+} from "../gen/ptah/console/v1/diagnostics_pb"
 import { StageState } from "../gen/ptah/console/v1/resources_pb"
 import {
   DecisionResultSchema,
@@ -31,7 +36,7 @@ const route = getRouteApi("/releases/$namespace/$kind/$name")
 export function ReleaseDetail() {
   const params = route.useParams()
   const kind = parseKind(params.kind)
-  const { resources, loading, error } = useResources()
+  const { resources, scope, loading, error } = useResources()
   const session = useSession()
   const offer = useOffer()
   const now = useNow(5_000)
@@ -39,6 +44,18 @@ export function ReleaseDetail() {
   const [copied, setCopied] = useState<boolean>()
   const resource = resources.find(
     (r) => r.kind === kind && r.namespace === params.namespace && r.name === params.name
+  )
+  // Events about the resource itself, when the identity may list them.
+  const events = useQuery(
+    DiagnosticsService.method.getDiagnostics,
+    resource && can(scope.scopes, resource.namespace, "readEvents")
+      ? {
+          kind: resource.kind === "schema" ? ResourceKind.SCHEMA : ResourceKind.MIGRATION,
+          namespace: resource.namespace,
+          name: resource.name,
+          uid: resource.ref.uid,
+        }
+      : skipToken
   )
 
   if (loading) {
@@ -89,14 +106,14 @@ export function ReleaseDetail() {
       <Card title="What happened">
         <EventList
           label={`What happened to ${resource.name}`}
-          events={history(resource).map((condition) => ({
-            key: condition.type,
-            time: clock(condition.lastTransition),
-            tone: conditionTone(condition),
-            title: `${condition.type} · ${condition.reason}`,
-            detail: condition.message,
-          }))}
+          events={happened(resource, events.data?.events)}
         />
+        {events.data?.events && events.data.events.evidence !== Evidence.SHOWN ? (
+          <span className="text-xs text-mute">
+            Kubernetes Events are not shown:{" "}
+            {events.data.events.problem || "this identity may not list them."}
+          </span>
+        ) : null}
       </Card>
       <Card title="What you can do">
         <span className="text-sm leading-normal">
@@ -125,9 +142,10 @@ export function ReleaseDetail() {
           ) : null}
         </div>
         {copied !== undefined ? (
-          <span role="status" className="text-[12.5px] text-mute">
-            {copied ? "Link copied." : "The browser did not allow copying."}
-          </span>
+          <Toast
+            title={copied ? "Link copied" : "The browser did not allow copying"}
+            detail={copied ? new URL(approvalPath, window.location.origin).toString() : undefined}
+          />
         ) : null}
       </Card>
       {suspending ? (
@@ -202,4 +220,36 @@ export function suspendText(resource: ResourceView, suspend: boolean) {
   return resource.kind === "migration"
     ? `${text} An Apply is running: suspending now leaves a run whose result is not read, and a person has to acknowledge it. Let it finish first.`
     : `${text} An Apply is running; the operator watches it until it ends and does not stop it.`
+}
+
+/**
+ * What happened, oldest first: the resource's conditions as the operator
+ * last wrote them, and the Kubernetes Events about it that are still kept.
+ */
+export function happened(resource: ResourceView, events?: EventListMessage): TimelineEvent[] {
+  const rows: { at: bigint; row: TimelineEvent }[] = history(resource).map((condition) => ({
+    at: condition.lastTransition?.seconds ?? 0n,
+    row: {
+      key: `condition-${condition.type}`,
+      time: clock(condition.lastTransition),
+      tone: conditionTone(condition),
+      title: `${condition.type} · ${condition.reason}`,
+      detail: condition.message,
+    },
+  }))
+  if (events?.evidence === Evidence.SHOWN) {
+    events.events.forEach((event, index) => {
+      rows.push({
+        at: event.lastSeen?.seconds ?? 0n,
+        row: {
+          key: `event-${index}`,
+          time: clock(event.lastSeen),
+          tone: event.type === "Warning" ? "warn" : "ok",
+          title: `Event · ${event.reason}${event.count > 1 ? ` ×${event.count}` : ""}`,
+          detail: event.message,
+        },
+      })
+    })
+  }
+  return rows.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0)).map(({ row }) => row)
 }

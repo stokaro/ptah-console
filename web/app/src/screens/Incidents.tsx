@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router"
 
 import { canAnywhere, useResources, useSession } from "../api/resources"
 import { attentionTitle, attentionTone, incident } from "../model/resource"
-import { Hero, Loading, ReadError, UnreadableNamespaces, where } from "./common"
+import { Hero, Loading, ReadError, TruncatedNotice, UnreadableNamespaces, where } from "./common"
 
 const borders = {
   ok: "border-l-green",
@@ -15,7 +15,7 @@ const borders = {
 } as const
 
 export function Incidents() {
-  const { resources, scope, loading, error } = useResources()
+  const { resources, scope, truncated, loading, error } = useResources()
   const session = useSession()
   const open = resources
     .map((resource) => ({ resource, attention: incident(resource) }))
@@ -38,6 +38,7 @@ export function Incidents() {
         capability={capability || "get ptahschemas, ptahmigrations"}
       />
       <UnreadableNamespaces scopes={scope.scopes} />
+      <TruncatedNotice namespaces={truncated} />
       {loading ? (
         <Loading what="what needs a person" />
       ) : error ? (
