@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect/v2"
 
+	"github.com/stokaro/ptah-console/internal/audit"
 	"github.com/stokaro/ptah-console/internal/auth/launch"
 	"github.com/stokaro/ptah-console/internal/auth/session"
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
@@ -32,6 +33,7 @@ type Session struct {
 	cookies session.Cookies
 	factory kube.ClientFactory
 	facts   SessionFacts
+	audit   *audit.Logger
 
 	// Local mode signs a browser in with a launch token, for the one
 	// principal the process acts for.
@@ -47,9 +49,10 @@ func NewLocalSession(
 	principal kube.Principal,
 	factory kube.ClientFactory,
 	facts SessionFacts,
+	auditLog *audit.Logger,
 ) *Session {
 	return &Session{
-		store: store, cookies: cookies, factory: factory, facts: facts,
+		store: store, cookies: cookies, factory: factory, facts: facts, audit: auditLog,
 		launcher: launcher, principal: principal,
 	}
 }
@@ -61,6 +64,7 @@ func (s *Session) ExchangeLaunchToken(ctx context.Context, request *consolev1.Ex
 		return nil, connect.NewError(connect.CodeUnimplemented, "this console signs in with an account, not a launch link")
 	}
 	if err := s.launcher.Redeem(request.GetToken()); err != nil {
+		s.record(ctx, "sign-in", audit.Refused, s.principal, "launch token not valid")
 		return nil, connect.NewError(connect.CodePermissionDenied,
 			"this link is not valid any more; press Enter where ptah-console local runs to open a new one").WithCause(err)
 	}
@@ -76,6 +80,7 @@ func (s *Session) ExchangeLaunchToken(ctx context.Context, request *consolev1.Ex
 		return nil, connect.NewError(connect.CodeInternal, "the session could not be started").WithCause(err)
 	}
 	info.ResponseHeader().Add("Set-Cookie", s.cookies.Issue(token).String())
+	s.record(ctx, "sign-in", audit.Admitted, s.principal, "launch token")
 	return &consolev1.ExchangeLaunchTokenResponse{}, nil
 }
 
@@ -110,8 +115,21 @@ func (s *Session) GetSession(ctx context.Context, _ *consolev1.GetSessionRequest
 func (s *Session) Logout(ctx context.Context, _ *consolev1.LogoutRequest) (*consolev1.LogoutResponse, error) {
 	info, _ := connect.CallInfoForServerContext(ctx)
 	if token, ok := s.cookies.Token(info.RequestHeader().Values("Cookie")); ok {
+		if current, err := s.store.Lookup(token, session.Background); err == nil {
+			s.record(ctx, "sign-out", audit.Admitted, current.Principal(), "")
+		}
 		s.store.Revoke(token)
 	}
 	info.ResponseHeader().Add("Set-Cookie", s.cookies.Clear().String())
 	return &consolev1.LogoutResponse{}, nil
+}
+
+func (s *Session) record(ctx context.Context, action, outcome string, principal kube.Principal, reason string) {
+	if s.audit == nil {
+		return
+	}
+	s.audit.Record(ctx, audit.Event{
+		Action: action, Outcome: outcome,
+		AccountID: principal.AccountID, Context: principal.Context, Reason: reason,
+	})
 }
