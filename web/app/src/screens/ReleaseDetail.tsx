@@ -6,6 +6,7 @@ import { getRouteApi } from "@tanstack/react-router"
 import { useState } from "react"
 
 import { useOffer, useResources, useSession } from "../api/resources"
+import { StageState } from "../gen/ptah/console/v1/resources_pb"
 import {
   DecisionResultSchema,
   DecisionService,
@@ -171,11 +172,7 @@ function SuspendDialog({ resource, context, onClose }: SuspendDialogProps) {
       where={where(context, resource.namespace)}
       as={session.data?.kubernetesUsername ?? "…"}
       title={`${suspend ? "Suspend" : "Resume"} ${resource.name}?`}
-      explanation={
-        suspend
-          ? `The operator stops planning and applying it until it is resumed. Only spec.suspend changes.${gitops}`
-          : `The operator plans and applies it again. Only spec.suspend changes.${gitops}`
-      }
+      explanation={suspendText(resource, suspend) + gitops}
       ready
       send={send}
       admittedTitle={suspend ? "Suspended" : "Resumed"}
@@ -184,4 +181,25 @@ function SuspendDialog({ resource, context, onClose }: SuspendDialogProps) {
       }
     />
   )
+}
+
+/**
+ * What suspending or resuming does, as the operator documents it. Only
+ * spec.suspend changes, but any spec change is an input to the plan.
+ */
+export function suspendText(resource: ResourceView, suspend: boolean) {
+  if (!suspend) {
+    return "The operator reads the database again and plans before it applies anything. Only spec.suspend changes."
+  }
+  const applying = resource.stages.some(
+    (stage) => stage.name === "Apply" && stage.state === StageState.ACTIVE
+  )
+  const text =
+    "The operator starts no new Job until it is resumed. Only spec.suspend changes, but a spec change retires the current plan and any approval of it."
+  if (!applying) {
+    return text
+  }
+  return resource.kind === "migration"
+    ? `${text} An Apply is running: suspending now leaves a run whose result is not read, and a person has to acknowledge it. Let it finish first.`
+    : `${text} An Apply is running; the operator watches it until it ends and does not stop it.`
 }
