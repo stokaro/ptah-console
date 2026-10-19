@@ -1,0 +1,181 @@
+syntax = "proto3";
+
+package ptah.console.v1;
+
+import "google/protobuf/timestamp.proto";
+import "ptah/console/v1/resources.proto";
+
+option go_package = "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1";
+
+// DecisionService records a person's decisions with their own identity and
+// lists the decisions already made. The operator's admission decides whether
+// a decision stands; the console reports what it said.
+service DecisionService {
+  rpc ListDecisions(ListDecisionsRequest) returns (ListDecisionsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // GetDecision reads one decision back, which is how the outcome of a
+  // submission whose response was lost is established.
+  rpc GetDecision(GetDecisionRequest) returns (GetDecisionResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // ApproveSchemaPlan approves exactly the plan the person reviewed.
+  rpc ApproveSchemaPlan(ApproveSchemaPlanRequest) returns (ApproveSchemaPlanResponse) {}
+
+  // ApproveMigrationPlan approves exactly the plan the person reviewed.
+  rpc ApproveMigrationPlan(ApproveMigrationPlanRequest) returns (ApproveMigrationPlanResponse) {}
+
+  // AcknowledgeMigrationRun settles exactly one unresolved run. It does not
+  // verify what the run did to the database.
+  rpc AcknowledgeMigrationRun(AcknowledgeMigrationRunRequest) returns (AcknowledgeMigrationRunResponse) {}
+
+  // SetSuspended suspends or resumes a schema or migration, changing nothing
+  // else.
+  rpc SetSuspended(SetSuspendedRequest) returns (SetSuspendedResponse) {}
+}
+
+enum DecisionKind {
+  DECISION_KIND_UNSPECIFIED = 0;
+  DECISION_KIND_SCHEMA_APPROVAL = 1;
+  DECISION_KIND_MIGRATION_APPROVAL = 2;
+  DECISION_KIND_RUN_ACKNOWLEDGMENT = 3;
+}
+
+// DecisionState is what the operator made of a decision.
+enum DecisionState {
+  DECISION_STATE_UNSPECIFIED = 0;
+  // Nothing has said yet.
+  DECISION_STATE_PENDING = 1;
+  DECISION_STATE_ACCEPTED = 2;
+  // Committed to one Apply dispatch, or the run it named was settled.
+  DECISION_STATE_CONSUMED = 3;
+  // The plan or run it named is no longer current; it will not be used.
+  DECISION_STATE_STALE = 4;
+  DECISION_STATE_REFUSED = 5;
+}
+
+message Decision {
+  DecisionKind kind = 1;
+  ObjectRef ref = 2;
+  string owner_name = 3;
+  string owner_uid = 4;
+  string plan_name = 5;
+  string plan_uid = 6;
+  string plan_fingerprint = 7;
+  string operation_id = 8;
+  // Who decided, as admission recorded it.
+  string decided_by = 9;
+  repeated string decided_by_groups = 10;
+  google.protobuf.Timestamp decided_at = 11;
+  DecisionState state = 12;
+  string state_reason = 13;
+  repeated Condition conditions = 14;
+}
+
+message ListDecisionsRequest {
+  repeated string namespaces = 1;
+}
+
+message ListDecisionsResponse {
+  repeated Decision decisions = 1;
+  repeated NamespaceResult namespaces = 2;
+}
+
+message GetDecisionRequest {
+  DecisionKind kind = 1;
+  string namespace = 2;
+  string name = 3;
+}
+
+message GetDecisionResponse {
+  Decision decision = 1;
+}
+
+message ApproveSchemaPlanRequest {
+  string namespace = 1;
+  string schema_name = 2;
+  string schema_uid = 3;
+  string plan_name = 4;
+  string plan_uid = 5;
+  string plan_fingerprint = 6;
+  int32 contract_version = 7;
+}
+
+message ApproveMigrationPlanRequest {
+  string namespace = 1;
+  string migration_name = 2;
+  string migration_uid = 3;
+  string plan_name = 4;
+  string plan_uid = 5;
+  string plan_fingerprint = 6;
+}
+
+message AcknowledgeMigrationRunRequest {
+  string namespace = 1;
+  string migration_name = 2;
+  string migration_uid = 3;
+  string operation_id = 4;
+}
+
+// DecisionOutcome is how a submission ended.
+enum DecisionOutcome {
+  DECISION_OUTCOME_UNSPECIFIED = 0;
+  // The API server stored the decision; admission recorded who made it.
+  DECISION_OUTCOME_ADMITTED = 1;
+  // What the person reviewed is no longer current. Nothing was sent.
+  DECISION_OUTCOME_CHANGED = 2;
+  // RBAC refused the identity.
+  DECISION_OUTCOME_FORBIDDEN = 3;
+  // The operator's admission refused the decision.
+  DECISION_OUTCOME_REFUSED = 4;
+  // The submission was sent and no answer came back. It may have been
+  // stored; read it back by name before doing anything else.
+  DECISION_OUTCOME_UNKNOWN = 5;
+}
+
+message DecisionResult {
+  DecisionOutcome outcome = 1;
+  // The API server's or admission's own words, or the console's for CHANGED.
+  string message = 2;
+  // The object's name, whatever the outcome, so it can be read back.
+  string name = 3;
+  string request_id = 4;
+  Decision decision = 5;
+}
+
+message ApproveSchemaPlanResponse {
+  DecisionResult result = 1;
+}
+
+message ApproveMigrationPlanResponse {
+  DecisionResult result = 1;
+}
+
+message AcknowledgeMigrationRunResponse {
+  DecisionResult result = 1;
+}
+
+enum ResourceKind {
+  RESOURCE_KIND_UNSPECIFIED = 0;
+  RESOURCE_KIND_SCHEMA = 1;
+  RESOURCE_KIND_MIGRATION = 2;
+}
+
+message SetSuspendedRequest {
+  ResourceKind kind = 1;
+  string namespace = 2;
+  string name = 3;
+  // The object as the person saw it: the change applies only to that object
+  // at that version.
+  string uid = 4;
+  string resource_version = 5;
+  bool suspended = 6;
+}
+
+message SetSuspendedResponse {
+  DecisionOutcome outcome = 1;
+  string message = 2;
+  string resource_version = 3;
+}
