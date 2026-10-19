@@ -284,9 +284,14 @@ func schemaAttention(schema *operatorv1alpha1.PtahSchema, c conditions) []*conso
 			operatorv1alpha1.ConditionReconciliationFailed)
 	}
 	if c.is(operatorv1alpha1.ConditionApprovalRequired, metav1.ConditionTrue) {
+		next := "Review the plan and approve it. Nothing changes in the database until someone does."
+		if status.Plan == nil {
+			// Each interval the operator refreshes the source and plans
+			// again; until it publishes the plan there is nothing to approve.
+			next = "The operator is planning again. The plan can be approved once it is published; nothing changes in the database until then."
+		}
 		add(consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL,
-			c.message(operatorv1alpha1.ConditionApprovalRequired),
-			"Review the plan and approve it. Nothing changes in the database until someone does.",
+			c.message(operatorv1alpha1.ConditionApprovalRequired), next,
 			operatorv1alpha1.ConditionApprovalRequired)
 	}
 	if reason := c.reason(operatorv1alpha1.ConditionPlanReady); c.is(operatorv1alpha1.ConditionPlanReady, metav1.ConditionFalse) && planBlockers[reason] != "" {
