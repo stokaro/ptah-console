@@ -32,14 +32,22 @@ admin wait --for=condition=InSync --timeout=600s "ptahschema/$SCHEMA" >/dev/null
 REASON=$(admin get "ptahschema/$SCHEMA" -o jsonpath='{.status.conditions[?(@.type=="InSync")].reason}')
 [ "$REASON" = ScopedConverged ] || fail "InSync carries $REASON"
 
+# The plan the approver approved is the one the approval names, read from the
+# approval admission stamped, not from what the recording saw.
+APPROVED=$(admin get ptahschemaapprovals -o json |
+	jq -r --arg who "${APPROVER:?}" '[.items[] | select(.spec.approver.username == $who) | .spec.planRef.name] | unique | join(",")')
+[ -n "$APPROVED" ] || fail "no approval records $APPROVER"
+case "$APPROVED" in
+*,*) fail "$APPROVER approved more than one plan: $APPROVED" ;;
+esac
 APPLIED=$(admin get "ptahschema/$SCHEMA" -o jsonpath='{.status.applied.planName}')
-[ "$APPLIED" = "$PLAN" ] || fail "the schema applied $APPLIED, not the approved $PLAN"
+[ "$APPLIED" = "$APPROVED" ] || fail "the schema applied $APPLIED, not the approved $APPROVED"
 
-RECORDED=$(admin get ptahschemaapprovals -o json |
-	jq -r --arg plan "$PLAN" '[.items[] | select(.spec.planRef.name == $plan) | .spec.approver.username] | unique | join(",")')
-[ "$RECORDED" = "${APPROVER:?}" ] || fail "the approval of $PLAN records '$RECORDED', not $APPROVER"
+OTHERS=$(admin get ptahschemaapprovals -o json |
+	jq -r --arg who "$APPROVER" '[.items[] | select(.spec.approver.username != $who) | .spec.approver.username] | unique | join(",")')
+[ -z "$OTHERS" ] || fail "approvals were admitted for $OTHERS as well"
 
 admin exec deploy/demo-psql -- psql -c '\d customers' | grep -q email ||
 	fail 'the customers table has no email column'
 
-printf 'verify: %s applied %s, approved by %s through the console\n' "$SCHEMA" "$PLAN" "$APPROVER"
+printf 'verify: %s applied %s, approved by %s through the console\n' "$SCHEMA" "$APPROVED" "$APPROVER"

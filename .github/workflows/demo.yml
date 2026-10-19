@@ -129,11 +129,6 @@ jobs:
           DEMO_KUBERNETES_VERSION: ${{ steps.support.outputs.kubernetes_version }}
           DEMO_RUN_ID: console-demo-${{ github.run_id }}-${{ github.run_attempt }}
         run: make demo-up
-      - name: Put a schema in front of an approver
-        env:
-          OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
-          OUT_DIR: ${{ runner.temp }}/demo
-        run: ./hack/demo/prepare.sh
       - name: Build the console with its web app
         run: |
           (cd web && npm ci)
@@ -141,8 +136,13 @@ jobs:
       - name: Install the browser
         working-directory: web
         run: npx playwright install --with-deps chromium
-      # The console runs as the approver's kubeconfig, and prints its sign-in
-      # link; the browser opens that link and nothing else.
+      - name: Put a schema in front of an approver
+        env:
+          OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
+          OUT_DIR: ${{ runner.temp }}/demo
+        run: ./hack/demo/prepare.sh
+      # Each person gets a console of their own, run with their kubeconfig;
+      # the browser opens the link it printed and nothing else.
       - name: Record the scenario
         env:
           OUT_DIR: ${{ runner.temp }}/demo
@@ -151,19 +151,30 @@ jobs:
           set -euo pipefail
           # shellcheck disable=SC1091
           . "$OUT_DIR/facts"
-          ./bin/ptah-console local --kubeconfig "$OUT_DIR/approver.kubeconfig" --namespace "$NAMESPACE" \
-            --no-open > "$OUT_DIR/console.out" 2> "$OUT_DIR/audit.log" &
-          console=$!
-          trap 'kill "$console" 2>/dev/null || true' EXIT
-          for _ in $(seq 1 60); do
-            link="$(sed -n 's|^  \(http://[^ ]*/#t=[A-Za-z0-9_-]*\)$|\1|p' "$OUT_DIR/console.out" | head -n 1)"
-            [ -n "$link" ] && break
-            sleep 1
-          done
-          [ -n "${link:-}" ] || { cat "$OUT_DIR/console.out" "$OUT_DIR/audit.log" >&2; exit 1; }
-          cd web
-          DEMO_LINK="$link" DEMO_PLAN="$PLAN" DEMO_APPROVER="$APPROVER" \
-            npx playwright test -c e2e/playwright.config.ts
+          export DEMO_NAMESPACE="$NAMESPACE" DEMO_APPROVER="$APPROVER" DEMO_AUTHOR="$AUTHOR"
+          consoles=()
+          trap 'kill "${consoles[@]}" 2>/dev/null || true' EXIT
+          # start_console runs ptah-console local as one person and prints the
+          # sign-in link it offered.
+          start_console() {
+            local who=$1
+            ./bin/ptah-console local --kubeconfig "$OUT_DIR/$who.kubeconfig" --namespace "$NAMESPACE" \
+              --no-open > "$OUT_DIR/$who.out" 2> "$OUT_DIR/$who-audit.log" &
+            consoles+=("$!")
+            local link=""
+            for _ in $(seq 1 60); do
+              link="$(sed -n 's|^  \(http://[^ ]*/#t=[A-Za-z0-9_-]*\)$|\1|p' "$OUT_DIR/$who.out" | head -n 1)"
+              [ -n "$link" ] && break
+              sleep 1
+            done
+            [ -n "$link" ] || { cat "$OUT_DIR/$who.out" "$OUT_DIR/$who-audit.log" >&2; return 1; }
+            printf '%s\n' "$link"
+          }
+          link="$(start_console author)"
+          (cd web && DEMO_LINK="$link" DEMO_RESULTS_DIR=../test-results-author DEMO_REPORT_DIR=../playwright-report-author \
+            npx playwright test -c e2e/playwright.config.ts e2e/author.spec.ts)
+          link="$(start_console approver)"
+          (cd web && DEMO_LINK="$link" npx playwright test -c e2e/playwright.config.ts e2e/demo.spec.ts)
       - name: Check the outcome against the cluster
         env:
           OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
@@ -180,7 +191,8 @@ jobs:
           cp "$video" demo-video/ptah-console-demo.webm
           ffmpeg -loglevel error -i "$video" -c:v libx264 -pix_fmt yuv420p -movflags +faststart \
             demo-video/ptah-console-demo.mp4
-          cp "${{ runner.temp }}/demo/audit.log" demo-video/console-audit.log || true
+          cp "${{ runner.temp }}/demo/approver-audit.log" demo-video/approver-audit.log || true
+          cp "${{ runner.temp }}/demo/author-audit.log" demo-video/author-audit.log || true
           printf 'operator %s\n' "${{ steps.operator.outputs.commit }}" > demo-video/versions.txt
       - name: Keep the recording
         if: always()
@@ -190,7 +202,9 @@ jobs:
           path: |
             demo-video/
             web/test-results/
+            web/test-results-author/
             web/playwright-report/
+            web/playwright-report-author/
           if-no-files-found: warn
           retention-days: 30
       - name: Remove the lab

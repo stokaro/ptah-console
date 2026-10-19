@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 
 const link = process.env.DEMO_LINK ?? ""
-const plan = process.env.DEMO_PLAN ?? ""
 const approver = process.env.DEMO_APPROVER ?? ""
 // How long the operator may take to apply and verify the plan.
 const applyTimeout = Number(process.env.DEMO_APPLY_TIMEOUT_MS ?? 15 * 60_000)
@@ -42,7 +41,14 @@ test("an approver approves a plan and follows it to the database", async ({ page
 
   await page.goto(link)
   const queue = page.getByRole("list", { name: "Plans waiting for approval" })
-  await expect(queue.getByRole("link", { name: plan })).toBeVisible()
+  // The operator may be planning again when the page opens; the queue follows
+  // it and shows the plan once it is published.
+  const planLink = queue
+    .getByRole("listitem")
+    .filter({ hasText: "for storefront" })
+    .getByRole("link", { name: /^ptah-plan-/ })
+  await expect(planLink).toBeVisible({ timeout: 5 * 60_000 })
+  const plan = (await planLink.textContent()) ?? ""
   await expect(page.getByText(approver).first()).toBeVisible()
   await caption(
     page,

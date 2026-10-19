@@ -17,6 +17,7 @@ OUT_DIR=${OUT_DIR:?set OUT_DIR to a directory for the approver kubeconfig}
 LAB_ENVIRONMENT=${LAB_ENVIRONMENT:-$OPERATOR_DIR/demo/.lab/environment}
 LAB="$OPERATOR_DIR/demo/bin/lab"
 APPROVER=demo-approver
+AUTHOR=demo-author
 SCHEMA=storefront
 
 say() {
@@ -72,11 +73,53 @@ subjects:
     namespace: $NAMESPACE
 YAML
 
+say "the author: a ServiceAccount that may edit the schema and read its plans, and may not approve"
+admin -n "$NAMESPACE" apply -f - >/dev/null <<YAML
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: $AUTHOR
+  namespace: $NAMESPACE
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: $AUTHOR
+  namespace: $NAMESPACE
+rules:
+  - apiGroups: [operator.ptah.run]
+    resources: [ptahschemas]
+    verbs: [get, list, watch, create, update, patch]
+  - apiGroups: [operator.ptah.run]
+    resources: [ptahschemaplans, ptahschemaplanchunks, ptahschemaapprovals]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: $AUTHOR
+  namespace: $NAMESPACE
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: $AUTHOR
+subjects:
+  - kind: ServiceAccount
+    name: $AUTHOR
+    namespace: $NAMESPACE
+YAML
+
 SERVER=$(admin config view --minify -o jsonpath='{.clusters[0].cluster.server}')
 AUTHORITY=$(admin config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}')
-TOKEN=$(admin -n "$NAMESPACE" create token "$APPROVER" --duration=60m)
 umask 077
-cat >"$OUT_DIR/approver.kubeconfig" <<YAML
+
+# write_kubeconfig writes a token kubeconfig for one ServiceAccount: what a
+# person would have, and nothing the lab's own administrator holds.
+write_kubeconfig() {
+	account=$1
+	file=$2
+	token=$(admin -n "$NAMESPACE" create token "$account" --duration=90m)
+	cat >"$OUT_DIR/$file" <<YAML
 apiVersion: v1
 kind: Config
 clusters:
@@ -85,23 +128,29 @@ clusters:
       server: $SERVER
       certificate-authority-data: $AUTHORITY
 users:
-  - name: $APPROVER
+  - name: $account
     user:
-      token: $TOKEN
+      token: $token
 contexts:
   - name: ptah-lab
     context:
       cluster: ptah-lab
-      user: $APPROVER
+      user: $account
       namespace: $NAMESPACE
 current-context: ptah-lab
 YAML
+}
+write_kubeconfig "$APPROVER" approver.kubeconfig
+write_kubeconfig "$AUTHOR" author.kubeconfig
 
 if kubectl --kubeconfig "$OUT_DIR/approver.kubeconfig" -n "$NAMESPACE" auth can-i create ptahschemas.operator.ptah.run >/dev/null; then
 	fail 'the approver may create a schema, so the demo would not show an approver'
 fi
 kubectl --kubeconfig "$OUT_DIR/approver.kubeconfig" -n "$NAMESPACE" auth can-i create ptahschemaapprovals.operator.ptah.run >/dev/null ||
 	fail 'the approver may not approve'
+if kubectl --kubeconfig "$OUT_DIR/author.kubeconfig" -n "$NAMESPACE" auth can-i create ptahschemaapprovals.operator.ptah.run >/dev/null; then
+	fail 'the author may approve, so the refusal row would prove nothing'
+fi
 
 say 'publishing the desired schema as an artifact'
 DIGEST=$(ptah schema push "oci://$PTAH_OCI_REGISTRY/schemas/demo:console-$$" \
@@ -112,8 +161,12 @@ sha256:*) ;;
 *) fail 'the push returned no digest' ;;
 esac
 
+# Each interval the operator refreshes the source and plans again, and the
+# plan is not there to approve while it does. Ten minutes keeps the plan the
+# recording reviews published for the whole recording; the proof after an
+# Apply is scheduled from the Job, not from the interval.
 say "pointing $SCHEMA at $DIGEST with apply: OnApproval"
-APPLY=OnApproval INTERVAL=1m "$LAB" manifest "$SCHEMA" "$DIGEST" | admin apply -f - >/dev/null
+APPLY=OnApproval INTERVAL=10m "$LAB" manifest "$SCHEMA" "$DIGEST" | admin apply -f - >/dev/null
 
 say 'waiting for the operator to plan and stop for an approval'
 admin -n "$NAMESPACE" wait --for=condition=ApprovalRequired --timeout=600s "ptahschema/$SCHEMA" >/dev/null ||
@@ -127,5 +180,6 @@ admin -n "$NAMESPACE" wait --for=condition=Ready --timeout=120s "ptahschemaplan/
 	printf 'SCHEMA=%s\n' "$SCHEMA"
 	printf 'PLAN=%s\n' "$PLAN"
 	printf 'APPROVER=system:serviceaccount:%s:%s\n' "$NAMESPACE" "$APPROVER"
+	printf 'AUTHOR=system:serviceaccount:%s:%s\n' "$NAMESPACE" "$AUTHOR"
 } >"$OUT_DIR/facts"
 say "ready: $SCHEMA waits for an approval of $PLAN"

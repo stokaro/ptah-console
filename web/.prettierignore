@@ -8,3 +8,5 @@ stub/
 storybook-static/
 test-results/
 playwright-report/
+test-results-author/
+playwright-report-author/
