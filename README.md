@@ -58,10 +58,21 @@ identities through impersonation, follows.
 
 ## Demo
 
-The Demo workflow records the basic scenario against the operator's own
-demonstration lab: an approver signs in, reviews the plan, approves it, and
-follows it until the operator has applied it and verified it. Its
-`ptah-console-demo` artifact holds the video.
+[![An approver approves a plan in Ptah Console and follows it until the operator has applied and verified it](docs/demo/poster.png)](docs/demo/ptah-console-demo.mp4)
+
+[The recording](docs/demo/ptah-console-demo.mp4) (68 seconds) is the basic
+scenario against a real operator: an approver signs in with the link
+`ptah-console local` printed, reviews the exact SQL, approves the plan as
+their own Kubernetes identity, and follows it until the operator has applied
+it and verified it by a fresh read. The auditor view then shows who approved,
+as admission recorded it.
+
+The Demo workflow records it against the operator's own demonstration lab,
+from the operator commit `go.mod` requires, and checks the outcome against the
+cluster rather than the page. Before the recorded run, an author who may not
+approve is shown no approval, and one sent anyway is refused by the API
+server. This file comes from run 39337386467; a new run's
+`ptah-console-demo` artifact holds a fresh one.
 
 ## Building
 
