@@ -28,7 +28,9 @@ type Resolved struct {
 	// loading rules merged, joined by the path list separator.
 	Kubeconfig string
 	Context    string
-	Config     *rest.Config
+	// Namespace is the context's namespace, if the kubeconfig sets one.
+	Namespace string
+	Config    *rest.Config
 	// ExecPlugin is set when the context runs a credential plugin.
 	ExecPlugin *ExecPlugin
 	// Impersonates is set when the kubeconfig itself asks to impersonate.
@@ -86,6 +88,7 @@ func Resolve(kubeconfig, context string) (Resolved, error) {
 	resolved := Resolved{
 		Kubeconfig:   source(rules),
 		Context:      context,
+		Namespace:    kubeContext.Namespace,
 		Config:       config,
 		Impersonates: config.Impersonate.UserName,
 		InsecureTLS:  config.Insecure,

@@ -38,6 +38,8 @@ func newLocal(stdout io.Writer) *cobra.Command {
 	flags := command.Flags()
 	flags.StringVar(&options.Kubeconfig, "kubeconfig", "", "kubeconfig file (default: KUBECONFIG, then ~/.kube/config)")
 	flags.StringVar(&options.Context, "context", "", "kubeconfig context to act with (default: the current one, pinned at start)")
+	flags.StringSliceVarP(&options.Namespaces, "namespace", "n", nil,
+		"namespace to show; repeat for more (default: the context's namespace, or every namespace you may list)")
 	flags.BoolVar(&options.ReadOnly, "read-only", false, "refuse every change the console could send, whatever the identity may do")
 	flags.IntVar(&options.Port, "port", 0, "loopback port (default: a free one)")
 	flags.BoolVar(&noOpen, "no-open", false, "print the sign-in link instead of opening the browser")
