@@ -27,5 +27,5 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
-      - name: make verify
-        run: make verify
+      - name: make check
+        run: make check
