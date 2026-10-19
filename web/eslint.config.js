@@ -53,6 +53,8 @@ export default [
       "app/src/gen/**",
       "stub/**",
       "**/storybook-static/**",
+      "test-results*/**",
+      "playwright-report*/**",
     ],
   },
   js.configs.recommended,

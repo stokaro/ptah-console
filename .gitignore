@@ -11,3 +11,7 @@ node_modules/
 /web/app/.lighthouseci/
 /.envtest/
 /web/app/storybook-static/
+/web/test-results/
+/web/playwright-report/
+/web/test-results-author/
+/web/playwright-report-author/
