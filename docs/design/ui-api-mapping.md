@@ -92,10 +92,14 @@ cells that start with `=`, `+`, `-` or `@`.
 | --- | --- | --- |
 | Suspend or resume a schema or migration | `ptahschemas`, `ptahmigrations` | patch |
 
-The patch tests `metadata.uid` and `metadata.resourceVersion` and replaces
-`/spec/suspend`, nothing else. Before the person confirms, the screen says that
-a spec change retires the current plan and its approval binding, and that a
-GitOps controller managing the object will revert the change.
+The JSON patch tests `metadata.resourceVersion` against the version the page
+showed and sets `/spec/suspend`, nothing else; the API server records the
+console as the manager of that one field. A resource version is the store's
+revision, so an object deleted and created again under the name never carries
+the version the person saw. Before the person confirms, the screen says that
+a spec change retires the current plan and its approval, that suspending a
+migration while its Apply runs leaves a run someone has to acknowledge, and
+that a GitOps controller managing the object may revert the change.
 
 ## Namespaces
 
