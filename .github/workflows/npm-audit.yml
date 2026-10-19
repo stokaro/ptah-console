@@ -1,0 +1,41 @@
+name: npm audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "web/package.json"
+      - "web/package-lock.json"
+      - "web/*/package.json"
+      - "web/packages/*/package.json"
+      - ".github/workflows/npm-audit.yml"
+  schedule:
+    # A new advisory can name a package nothing here changed.
+    - cron: "41 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: web/package.json
+      # What ships in the binary has to be clean; the build toolchain fails
+      # only on high and critical advisories.
+      - name: Shipped dependencies
+        working-directory: web
+        run: npm audit --omit=dev --audit-level=low
+      - name: Build toolchain
+        working-directory: web
+        run: npm audit --audit-level=high

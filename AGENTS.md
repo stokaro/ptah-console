@@ -56,13 +56,25 @@ a change to #588 first.
 ## Building and testing
 
 ```bash
-make build          # the ptah-console binary, into bin/
-make test           # unit tests, with the race detector
-make check          # gofmt, go mod tidy, vet, build, test: the Verify job
+make web-install    # npm ci in web/
+make build          # the web app, then the binary that embeds it, into bin/
+make build-go       # the binary without the web app; no Node needed
+make test           # Go unit tests, with the race detector
+make check          # gofmt, go mod tidy, vet, build-go, test: the Verify job
 make lint           # golangci-lint, qtlint, nolintguard, teststyle
 make vulncheck      # govulncheck
-make verify         # everything CI runs
+make web-check      # ESLint, Prettier, tsc, Vitest, size budgets
+make embed-smoke    # the binary carries the app and every file index.html loads
+make verify         # everything CI runs, apart from Lighthouse
 ```
+
+The web app lives in `web/`: an npm workspace with the app in `web/app` and
+the shared components in `web/packages/ui` (`@ptah/console-ui`), which imports
+nothing proprietary so the Platform can reuse it. `web/` is also a Go module of
+its own, so Go tools run from the root never walk `node_modules`; name its
+package explicitly (`cd web && go test .`). The frontend lint setup is
+denisvmedia/inventario's. Node is pinned in `web/package.json` (`volta` and
+`engines`).
 
 The Go lint setup is stokaro/ptah's: change `.golangci.yml` the way you would
 there, and give every `//nolint` and `#nosec` a reason. Each later step adds

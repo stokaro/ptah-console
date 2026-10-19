@@ -24,8 +24,12 @@ func newVersion(stdout io.Writer) *cobra.Command {
 				if info.Modified {
 					modified = ", modified"
 				}
-				_, err := fmt.Fprintf(stdout, "ptah-console %s (commit %s%s, %s)\n",
-					info.Version, info.Commit, modified, info.GoVersion)
+				webApp := "without the web app"
+				if info.WebApp {
+					webApp = "with the web app"
+				}
+				_, err := fmt.Fprintf(stdout, "ptah-console %s (commit %s%s, %s, %s)\n",
+					info.Version, info.Commit, modified, info.GoVersion, webApp)
 				return err
 			case "json":
 				encoder := json.NewEncoder(stdout)

@@ -27,7 +27,7 @@ func TestVersion(t *testing.T) {
 
 	c.Assert(code, qt.Equals, cli.ExitOK)
 	c.Assert(stderr, qt.Equals, "")
-	c.Assert(stdout, qt.Matches, `ptah-console \S+ \(commit \S+(, modified)?, go\S+\)\n`)
+	c.Assert(stdout, qt.Matches, `ptah-console \S+ \(commit \S+(, modified)?, go\S+, with(out)? the web app\)\n`)
 	c.Assert(stdout, qt.Contains, runtime.Version())
 }
 
@@ -43,6 +43,7 @@ func TestVersionJSON(t *testing.T) {
 	c.Assert(info["goVersion"], qt.Equals, runtime.Version())
 	c.Assert(info["version"], qt.Not(qt.Equals), "")
 	c.Assert(info["commit"], qt.Not(qt.Equals), "")
+	c.Assert(info["webApp"], qt.IsFalse, qt.Commentf("go test builds without the with_frontend tag"))
 }
 
 func TestUsageMistakes(t *testing.T) {

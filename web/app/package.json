@@ -1,0 +1,17 @@
+{
+  "name": "@ptah/console-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "size": "size-limit",
+    "lhci": "npx --yes @lhci/cli@0.15.1 autorun"
+  },
+  "dependencies": {
+    "@ptah/console-ui": "*",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}

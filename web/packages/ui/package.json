@@ -1,0 +1,13 @@
+{
+  "name": "@ptah/console-ui",
+  "description": "Presentation components for Ptah plans, findings and execution history. No dependency on anything proprietary.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.3.0"
+  }
+}
