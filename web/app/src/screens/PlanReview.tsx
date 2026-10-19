@@ -12,7 +12,7 @@ import {
 import { getRouteApi, Link } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { can, useResources, useSession } from "../api/resources"
+import { readOnlyText, useOffer, useResources, useSession } from "../api/resources"
 import {
   MigrationService,
   PlanSelection,
@@ -37,8 +37,9 @@ const route = getRouteApi("/approve/$namespace/$kind/$name")
 export function PlanReview() {
   const params = route.useParams()
   const kind = parseKind(params.kind)
-  const { resources, scope, loading, error } = useResources()
+  const { resources, loading, error } = useResources()
   const session = useSession()
+  const offer = useOffer()
   const [approving, setApproving] = useState(false)
   const resource = resources.find(
     (r) => r.kind === kind && r.namespace === params.namespace && r.name === params.name
@@ -75,8 +76,7 @@ export function PlanReview() {
 
   const context = session.data?.context
   const waiting = waitingForApproval(resource)
-  const mayApprove = can(
-    scope.scopes,
+  const mayApprove = offer(
     resource.namespace,
     kind === "schema" ? "approveSchemaPlans" : "approveMigrationPlans"
   )
@@ -111,7 +111,7 @@ export function PlanReview() {
       ) : null}
       <div className="sticky bottom-3 flex flex-wrap items-center gap-2 rounded-[18px] border border-line bg-card p-3 shadow-card">
         {waiting ? (
-          mayApprove ? (
+          mayApprove === "allowed" ? (
             <Button
               variant="primary"
               className="flex-[1_1_200px]"
@@ -122,8 +122,9 @@ export function PlanReview() {
             </Button>
           ) : (
             <span className="flex-auto p-2.5 text-sm text-fg2">
-              This identity may not approve plans in {resource.namespace}. Share the link with an
-              approver.
+              {mayApprove === "read-only"
+                ? readOnlyText
+                : `This identity may not approve plans in ${resource.namespace}. Share the link with an approver.`}
             </span>
           )
         ) : (

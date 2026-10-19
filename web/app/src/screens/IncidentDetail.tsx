@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { getRouteApi } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { can, useResources, useSession } from "../api/resources"
+import { can, readOnlyText, useOffer, useResources, useSession } from "../api/resources"
 import { DecisionKind, DecisionService, ResourceKind } from "../gen/ptah/console/v1/decisions_pb"
 import {
   DiagnosticsService,
@@ -42,6 +42,7 @@ export function IncidentDetail() {
   const kind = parseKind(params.kind)
   const { resources, scope, loading, error } = useResources()
   const session = useSession()
+  const offer = useOffer()
   const [acknowledging, setAcknowledging] = useState(false)
   const resource = resources.find(
     (r) => r.kind === kind && r.namespace === params.namespace && r.name === params.name
@@ -81,7 +82,7 @@ export function IncidentDetail() {
   const attention = incident(resource) ?? resource.attention[0]
   const tone = attention ? attentionTone(attention.kind) : "ok"
   const unresolved = attention?.kind === AttentionKind.UNRESOLVED_RUN && resource.unresolvedRun
-  const mayAcknowledge = can(scope.scopes, resource.namespace, "acknowledgeRuns")
+  const mayAcknowledge = offer(resource.namespace, "acknowledgeRuns")
   const log = diagnostics.data ? lastLog(diagnostics.data) : undefined
 
   return (
@@ -98,7 +99,7 @@ export function IncidentDetail() {
           {attention?.nextStep || "Nothing to do."}
         </span>
         {unresolved ? (
-          mayAcknowledge ? (
+          mayAcknowledge === "allowed" ? (
             <Button
               variant="attention"
               className="self-start"
@@ -108,7 +109,9 @@ export function IncidentDetail() {
             </Button>
           ) : (
             <span className="text-[13px] text-fg2">
-              This identity may not acknowledge runs in {resource.namespace}.
+              {mayAcknowledge === "read-only"
+                ? readOnlyText
+                : `This identity may not acknowledge runs in ${resource.namespace}.`}
             </span>
           )
         ) : null}

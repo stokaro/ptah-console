@@ -38,6 +38,32 @@ export function canAnywhere(scopes: NamespaceScope[], capability: Capability) {
   return scopes.some((scope) => scope.capabilities?.[capability] === Answer.ALLOWED)
 }
 
+/** Whether a page offers a decision, and if not, why not. */
+export type Offer = "allowed" | "read-only" | "denied"
+
+/** The text a page shows in place of a decision a read-only console refuses. */
+export const readOnlyText = "This console runs read-only: it sends no decision."
+
+/**
+ * Says whether a page should offer a decision: not in a read-only console,
+ * and not where RBAC says no. The server decides either way; this only keeps
+ * a button off a page where pressing it can only be refused.
+ */
+export function useOffer() {
+  const session = useSession()
+  const scope = useScope()
+  return (namespace: string | undefined, capability: Capability): Offer => {
+    if (session.data?.readOnly) {
+      return "read-only"
+    }
+    const allowed =
+      namespace === undefined
+        ? canAnywhere(scope.scopes, capability)
+        : can(scope.scopes, namespace, capability)
+    return allowed ? "allowed" : "denied"
+  }
+}
+
 /** Every schema and migration in the readable namespaces. */
 export function useResources() {
   const scope = useScope()

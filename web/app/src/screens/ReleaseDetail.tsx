@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { getRouteApi } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { can, useResources, useSession } from "../api/resources"
+import { useOffer, useResources, useSession } from "../api/resources"
 import {
   DecisionResultSchema,
   DecisionService,
@@ -30,8 +30,9 @@ const route = getRouteApi("/releases/$namespace/$kind/$name")
 export function ReleaseDetail() {
   const params = route.useParams()
   const kind = parseKind(params.kind)
-  const { resources, scope, loading, error } = useResources()
+  const { resources, loading, error } = useResources()
   const session = useSession()
+  const offer = useOffer()
   const now = useNow(5_000)
   const [suspending, setSuspending] = useState(false)
   const [copied, setCopied] = useState<boolean>()
@@ -62,11 +63,9 @@ export function ReleaseDetail() {
   const sentence = say(resource, now)
   const waiting = waitingForApproval(resource)
   const next = resource.attention[0]?.nextStep
-  const maySuspend = can(
-    scope.scopes,
-    resource.namespace,
-    kind === "schema" ? "suspendSchemas" : "suspendMigrations"
-  )
+  const maySuspend =
+    offer(resource.namespace, kind === "schema" ? "suspendSchemas" : "suspendMigrations") ===
+    "allowed"
   const approvalPath = `/approve/${encodeURIComponent(resource.namespace)}/${resource.kind}/${encodeURIComponent(resource.name)}`
 
   return (
