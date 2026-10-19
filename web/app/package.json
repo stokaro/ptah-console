@@ -10,7 +10,12 @@
     "lhci": "npx --yes @lhci/cli@0.15.1 autorun"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "2.16.0",
+    "@connectrpc/connect": "2.2.0",
+    "@connectrpc/connect-query": "2.3.1",
+    "@connectrpc/connect-web": "2.2.0",
     "@ptah/console-ui": "*",
+    "@tanstack/react-query": "5.104.5",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   }

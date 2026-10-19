@@ -1,5 +1,7 @@
 import { Wordmark } from "@ptah/console-ui"
 
+import { BuildFooter } from "./BuildFooter"
+
 export function App() {
   return (
     <div className="flex min-h-screen flex-col">
@@ -13,6 +15,7 @@ export function App() {
           schemas and migrations, and let you approve the exact plan you reviewed.
         </p>
       </main>
+      <BuildFooter />
     </div>
   )
 }

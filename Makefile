@@ -9,9 +9,19 @@ LDFLAGS := -X github.com/stokaro/ptah-console/internal/buildinfo.version=$(VERSI
 
 QTLINT_RULES := -require-qt-c-receiver -require-data-rows -require-testing-run
 
+# buf runs at a pinned version through go run, so its dependency graph stays
+# out of go.mod. The code generators it calls are pinned in go.mod and
+# web/package-lock.json.
+BUF_VERSION := v1.74.0
+BUF := $(GO) run github.com/bufbuild/buf/cmd/buf@$(BUF_VERSION)
+# The contract a change is compared with.
+BUF_BASE ?= origin/main
+GENERATED := internal/gen web/app/src/gen
+
 .PHONY: build build-go test test-web-go vet fmt-check verify-go-mod check \
 	lint lint-golangci lint-qtlint lint-nolintguard lint-teststyle vulncheck \
-	web-install web-build web-lint web-test web-size web-check embed-smoke verify
+	web-install web-build web-lint web-test web-size web-check embed-smoke \
+	generate verify-generated buf-lint buf-breaking contract verify
 
 # The binary with the web app embedded, into bin/. Never the repository root:
 # a binary written there gets committed.
@@ -90,5 +100,31 @@ embed-smoke: build
 	./$(BIN)/ptah-console version -o json | grep -q '"webApp": true'
 	cd web && $(GO) test -count=1 -tags with_frontend .
 
+# Go and TypeScript from the proto files. protoc-gen-es comes from
+# web/node_modules, so run make web-install first.
+generate:
+	$(BUF) generate
+
+# Generated code is committed, and has to be what the generators write today.
+verify-generated: generate
+	@git diff --exit-code -- $(GENERATED) || { echo "generated code is stale: run make generate"; exit 1; }
+	@untracked="$$(git ls-files --others --exclude-standard -- $(GENERATED))"; \
+	if [ -n "$$untracked" ]; then echo "generated files git does not track:"; echo "$$untracked"; exit 1; fi
+
+buf-lint:
+	$(BUF) lint
+
+# A change to the API is compared with BUF_BASE. Before the first proto file
+# reached it there is nothing to break, and the target says so rather than
+# passing silently.
+buf-breaking:
+	@if git cat-file -e "$(BUF_BASE):proto" 2>/dev/null; then \
+		$(BUF) breaking --against '.git#ref=$(BUF_BASE)'; \
+	else \
+		echo "buf-breaking: $(BUF_BASE) has no proto/ yet, so there is no contract to compare with"; \
+	fi
+
+contract: buf-lint buf-breaking verify-generated
+
 # Everything CI runs.
-verify: check lint vulncheck web-check embed-smoke
+verify: check lint vulncheck web-check embed-smoke contract

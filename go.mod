@@ -5,14 +5,16 @@ go 1.26.0
 toolchain go1.27.2
 
 require (
+	connectrpc.com/connect/v2 v2.0.1
 	github.com/frankban/quicktest v1.14.6
 	github.com/spf13/cobra v1.10.2
+	google.golang.org/protobuf v1.36.12
 )
 
 require (
 	github.com/go-extras/nolintguard v0.4.2 // indirect
 	github.com/go-extras/qtlint v1.15.0 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -29,10 +31,12 @@ require (
 )
 
 tool (
+	connectrpc.com/connect/v2/cmd/protoc-gen-connect-go
 	github.com/go-extras/nolintguard/cmd/nolintguard
 	github.com/go-extras/qtlint/cmd/qtlint
 	github.com/stokaro/teststyle/cmd/teststyle
 	golang.org/x/vuln/cmd/govulncheck
+	google.golang.org/protobuf/cmd/protoc-gen-go
 )
 
 replace github.com/stokaro/ptah-console/web => ./web

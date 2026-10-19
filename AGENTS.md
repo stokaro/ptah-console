@@ -65,8 +65,17 @@ make lint           # golangci-lint, qtlint, nolintguard, teststyle
 make vulncheck      # govulncheck
 make web-check      # ESLint, Prettier, tsc, Vitest, size budgets
 make embed-smoke    # the binary carries the app and every file index.html loads
+make generate       # Go and TypeScript from proto/; needs make web-install
+make contract       # buf lint, buf breaking against origin/main, stale generated code
 make verify         # everything CI runs, apart from Lighthouse
 ```
+
+The browser and the server speak Connect. `proto/ptah/console/v1` is the
+contract; `internal/gen` and `web/app/src/gen` are generated from it and
+committed, and `make contract` refuses generated code that differs from what
+the generators write and a change `buf breaking` calls incompatible. The
+server uses connect-go v2: a handler returns a `*connect.Error` for anything
+the browser should read, because any other error reaches it as a bare code.
 
 The web app lives in `web/`: an npm workspace with the app in `web/app` and
 the shared components in `web/packages/ui` (`@ptah/console-ui`), which imports

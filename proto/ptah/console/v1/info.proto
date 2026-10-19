@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package ptah.console.v1;
+
+option go_package = "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1";
+
+// InfoService says which console build is serving and how it runs.
+service InfoService {
+  // GetInfo returns the build and the mode. It reads nothing from a cluster.
+  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message GetInfoRequest {}
+
+message GetInfoResponse {
+  // The release version, or what the toolchain recorded for a build from a
+  // checkout.
+  string version = 1;
+  string commit = 2;
+  Mode mode = 3;
+  // True when the server refuses every mutation, whatever the identity may do.
+  bool read_only = 4;
+}
+
+// Mode is how the console reaches Kubernetes and whom it acts for.
+enum Mode {
+  MODE_UNSPECIFIED = 0;
+  // The user's own kubeconfig, on a loopback listener.
+  MODE_LOCAL = 1;
+  // Beside the operator, with personal Console accounts and impersonation.
+  MODE_HOSTED = 2;
+}
