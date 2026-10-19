@@ -18,10 +18,18 @@ BUF := $(GO) run github.com/bufbuild/buf/cmd/buf@$(BUF_VERSION)
 BUF_BASE ?= origin/main
 GENERATED := internal/gen web/app/src/gen
 
+# envtest, pinned as stokaro/ptah-operator pins it: setup-envtest by version,
+# its release index by commit, and the Kubernetes release inside the
+# operator's support window.
+SETUP_ENVTEST_VERSION ?= v0.25.1
+ENVTEST_KUBERNETES_VERSION ?= 1.37.0
+ENVTEST_INDEX ?= https://raw.githubusercontent.com/kubernetes-sigs/controller-tools/1031496fc98a4f51010c3bdfdeb57b5d67bea7bd/envtest-releases.yaml
+ENVTEST_BIN_DIR ?=
+
 .PHONY: build build-go test test-web-go vet fmt-check verify-go-mod check \
 	lint lint-golangci lint-qtlint lint-nolintguard lint-teststyle vulncheck \
 	web-install web-build web-lint web-test web-size web-check embed-smoke \
-	generate verify-generated buf-lint buf-breaking contract verify
+	generate verify-generated buf-lint buf-breaking contract test-envtest verify
 
 # The binary with the web app embedded, into bin/. Never the repository root:
 # a binary written there gets committed.
@@ -126,5 +134,13 @@ buf-breaking:
 
 contract: buf-lint buf-breaking verify-generated
 
+# The packages under test/envtest against a real kube-apiserver and etcd. A
+# missing control plane fails here instead of skipping.
+test-envtest:
+	@assets="$$($(GO) run sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VERSION) \
+		use $(ENVTEST_KUBERNETES_VERSION) --index "$(ENVTEST_INDEX)" \
+		$(if $(ENVTEST_BIN_DIR),--bin-dir "$(ENVTEST_BIN_DIR)") -p path)" || exit $$?; \
+	KUBEBUILDER_ASSETS="$$assets" PTAH_CONSOLE_REQUIRE_ENVTEST=1 $(GO) test -count=1 -timeout=10m ./test/envtest/...
+
 # Everything CI runs.
-verify: check lint vulncheck web-check embed-smoke contract
+verify: check lint vulncheck web-check embed-smoke contract test-envtest

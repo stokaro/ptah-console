@@ -9,3 +9,4 @@ node_modules/
 /web/coverage/
 .DS_Store
 /web/app/.lighthouseci/
+/.envtest/

@@ -67,8 +67,17 @@ make web-check      # ESLint, Prettier, tsc, Vitest, size budgets
 make embed-smoke    # the binary carries the app and every file index.html loads
 make generate       # Go and TypeScript from proto/; needs make web-install
 make contract       # buf lint, buf breaking against origin/main, stale generated code
+make test-envtest   # test/envtest against a real kube-apiserver and etcd
 make verify         # everything CI runs, apart from Lighthouse
 ```
+
+`make test-envtest` runs the packages under `test/envtest`, one control plane
+per package, at the Kubernetes release the operator pins. No controller runs
+there, the operator's included: what those suites prove is the API server's
+verdict (authentication, RBAC, the operator's CRD schemas), not what the
+operator does with an object. Without `KUBEBUILDER_ASSETS` a plain `go test`
+skips them and says so; the target sets `PTAH_CONSOLE_REQUIRE_ENVTEST=1`, so a
+missing control plane fails there.
 
 The browser and the server speak Connect. `proto/ptah/console/v1` is the
 contract; `internal/gen` and `web/app/src/gen` are generated from it and
