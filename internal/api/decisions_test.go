@@ -16,6 +16,7 @@ import (
 	"github.com/stokaro/ptah-operator/pkg/planread"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -499,4 +500,81 @@ func TestListDecisionsListsEveryKind(t *testing.T) {
 		"DECISION_KIND_MIGRATION_APPROVAL bob",
 		"DECISION_KIND_RUN_ACKNOWLEDGMENT oncall",
 	})
+}
+
+// An approval says whether the plan it approved is still stored under the
+// UID it recorded: an auditor reads "not retained", never an empty plan.
+func TestADecisionSaysWhetherItsPlanIsKept(t *testing.T) {
+	t.Parallel()
+	approval := &operatorv1alpha1.PtahSchemaApproval{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "approval"},
+		Spec: operatorv1alpha1.PtahSchemaApprovalSpec{
+			SchemaRef: operatorv1alpha1.ImmutableObjectReference{Name: "storefront", UID: "uid-schema"},
+			PlanRef:   operatorv1alpha1.ImmutableObjectReference{Name: "storefront-plan-1", UID: "uid-plan"},
+		},
+	}
+	plan := func(uid string) client.Object {
+		return &operatorv1alpha1.PtahSchemaPlan{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "storefront-plan-1", UID: types.UID(uid)}}
+	}
+	tests := []struct {
+		name    string
+		objects []client.Object
+		get     func(ctx context.Context, c client.WithWatch, key client.ObjectKey, object client.Object, options ...client.GetOption) error
+		want    consolev1.PlanRetention
+	}{
+		{name: "the plan is stored", objects: []client.Object{approval, plan("uid-plan")}, want: consolev1.PlanRetention_PLAN_RETENTION_RETAINED},
+		{name: "the plan is gone", objects: []client.Object{approval}, want: consolev1.PlanRetention_PLAN_RETENTION_NOT_RETAINED},
+		{name: "another plan holds the name", objects: []client.Object{approval, plan("uid-later-plan")}, want: consolev1.PlanRetention_PLAN_RETENTION_NOT_RETAINED},
+		{
+			name: "the identity may not read plans", objects: []client.Object{approval, plan("uid-plan")},
+			get:  forbidPlans,
+			want: consolev1.PlanRetention_PLAN_RETENTION_NOT_GRANTED,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			service := decisionsWithGet(t, test.get, test.objects...)
+
+			listed, err := service.client.ListDecisions(service.ctx, &consolev1.ListDecisionsRequest{Namespaces: []string{namespace}})
+			c.Assert(err, qt.IsNil)
+			read, err := service.client.GetDecision(service.ctx, &consolev1.GetDecisionRequest{
+				Kind: consolev1.DecisionKind_DECISION_KIND_SCHEMA_APPROVAL, Namespace: namespace, Name: "approval",
+			})
+			c.Assert(err, qt.IsNil)
+
+			c.Assert(listed.GetDecisions(), qt.HasLen, 1)
+			c.Assert(listed.GetDecisions()[0].GetPlanRetention(), qt.Equals, test.want)
+			c.Assert(read.GetDecision().GetPlanRetention(), qt.Equals, test.want)
+		})
+	}
+}
+
+func forbidPlans(ctx context.Context, c client.WithWatch, key client.ObjectKey, object client.Object, options ...client.GetOption) error {
+	if _, ok := object.(*operatorv1alpha1.PtahSchemaPlan); ok {
+		return apierrors.NewForbidden(operatorv1alpha1.GroupVersion.WithResource("ptahschemaplans").GroupResource(), key.Name, errors.New("no rule"))
+	}
+	return c.Get(ctx, key, object, options...)
+}
+
+// decisionsWithGet is the decision service over objects, with an optional
+// answer to every Get.
+func decisionsWithGet(t *testing.T, get func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error, objects ...client.Object) decisions {
+	t.Helper()
+	scheme, err := kube.Scheme()
+	qt.New(t).Assert(err, qt.IsNil)
+	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...)
+	if get != nil {
+		builder = builder.WithInterceptorFuncs(interceptor.Funcs{Get: get})
+	}
+	built := builder.Build()
+	store := session.NewStore(session.Options{})
+	server := connect.NewServer(session.Interceptor(store, session.Cookies{}))
+	consolev1connect.RegisterDecisionServiceHandler(server,
+		api.NewDecisionService(staticFactory{built}, api.Scope{}, decision.NewLedger(), audit.Discard()))
+	return decisions{
+		client: consolev1connect.NewDecisionServiceClient(connect.NewClient(connectinprocess.New(server))),
+		ctx:    signedIn(t, store), store: built,
+	}
 }

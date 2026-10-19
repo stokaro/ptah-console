@@ -196,3 +196,40 @@ func TestListNamespacesHintsWhatTheIdentityMayDo(t *testing.T) {
 	c.Assert(byName[allowed].GetCapabilities().GetReadPlanSql(), qt.Equals, consolev1.Answer_ANSWER_DENIED)
 	c.Assert(byName[forbidden].GetAccess(), qt.Equals, consolev1.Access_ACCESS_FORBIDDEN)
 }
+
+// A namespace with more of a kind than the bound is read a page at a time up
+// to the bound and said to be cut short, never silently partial.
+func TestAListStopsAtItsBoundAndSaysSo(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	namespace := "paged"
+	c.Assert(plane.Admin.Create(t.Context(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}), qt.IsNil)
+	for i := range 5 {
+		c.Assert(plane.Admin.Create(t.Context(), schema(namespace, fmt.Sprintf("schema-%d", i))), qt.IsNil)
+	}
+	tests := []struct {
+		name      string
+		max       int
+		count     int
+		truncated bool
+	}{
+		{name: "under the bound", max: 0, count: 5, truncated: false},
+		{name: "over the bound", max: 3, count: 3, truncated: true},
+		{name: "exactly the bound", max: 5, count: 5, truncated: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			c := qt.New(t)
+			client, ctx := signedIn(t, func(server *connect.Server) {
+				consolev1connect.RegisterSchemaServiceHandler(server,
+					api.NewSchemaService(factory{plane.Admin}, api.Scope{MaxPerNamespace: test.max}))
+			})
+
+			response, err := consolev1connect.NewSchemaServiceClient(client).ListSchemas(ctx, &consolev1.ListSchemasRequest{Namespaces: []string{namespace}})
+
+			c.Assert(err, qt.IsNil)
+			c.Assert(response.GetSchemas(), qt.HasLen, test.count)
+			c.Assert(response.GetNamespaces()[0].GetTruncated(), qt.Equals, test.truncated)
+		})
+	}
+}

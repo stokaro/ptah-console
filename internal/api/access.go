@@ -23,6 +23,22 @@ type Scope struct {
 	// Ceiling, when set, is the only set of namespaces the console reads,
 	// whatever the identity may read elsewhere.
 	Ceiling []string
+	// MaxPerNamespace bounds the objects of one kind read from one
+	// namespace; zero means DefaultMaxPerNamespace.
+	MaxPerNamespace int
+}
+
+// DefaultMaxPerNamespace bounds a list when the scope does not.
+const DefaultMaxPerNamespace = 1000
+
+// listPage is the most objects one list request asks for.
+const listPage = 250
+
+func (s Scope) maxPerNamespace() int {
+	if s.MaxPerNamespace > 0 {
+		return s.MaxPerNamespace
+	}
+	return DefaultMaxPerNamespace
 }
 
 // maxNamespaces bounds one request.

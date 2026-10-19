@@ -11,6 +11,7 @@ import (
 	operatorv1alpha1 "github.com/stokaro/ptah-operator/api/v1alpha1"
 	"github.com/stokaro/ptah-operator/pkg/planread"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -26,7 +27,7 @@ const maxParallelNamespaces = 8
 // eachNamespace reads every namespace with read, at most a few at a time,
 // and reports how each went. A forbidden namespace is a result, not an error:
 // it is not the same as an empty one.
-func eachNamespace(ctx context.Context, namespaces []string, read func(context.Context, string) error) []*consolev1.NamespaceResult {
+func eachNamespace(ctx context.Context, namespaces []string, read func(context.Context, string) (bool, error)) []*consolev1.NamespaceResult {
 	results := make([]*consolev1.NamespaceResult, len(namespaces))
 	slots := make(chan struct{}, maxParallelNamespaces)
 	var wg sync.WaitGroup
@@ -34,7 +35,9 @@ func eachNamespace(ctx context.Context, namespaces []string, read func(context.C
 		wg.Go(func() {
 			slots <- struct{}{}
 			defer func() { <-slots }()
-			results[i] = namespaceResult(namespace, read(ctx, namespace))
+			truncated, err := read(ctx, namespace)
+			results[i] = namespaceResult(namespace, err)
+			results[i].Truncated = truncated
 		})
 	}
 	wg.Wait()
@@ -46,23 +49,49 @@ func eachNamespace(ctx context.Context, namespaces []string, read func(context.C
 func collect[T any](
 	ctx context.Context,
 	namespaces []string,
-	read func(context.Context, string) ([]T, error),
+	read func(context.Context, string) ([]T, bool, error),
 	key func(T) string,
 ) ([]T, []*consolev1.NamespaceResult) {
 	var mu sync.Mutex
 	var items []T
-	results := eachNamespace(ctx, namespaces, func(ctx context.Context, namespace string) error {
-		found, err := read(ctx, namespace)
+	results := eachNamespace(ctx, namespaces, func(ctx context.Context, namespace string) (bool, error) {
+		found, truncated, err := read(ctx, namespace)
 		if err != nil {
-			return err
+			return false, err
 		}
 		mu.Lock()
 		defer mu.Unlock()
 		items = append(items, found...)
-		return nil
+		return truncated, nil
 	})
 	sort.Slice(items, func(i, j int) bool { return key(items[i]) < key(items[j]) })
 	return items, results
+}
+
+// pages lists one kind in one namespace, a page at a time, until the kind is
+// read or bound objects are, and says whether it stopped short. Each page goes
+// to each before the next is asked for.
+func pages[L client.ObjectList](ctx context.Context, c client.Client, namespace string, bound int, list func() L, each func(L)) (bool, error) {
+	read, next := 0, ""
+	for {
+		page := list()
+		options := []client.ListOption{client.InNamespace(namespace), client.Limit(int64(min(listPage, bound-read)))}
+		if next != "" {
+			options = append(options, client.Continue(next))
+		}
+		if err := c.List(ctx, page, options...); err != nil {
+			return false, err
+		}
+		each(page)
+		read += meta.LenList(page)
+		next = page.GetContinue()
+		switch {
+		case next == "":
+			return false, nil
+		case read >= bound:
+			return true, nil
+		}
+	}
 }
 
 func refKey(ref *consolev1.ObjectRef) string { return ref.GetNamespace() + "/" + ref.GetName() }
@@ -74,7 +103,7 @@ func listEach[T any](
 	factory kube.ClientFactory,
 	scope Scope,
 	namespaces []string,
-	list func(context.Context, client.Client, string) ([]T, error),
+	list func(context.Context, client.Client, string, int) ([]T, bool, error),
 	ref func(T) *consolev1.ObjectRef,
 ) ([]T, []*consolev1.NamespaceResult, error) {
 	if err := scope.check(namespaces); err != nil {
@@ -84,34 +113,32 @@ func listEach[T any](
 	if err != nil {
 		return nil, nil, err
 	}
-	items, results := collect(ctx, namespaces, func(ctx context.Context, namespace string) ([]T, error) {
-		return list(ctx, c, namespace)
+	items, results := collect(ctx, namespaces, func(ctx context.Context, namespace string) ([]T, bool, error) {
+		return list(ctx, c, namespace, scope.maxPerNamespace())
 	}, func(item T) string { return refKey(ref(item)) })
 	return items, results, nil
 }
 
-func listSchemas(ctx context.Context, c client.Client, namespace string) ([]*consolev1.Schema, error) {
-	list := &operatorv1alpha1.PtahSchemaList{}
-	if err := c.List(ctx, list, client.InNamespace(namespace)); err != nil {
-		return nil, err
-	}
-	out := make([]*consolev1.Schema, 0, len(list.Items))
-	for i := range list.Items {
-		out = append(out, model.Schema(&list.Items[i]))
-	}
-	return out, nil
+func listSchemas(ctx context.Context, c client.Client, namespace string, bound int) ([]*consolev1.Schema, bool, error) {
+	var out []*consolev1.Schema
+	truncated, err := pages(ctx, c, namespace, bound, func() *operatorv1alpha1.PtahSchemaList { return &operatorv1alpha1.PtahSchemaList{} },
+		func(page *operatorv1alpha1.PtahSchemaList) {
+			for i := range page.Items {
+				out = append(out, model.Schema(&page.Items[i]))
+			}
+		})
+	return out, truncated, err
 }
 
-func listMigrations(ctx context.Context, c client.Client, namespace string) ([]*consolev1.Migration, error) {
-	list := &operatorv1alpha1.PtahMigrationList{}
-	if err := c.List(ctx, list, client.InNamespace(namespace)); err != nil {
-		return nil, err
-	}
-	out := make([]*consolev1.Migration, 0, len(list.Items))
-	for i := range list.Items {
-		out = append(out, model.Migration(&list.Items[i]))
-	}
-	return out, nil
+func listMigrations(ctx context.Context, c client.Client, namespace string, bound int) ([]*consolev1.Migration, bool, error) {
+	var out []*consolev1.Migration
+	truncated, err := pages(ctx, c, namespace, bound, func() *operatorv1alpha1.PtahMigrationList { return &operatorv1alpha1.PtahMigrationList{} },
+		func(page *operatorv1alpha1.PtahMigrationList) {
+			for i := range page.Items {
+				out = append(out, model.Migration(&page.Items[i]))
+			}
+		})
+	return out, truncated, err
 }
 
 // SchemaService serves SchemaService.

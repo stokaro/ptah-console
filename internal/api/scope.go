@@ -86,7 +86,7 @@ func (s *ScopeService) ListNamespaces(ctx context.Context, _ *consolev1.ListName
 		names = names[:maxNamespaces]
 	}
 
-	out := &consolev1.ListNamespacesResponse{}
+	out := &consolev1.ListNamespacesResponse{OperatorApi: operatorAPI(c.Config)}
 	for _, name := range names {
 		hints := kube.Can(ctx, c, capabilityChecks(name)...)
 		caps := capabilities(hints)

@@ -93,6 +93,9 @@ func Migration(migration *operatorv1alpha1.PtahMigration) *consolev1.Migration {
 	}
 	out.Stages = migrationStages(migration, c)
 	out.Attention = migrationAttention(migration, c)
+	for _, attention := range out.Attention {
+		attention.Command = ptahCommand("migration", migration.Name, migration.Namespace)
+	}
 	return out
 }
 

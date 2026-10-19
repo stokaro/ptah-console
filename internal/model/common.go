@@ -123,3 +123,10 @@ func (c conditions) newest(kind string) bool {
 func stage(name string, state consolev1.StageState, detail string) *consolev1.Stage {
 	return &consolev1.Stage{Name: name, State: state, Detail: detail}
 }
+
+// ptahCommand is the operator's read-only kubectl plugin, asked about one
+// object. Names come from the API server, which allows only DNS labels and
+// subdomains in them, so they need no quoting.
+func ptahCommand(verb, name, namespace string) string {
+	return "kubectl ptah " + verb + " " + name + " -n " + namespace
+}

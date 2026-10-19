@@ -14,6 +14,8 @@ import (
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
 	qt "github.com/frankban/quicktest"
+	"github.com/stokaro/ptah-operator/pkg/planread"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/v1/consolev1connect"
@@ -295,4 +297,33 @@ func TestTheAccessLogLeavesOutTheQuery(t *testing.T) {
 
 	c.Assert(srv.log.String(), qt.Contains, `"path":"/approve"`)
 	c.Assert(srv.log.String(), qt.Not(qt.Contains), "do-not-log-this")
+}
+
+// A response over the limit is refused rather than sent.
+func TestAResponseOverTheLimitIsRefused(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	srv := newServer(t, func(options *server.Options) { options.MaxResponseBytes = 8 })
+
+	response := srv.call(t, http.Header{"Connect-Protocol-Version": {"1"}}, "{}")
+
+	c.Assert(response.StatusCode, qt.Not(qt.Equals), http.StatusOK)
+	body, err := io.ReadAll(response.Body)
+	c.Assert(err, qt.IsNil)
+	c.Assert(string(body), qt.Contains, "resource_exhausted")
+}
+
+// The default limit holds the largest plan the operator stores, as the JSON a
+// browser reads, where every byte of the SQL may be a control character.
+func TestTheDefaultLimitHoldsTheLargestPlan(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	largest := &consolev1.GetSchemaPlanResponse{Plan: &consolev1.SchemaPlan{
+		Statements: []*consolev1.Statement{{Sql: strings.Repeat("\x01", int(planread.MaxPlanBytes))}},
+	}}
+
+	encoded, err := protojson.Marshal(largest)
+
+	c.Assert(err, qt.IsNil)
+	c.Assert(int64(len(encoded)) <= server.DefaultMaxResponseBytes, qt.IsTrue, qt.Commentf("%d bytes", len(encoded)))
 }

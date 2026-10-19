@@ -78,6 +78,15 @@ func Schema(schema *operatorv1alpha1.PtahSchema) *consolev1.Schema {
 	}
 	out.Stages = schemaStages(schema, c)
 	out.Attention = schemaAttention(schema, c)
+	for _, attention := range out.Attention {
+		// The plan, for a person deciding on it; where the schema stands,
+		// for everything else.
+		verb := "schema"
+		if attention.GetKind() == consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL && schema.Status.Plan != nil {
+			verb = "plan"
+		}
+		attention.Command = ptahCommand(verb, schema.Name, schema.Namespace)
+	}
 	return out
 }
 
