@@ -195,7 +195,7 @@ export function say(resource: ResourceView, now: Date): { tone: Tone; text: stri
   }
   const active = resource.stages.find((s) => s.state === StageState.ACTIVE)
   if (active) {
-    return { tone: "run", text: active.detail || `${active.name} is in progress.` }
+    return { tone: "run", text: sentence(active.detail) || `${active.name} is in progress.` }
   }
   const allDone =
     resource.stages.length > 0 &&
@@ -208,7 +208,7 @@ export function say(resource: ResourceView, now: Date): { tone: Tone; text: stri
     const when = synced?.lastTransition ? `, ${age(synced.lastTransition, now)} ago` : ""
     return {
       tone: "ok",
-      text: verified?.detail || `In the database and verified by a fresh read${when}.`,
+      text: sentence(verified?.detail) || `In the database and verified by a fresh read${when}.`,
     }
   }
   return { tone: "off", text: resource.phase ? `Phase ${resource.phase}.` : "No status yet." }
@@ -349,4 +349,14 @@ export function history(resource: ResourceView) {
 export function csvField(value: string) {
   const guarded = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
   return /[",\n\r]/.test(guarded) ? `"${guarded.replaceAll('"', '""')}"` : guarded
+}
+
+/** A stage's detail as a sentence: capitalized, with a full stop. */
+export function sentence(detail: string | undefined) {
+  const text = detail?.trim() ?? ""
+  if (text === "") {
+    return ""
+  }
+  const capitalized = text.charAt(0).toUpperCase() + text.slice(1)
+  return /[.!?]$/.test(capitalized) ? capitalized : `${capitalized}.`
 }

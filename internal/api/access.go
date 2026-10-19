@@ -73,7 +73,11 @@ func readError(err error, what string) error {
 		return connect.NewError(connect.CodePermissionDenied, status.Status().Message).WithCause(err)
 	case apierrors.IsNotFound(err):
 		return connect.NewError(connect.CodeNotFound, fmt.Sprintf("%s does not exist", what)).WithCause(err)
-	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
+	case errors.Is(err, context.Canceled):
+		// The caller went away, as a page does when it navigates while a
+		// read is in flight. The API server did nothing wrong.
+		return connect.NewError(connect.CodeCanceled, "the request was cancelled").WithCause(err)
+	case errors.Is(err, context.DeadlineExceeded):
 		return connect.NewError(connect.CodeDeadlineExceeded, "the API server did not answer in time").WithCause(err)
 	default:
 		return connect.NewError(connect.CodeUnavailable, fmt.Sprintf("the API server did not return %s", what)).WithCause(err)
