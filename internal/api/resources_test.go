@@ -177,3 +177,37 @@ func (r *counting) List(ctx context.Context, list client.ObjectList, options ...
 	r.reads++
 	return r.Client.List(ctx, list, options...)
 }
+
+// A read the caller abandoned is reported as cancelled, not as an API server
+// that did not answer: a page cancels its reads whenever it navigates.
+func TestAnAbandonedReadIsNotATimeout(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		err  error
+		want connect.Code
+	}{
+		{name: "the caller went away", err: context.Canceled, want: connect.CodeCanceled},
+		{name: "the API server did not answer", err: context.DeadlineExceeded, want: connect.CodeDeadlineExceeded},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			schemas, ctx := schemaService(t, failing{Client: planreadtest.NewClient(t), err: test.err})
+
+			_, err := schemas.GetSchema(ctx, &consolev1.GetSchemaRequest{Namespace: planreadtest.Namespace, Name: "storefront"})
+
+			c.Assert(connect.CodeOf(err), qt.Equals, test.want)
+		})
+	}
+}
+
+type failing struct {
+	client.Client
+	err error
+}
+
+func (f failing) Get(context.Context, client.ObjectKey, client.Object, ...client.GetOption) error {
+	return f.err
+}
