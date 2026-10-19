@@ -1,0 +1,10 @@
+/bin/
+/dist/
+/cover.out
+# `go build ./cmd/ptah-console` from the root writes the binary here.
+/ptah-console
+node_modules/
+/web/app/dist/
+/web/dist/
+/web/coverage/
+.DS_Store

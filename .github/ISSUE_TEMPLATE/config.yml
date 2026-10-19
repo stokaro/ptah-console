@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/stokaro/ptah-console/blob/main/SECURITY.md
+    about: A vulnerability goes to the address the security policy names, not to a public issue.
+  - name: Operator behavior
+    url: https://github.com/stokaro/ptah-operator/issues
+    about: What a condition means, why a plan waits, and how approvals are admitted belong in the operator's repository.

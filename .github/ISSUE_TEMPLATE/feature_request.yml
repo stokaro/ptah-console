@@ -1,0 +1,16 @@
+name: Feature request
+description: Something the console should show or let you do.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: The question you could not answer
+      description: What you needed to know or do, and where the console left you to kubectl.
+    validations:
+      required: true
+  - type: textarea
+    id: operator-support
+    attributes:
+      label: What the operator already exposes
+      description: The resource, field or condition that holds the answer, if you know it. The console shows what the operator records; it does not compute a second answer.
