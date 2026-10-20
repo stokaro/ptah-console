@@ -30,6 +30,8 @@ import (
 
 const publicHost = "console.example.test"
 
+var stopped = time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
+
 var assets = fstest.MapFS{"index.html": {Data: []byte("<!doctype html><title>console</title>")}}
 
 const configuration = `apiVersion: console.ptah.run/v1alpha1
@@ -172,6 +174,9 @@ func start(t *testing.T) *console {
 			TLSCertFile: served.certFile, TLSKeyFile: served.keyFile,
 			Kube: &rest.Config{Host: "https://127.0.0.1:1"}, Assets: assets,
 			Listening: func(addr net.Addr) { listening <- addr },
+			// Sign-in limits refill with time. A clock that stands still
+			// keeps a run on a slow machine from refilling one mid-test.
+			Now: func() time.Time { return stopped },
 		})
 	}()
 	t.Cleanup(func() {

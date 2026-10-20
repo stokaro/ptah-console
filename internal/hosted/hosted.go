@@ -59,6 +59,8 @@ type Options struct {
 	Stdout io.Writer
 	// Listening, when set, is told the address the console listens on.
 	Listening func(net.Addr)
+	// Now is the clock sign-in limits are kept by; nil is time.Now.
+	Now func() time.Time
 }
 
 // transportProblem says why the options do not serve HTTPS.
@@ -110,7 +112,7 @@ func Run(ctx context.Context, options Options) error {
 	if err != nil {
 		return err
 	}
-	verifier, err := signin.New(signin.Options{Config: config, Passwords: passwords})
+	verifier, err := signin.New(signin.Options{Config: config, Passwords: passwords, Now: options.Now})
 	if err != nil {
 		return err
 	}
