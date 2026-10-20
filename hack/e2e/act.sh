@@ -18,6 +18,8 @@
 #   act.sh repair deliveries|reports  undo what an unsettled run left
 #   act.sh outage start|stop          freeze or release the API server's
 #                                     load balancer
+#   act.sh hosted ...                 the hosted console; see hosted.sh
+#   act.sh insync <schema>            wait for a schema to be InSync
 set -eu
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
@@ -27,6 +29,12 @@ read_lab
 action=$1
 shift
 case "$action" in
+hosted)
+	exec "$E2E_DIR/hosted.sh" "$@"
+	;;
+insync)
+	wait_condition ptahschema "${1:?name a schema}" InSync 900s
+	;;
 publish)
 	[ "${1:-}" = storefront ] || fail 'only storefront is published again'
 	case "${2:-}" in

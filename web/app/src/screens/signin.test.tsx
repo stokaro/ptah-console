@@ -95,6 +95,40 @@ describe("Signing in to a hosted console", () => {
   })
 })
 
+describe("A session the server forgot", () => {
+  it("goes back to the sign-in form once, though the page still holds the old session", async () => {
+    const { hosted } = hostedConsole()
+    const server = { ended: false }
+    const { history, queryClient } = renderConsole("/login", { hosted, server })
+    await signIn("alex@example.com", "alex-secret")
+    expect(await screen.findByText("ptah-console:prod:alex")).toBeInTheDocument()
+
+    // A restart of the console: the cookie names a session nobody holds now.
+    server.ended = true
+    await queryClient.invalidateQueries()
+
+    expect(await screen.findByRole("form", { name: "Sign in" })).toBeInTheDocument()
+    expect(history.location.pathname).toBe("/login")
+    expect(screen.queryByText("ptah-console:prod:alex")).toBeNull()
+  })
+})
+
+describe("A local session the server forgot", () => {
+  it("goes to the launch page once, though the page still holds the old session", async () => {
+    const server = { ended: false }
+    const { history, queryClient } = renderConsole("/releases", { server })
+    expect(await screen.findByText("alice")).toBeInTheDocument()
+
+    // The session's idle limit passed, or ptah-console local was restarted.
+    server.ended = true
+    await queryClient.invalidateQueries()
+
+    expect(await screen.findByText("This page is not signed in")).toBeInTheDocument()
+    expect(history.location.pathname).toBe("/launch")
+    expect(screen.queryByText("alice")).toBeNull()
+  })
+})
+
 describe("A local console", () => {
   it("has no password form and no sign-out", async () => {
     renderConsole("/login")

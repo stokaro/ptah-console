@@ -95,7 +95,8 @@ function OperatorApiBanner() {
 function Header() {
   const session = useSession()
   const [theme, setTheme] = useTheme()
-  const identity = session.data
+  // A failed refresh keeps the last session's data; it names nobody now.
+  const identity = session.isSuccess ? session.data : undefined
   return (
     <header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-line bg-[color-mix(in_oklab,var(--bg)_85%,transparent)] px-5 py-3 backdrop-blur-[14px]">
       <Link to="/" aria-label="Ptah Console, home" className="text-fg">

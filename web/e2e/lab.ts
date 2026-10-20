@@ -15,6 +15,9 @@ const run = promisify(execFile)
 /** The people the rows sign in as; personas.sh says what each may do. */
 export type Persona = "outsider" | "viewer" | "reviewer" | "author" | "lead" | "approver" | "diag"
 
+/** The hosted console's accounts; hosted.sh says what each may do. */
+export type Account = "author" | "approver"
+
 /** One fact the environment scripts recorded, such as NAMESPACE or APPROVER. */
 export function fact(name: string): string {
   const line = readFileSync(path.join(outDir, "facts"), "utf8")
@@ -124,6 +127,11 @@ export interface Lab {
    * named, and opens the link it printed.
    */
   signIn(who: Persona, namespaces?: string[]): Promise<void>
+  /**
+   * Opens the hosted console and signs in with an account's login and
+   * password, the current one unless another is given.
+   */
+  signInHosted(account: Account, password?: string): Promise<void>
   /** The origin of the console the page is signed in to. */
   origin(): string
   /** Shows a caption and holds it long enough to read. */
@@ -177,6 +185,25 @@ export const test = base.extend<{ lab: Lab }>({
         // Signed in once the page names the identity the session acts as.
         await expect(page.getByText(`e2e-${who}`).first()).toBeVisible({ timeout: 60_000 })
         cuts.push({ from, to: seconds(), keep: 0 })
+      },
+      async signInHosted(account, password) {
+        const from = children.length === 0 && cuts.length === 0 ? 0 : seconds()
+        for (const child of children.splice(0)) {
+          child.kill()
+        }
+        origin = fact("HOSTED_URL")
+        await page.goto(`${origin}/login`)
+        const form = page.getByRole("form", { name: "Sign in" })
+        await expect(form).toBeVisible({ timeout: 60_000 })
+        cuts.push({ from, to: seconds(), keep: 0 })
+        await form.getByLabel("Login").fill(`${account}@e2e.test`)
+        await form
+          .getByLabel("Password")
+          .fill(password ?? fact(`HOSTED_${account.toUpperCase()}_PASSWORD`))
+        await form.getByRole("button", { name: "Sign in" }).click()
+        await expect(page.getByText(fact(`HOSTED_${account.toUpperCase()}`)).first()).toBeVisible({
+          timeout: 60_000,
+        })
       },
       origin: () => origin,
       async caption(text, holdMs = 3500, at = "top") {

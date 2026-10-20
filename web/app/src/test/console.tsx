@@ -198,6 +198,8 @@ export interface Fixture {
    * a sign-in, and returning signs the account in.
    */
   hosted?: { login: (request: LoginRequest) => void }
+  /** The server's side of the session; set ended to forget it, as a restart does. */
+  server?: { ended: boolean }
 }
 
 /** A watch that says it is live once and then stays quiet. */
@@ -223,7 +225,7 @@ export function consoleTransport(fixture: Fixture) {
   const hosted = fixture.hosted
   let signedIn = hosted === undefined
   const requireSession = () => {
-    if (!signedIn) {
+    if (!signedIn || fixture.server?.ended) {
       throw new ConnectError("sign in first", Code.Unauthenticated)
     }
   }
@@ -253,6 +255,9 @@ export function consoleTransport(fixture: Fixture) {
       login: (request) => {
         hosted?.login(request)
         signedIn = true
+        if (fixture.server) {
+          fixture.server.ended = false
+        }
         return {}
       },
       logout: () => {
@@ -333,7 +338,7 @@ export function renderConsole(path: string, fixture: Fixture = {}) {
       <App history={history} />
     </AppProviders>
   )
-  return { ...view, history }
+  return { ...view, history, queryClient }
 }
 
 type WatchEvent = MessageInitShape<typeof SubscribeResponseSchema>

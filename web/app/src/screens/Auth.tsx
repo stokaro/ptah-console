@@ -19,7 +19,9 @@ export function Launch() {
   if (session.isPending) {
     return <Loading what="the session" />
   }
-  if (session.data) {
+  // A query that failed keeps its last data, so data alone does not say
+  // there is a session: after a restart it is the session that ended.
+  if (session.isSuccess) {
     return <Navigate to="/" replace />
   }
   return (
@@ -34,7 +36,9 @@ export function Launch() {
 export function Login() {
   const session = useSession()
   const hosted = useHosted()
-  if (session.data) {
+  // A query that failed keeps its last data, so data alone does not say
+  // there is a session: after a restart it is the session that ended.
+  if (session.isSuccess) {
     return <Navigate to="/" replace />
   }
   if (hosted === undefined) {
