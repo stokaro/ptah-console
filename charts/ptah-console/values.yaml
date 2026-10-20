@@ -54,6 +54,13 @@ tls:
   secretName: ""
   terminatedUpstream: false
 
+# The networks of the proxies in front of the console, such as the ingress
+# controller's Pod network. Only a request whose connection comes from one of
+# them has its X-Forwarded-For read, from the right, to count sign-in attempts
+# per client rather than per proxy. Empty, the header is never read. Every
+# address (/0) is refused.
+trustedProxies: []
+
 # Refuse every change the console could send, whatever an account may do.
 readOnly: false
 

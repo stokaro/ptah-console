@@ -22,6 +22,8 @@ passwords:
   key: htpasswd
 tls:
   terminatedUpstream: true
+# The ingress controller's Pods.
+trustedProxies: [10.244.0.0/16, fd00:10::/64]
 readOnly: true
 ingress:
   enabled: true

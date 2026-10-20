@@ -3,11 +3,11 @@ package api
 import (
 	"context"
 	"errors"
-	"net"
 
 	"connectrpc.com/connect/v2"
 
 	"github.com/stokaro/ptah-console/internal/audit"
+	"github.com/stokaro/ptah-console/internal/auth/clientaddr"
 	"github.com/stokaro/ptah-console/internal/auth/launch"
 	"github.com/stokaro/ptah-console/internal/auth/session"
 	"github.com/stokaro/ptah-console/internal/auth/signin"
@@ -46,6 +46,7 @@ type Session struct {
 	verifier     *signin.Verifier
 	generation   uint64
 	displayNames map[string]string
+	addresses    clientaddr.Resolver
 }
 
 // NewLocalSession returns the SessionService of ptah-console local.
@@ -71,6 +72,8 @@ type HostedAccounts struct {
 	Generation uint64
 	// DisplayNames are the accounts' names for people, by account ID.
 	DisplayNames map[string]string
+	// Addresses says where an attempt came from, for the per-address limit.
+	Addresses clientaddr.Resolver
 }
 
 // NewHostedSession returns the SessionService of a hosted console.
@@ -85,6 +88,7 @@ func NewHostedSession(
 	return &Session{
 		store: store, cookies: cookies, factory: factory, facts: facts, audit: auditLog,
 		verifier: hosted.Verifier, generation: hosted.Generation, displayNames: hosted.DisplayNames,
+		addresses: hosted.Addresses,
 	}
 }
 
@@ -96,13 +100,14 @@ func (s *Session) Login(ctx context.Context, request *consolev1.LoginRequest) (*
 		return nil, connect.NewError(connect.CodeUnimplemented, "this console signs in with the link ptah-console local prints")
 	}
 	info, _ := connect.CallInfoForServerContext(ctx)
-	account, err := s.verifier.Verify(request.GetLogin(), request.GetPassword(), peerHost(info.PeerAddr))
+	from := s.addresses.Resolve(info.PeerAddr, info.RequestHeader().Values(clientaddr.Header))
+	account, err := s.verifier.Verify(request.GetLogin(), request.GetPassword(), clientaddr.Key(from))
 	switch {
 	case errors.Is(err, signin.ErrThrottled):
-		s.record(ctx, "sign-in", audit.Refused, kube.Principal{}, "too many attempts")
+		s.recordSignIn(ctx, audit.Refused, kube.Principal{}, "too many attempts", from.String())
 		return nil, connect.NewError(connect.CodeResourceExhausted, "too many sign-in attempts; wait a minute and try again")
 	case err != nil:
-		s.record(ctx, "sign-in", audit.Refused, kube.Principal{}, "wrong login or password")
+		s.recordSignIn(ctx, audit.Refused, kube.Principal{}, "wrong login or password", from.String())
 		return nil, connect.NewError(connect.CodeUnauthenticated, "the login or the password is wrong")
 	}
 	principal := kube.Principal{
@@ -111,7 +116,7 @@ func (s *Session) Login(ctx context.Context, request *consolev1.LoginRequest) (*
 	if err := s.start(ctx, info, principal); err != nil {
 		return nil, err
 	}
-	s.record(ctx, "sign-in", audit.Admitted, principal, "password")
+	s.recordSignIn(ctx, audit.Admitted, principal, "password", from.String())
 	return &consolev1.LoginResponse{}, nil
 }
 
@@ -130,16 +135,6 @@ func (s *Session) start(_ context.Context, info *connect.CallInfo, principal kub
 	}
 	info.ResponseHeader().Add("Set-Cookie", s.cookies.Issue(token).String())
 	return nil
-}
-
-// peerHost is the address part of a peer, or the whole of it when it has no
-// port.
-func peerHost(peer string) string {
-	host, _, err := net.SplitHostPort(peer)
-	if err != nil {
-		return peer
-	}
-	return host
 }
 
 // ExchangeLaunchToken trades a launch token for a session cookie. A cookie
@@ -200,6 +195,16 @@ func (s *Session) Logout(ctx context.Context, _ *consolev1.LogoutRequest) (*cons
 	}
 	info.ResponseHeader().Add("Set-Cookie", s.cookies.Clear().String())
 	return &consolev1.LogoutResponse{}, nil
+}
+
+func (s *Session) recordSignIn(ctx context.Context, outcome string, principal kube.Principal, reason, address string) {
+	if s.audit == nil {
+		return
+	}
+	s.audit.Record(ctx, audit.Event{
+		Action: "sign-in", Outcome: outcome,
+		AccountID: principal.AccountID, Context: principal.Context, Reason: reason, Address: address,
+	})
 }
 
 func (s *Session) record(ctx context.Context, action, outcome string, principal kube.Principal, reason string) {

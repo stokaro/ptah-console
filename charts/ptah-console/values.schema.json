@@ -82,6 +82,17 @@
         "terminatedUpstream": { "type": "boolean" }
       }
     },
+    "trustedProxies": {
+      "description": "Networks whose X-Forwarded-For is read. The console checks each one fully at start.",
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9A-Fa-f:.]+/[0-9]{1,3}$",
+        "not": { "pattern": "/0+$" }
+      }
+    },
     "readOnly": { "type": "boolean" },
     "service": {
       "type": "object",

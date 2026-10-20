@@ -190,6 +190,7 @@ func TestTheConsoleImpersonatesExactlyItsAccounts(t *testing.T) {
 	text, _, _ := unstructured.NestedString(configMaps[0].Object, "data", "configuration.yaml")
 	config, err := accounts.ParseConfig([]byte(text))
 	c.Assert(err, qt.IsNil)
+	c.Assert(config.TrustedProxies, qt.DeepEquals, []string{"10.244.0.0/16", "fd00:10::/64"})
 	var usernames []string
 	for _, account := range config.Accounts {
 		usernames = append(usernames, config.Username(account))
@@ -303,6 +304,9 @@ func TestEachRefusal(t *testing.T) {
 		{name: "a policy that does not name the API server", overlay: "networkPolicy: {enabled: true}",
 			says: `networkPolicy: apiServer.cidrs names the API server`},
 		{name: "a value the chart does not read", overlay: "replicas: 3", says: `additional properties 'replicas' not allowed`},
+		{name: "every IPv4 address as a proxy", overlay: "trustedProxies: [0.0.0.0/0]", says: `/trustedProxies/0.*'not' failed`},
+		{name: "every IPv6 address as a proxy", overlay: "trustedProxies: ['::/0']", says: `/trustedProxies/0.*'not' failed`},
+		{name: "a proxy that is no network", overlay: "trustedProxies: [10.244.0.0]", says: `/trustedProxies/0.*does not match pattern`},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -1,6 +1,8 @@
 package accounts_test
 
 import (
+	"fmt"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -108,6 +110,24 @@ func TestEachConfigurationRefusal(t *testing.T) {
 			want: `accounts[0].displayName: must not hold control characters`},
 		{name: "a long name", change: func(c *accounts.Config) { c.Accounts[0].DisplayName = strings.Repeat("A", 129) },
 			want: `accounts[0].displayName: is longer than 128 bytes`},
+		{name: "a proxy that is no network", change: func(c *accounts.Config) { c.TrustedProxies = []string{"10.244.0.0"} },
+			want: "trustedProxies[0]: is not a network in CIDR notation, such as 10.244.0.0/16 or 192.0.2.10/32"},
+		{name: "every IPv4 address as a proxy", change: func(c *accounts.Config) { c.TrustedProxies = []string{"0.0.0.0/0"} },
+			want: "trustedProxies[0]: is every address, which would let any client say it is any other"},
+		{name: "every IPv6 address as a proxy", change: func(c *accounts.Config) { c.TrustedProxies = []string{"::/0"} },
+			want: "trustedProxies[0]: is every address, which would let any client say it is any other"},
+		{name: "an IPv4 network written as IPv6", change: func(c *accounts.Config) { c.TrustedProxies = []string{"::ffff:10.244.0.0/112"} },
+			want: "trustedProxies[0]: is an IPv4 network written as IPv6; write it as IPv4"},
+		{name: "a host address with a network's length", change: func(c *accounts.Config) { c.TrustedProxies = []string{"10.244.1.5/16"} },
+			want: "trustedProxies[0]: is not a network address; write 10.244.0.0/16"},
+		{name: "a network twice", change: func(c *accounts.Config) { c.TrustedProxies = []string{"10.244.0.0/16", "10.244.0.0/16"} },
+			want: "trustedProxies[1]: repeats trustedProxies[0]"},
+		{name: "too many networks", change: func(c *accounts.Config) {
+			c.TrustedProxies = make([]string, 65)
+			for i := range c.TrustedProxies {
+				c.TrustedProxies[i] = fmt.Sprintf("10.%d.0.0/16", i)
+			}
+		}, want: "trustedProxies: lists more than 64 networks"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -150,6 +170,22 @@ func TestAFileThatIsNotAConfiguration(t *testing.T) {
 			c.Assert(err, qt.ErrorMatches, test.want)
 		})
 	}
+}
+
+func TestTrustedProxiesAreReadAsNetworks(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	document := changed(t, func(config *accounts.Config) {
+		config.TrustedProxies = []string{"10.244.0.0/16", "192.0.2.10/32", "fd00:10::/64"}
+	})
+
+	config, err := accounts.ParseConfig([]byte(document))
+
+	c.Assert(err, qt.IsNil)
+	c.Assert(fmt.Sprint(config.Proxies()), qt.Equals, fmt.Sprint([]netip.Prefix{
+		netip.MustParsePrefix("10.244.0.0/16"), netip.MustParsePrefix("192.0.2.10/32"), netip.MustParsePrefix("fd00:10::/64"),
+	}))
+	c.Assert(config.Proxies(), qt.HasLen, 3)
 }
 
 func TestEveryProblemIsReportedAtOnce(t *testing.T) {

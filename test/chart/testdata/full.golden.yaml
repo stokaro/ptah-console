@@ -75,6 +75,7 @@ data:
     publicURL: "https://console.example.com/"
     namespaces: ["storefront","billing"]
     accounts: [{"displayName":"Alex Morgan","id":"alex","login":"alex@example.com"},{"id":"sam","login":"sam@example.com"},{"displayName":"Kim Lee","id":"kim","login":"kim@example.com"}]
+    trustedProxies: ["10.244.0.0/16","fd00:10::/64"]
 
 ---
 # Source: ptah-console/templates/impersonation.yaml
@@ -667,7 +668,7 @@ spec:
         app.kubernetes.io/name: ptah-console
         app.kubernetes.io/instance: console
       annotations:
-        checksum/configuration: 7d5d981f036d0383f431cc9d8619500a8ae19f71e24f0d0f2bf1f420c7e5e873
+        checksum/configuration: 0cbbc13a6b012789d7d99c8d355b238e93affe59061c35a7b3c7f41ac1408194
         example.com/team: data
     spec:
       serviceAccountName: console-ptah-console

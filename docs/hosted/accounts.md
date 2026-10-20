@@ -22,6 +22,8 @@ accounts:
     displayName: Alex Morgan
   - id: sam
     login: sam@example.com
+trustedProxies:
+  - 10.244.0.0/16
 ```
 
 | Field | Rule |
@@ -32,6 +34,7 @@ accounts:
 | `accounts[].id` | A DNS label, unique. It never changes, because RBAC bindings name it: a person who needs another ID gets another account. |
 | `accounts[].login` | What the person types: ASCII letters, digits and punctuation, no spaces, at most 254 bytes. Unique ignoring case, and never starting with `system:`. It may change. |
 | `accounts[].displayName` | Optional, at most 128 bytes, no control characters. |
+| `trustedProxies` | Optional. The networks of the proxies in front of the console, in CIDR notation, at most 64, none repeated, none `/0`. Only from them is `X-Forwarded-For` read; see [Behind a proxy](serve.md#behind-a-proxy). |
 
 A field the console does not know is refused, so a misspelled one is caught
 instead of ignored.
