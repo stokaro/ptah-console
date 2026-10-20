@@ -27,10 +27,14 @@ func NewHTTPServer(handler http.Handler, tlsConfig *tls.Config, logger *slog.Log
 // shuts the server down and sends the failure, or nil, on the channel it
 // returns. A server with a TLS configuration serves TLS, HTTP/2 included.
 func Serve(ctx context.Context, httpServer *http.Server, listeners []net.Listener) <-chan error {
+	// Decided once, before anything serves: the first Serve configures HTTP/2
+	// and may set TLSConfig on a server that had none, so a second listener
+	// that looked afterwards would serve TLS without a certificate.
+	useTLS := httpServer.TLSConfig != nil
 	errs := make(chan error, len(listeners))
 	for _, listener := range listeners {
 		go func() {
-			if httpServer.TLSConfig != nil {
+			if useTLS {
 				errs <- httpServer.ServeTLS(listener, "", "")
 				return
 			}
