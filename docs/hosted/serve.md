@@ -64,10 +64,13 @@ client:
 - `/0` is refused: a network that holds every address would let any client
   name any other.
 
-Name only the proxies themselves, such as the ingress controller's Pod
-network, and make sure clients cannot reach the console's Service around them.
-A NetworkPolicy that admits only the proxies does that; the chart's example
-policy takes them in `networkPolicy.ingressFrom`. The resolved address is
+A trusted network is usually wider than the proxies: the ingress
+controller's Pod network holds every Pod. Anything inside it that reached the
+console directly could name any client, so only the proxies may connect. The
+chart enforces that: with `trustedProxies` set it refuses to render unless
+`networkPolicy.enabled` is on and `networkPolicy.ingressFrom` names the
+proxies, for example by their namespace and Pod labels. The cluster's network
+plugin has to enforce NetworkPolicy for that to hold. The resolved address is
 written into the audit line of every sign-in.
 
 Signing in replaces the session the browser had. A session ends after 30

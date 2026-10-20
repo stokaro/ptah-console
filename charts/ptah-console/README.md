@@ -62,7 +62,8 @@ An empty account list, a namespace or role that is not one of the known
 names, an account ID or login that starts with `system:`, the same ID or
 login twice, `cluster-admin`, `admin`, `edit` or a `system:` role as the
 approver role, more than one replica, a public URL that is not the `https`
-root of a host, and anything but exactly one TLS choice.
+root of a host, anything but exactly one TLS choice, and `trustedProxies`
+without an enabled NetworkPolicy whose `ingressFrom` names the proxies.
 
 A changed password takes effect when the Pod restarts:
 

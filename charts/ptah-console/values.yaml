@@ -58,7 +58,8 @@ tls:
 # controller's Pod network. Only a request whose connection comes from one of
 # them has its X-Forwarded-For read, from the right, to count sign-in attempts
 # per client rather than per proxy. Empty, the header is never read. Every
-# address (/0) is refused.
+# address (/0) is refused. Setting it requires networkPolicy.enabled with
+# ingressFrom naming the proxies, so nothing else can reach the console.
 trustedProxies: []
 
 # Refuse every change the console could send, whatever an account may do.
@@ -83,8 +84,8 @@ httpRoute:
   # The Gateway listeners to attach to, such as [{name: public, namespace: gateway}].
   parentRefs: []
 
-# An example policy, off by default: it admits the given peers to the console
-# and lets the console reach only the API server.
+# A policy that admits the given peers to the console and lets the console
+# reach only the API server. Off by default, and required with trustedProxies.
 networkPolicy:
   enabled: false
   # NetworkPolicy peers that may reach the console, such as the ingress
