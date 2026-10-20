@@ -13,7 +13,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { getRouteApi } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { can, offerText, useOffer, useResources, useSession } from "../api/resources"
+import { can, offerText, useOffer, useResource, useSession } from "../api/resources"
 import { DecisionKind, DecisionService, ResourceKind } from "../gen/ptah/console/v1/decisions_pb"
 import {
   DiagnosticsService,
@@ -47,13 +47,10 @@ const titleColors = {
 export function IncidentDetail() {
   const params = route.useParams()
   const kind = parseKind(params.kind)
-  const { resources, scope, loading, error } = useResources()
+  const { resource, scope, loading, error } = useResource(kind, params.namespace, params.name)
   const session = useSession()
   const offer = useOffer()
   const [acknowledging, setAcknowledging] = useState(false)
-  const resource = resources.find(
-    (r) => r.kind === kind && r.namespace === params.namespace && r.name === params.name
-  )
   const readLogs = resource ? can(scope.scopes, resource.namespace, "readLogs") : false
   const diagnostics = useQuery(
     DiagnosticsService.method.getDiagnostics,

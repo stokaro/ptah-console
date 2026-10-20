@@ -14,7 +14,7 @@ import {
 import { getRouteApi, Link } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { offerText, useOffer, useResources, useSession } from "../api/resources"
+import { offerText, useOffer, useResource, useSession } from "../api/resources"
 import {
   MigrationService,
   PlanSelection,
@@ -31,7 +31,7 @@ import {
   type ResourceView,
 } from "../model/resource"
 import { planSummary } from "./ApproverQueue"
-import { ApproveDialog } from "./ApproveDialog"
+import { ApproveDialog, type ReviewedPlan } from "./ApproveDialog"
 import { BackButton, DetailHeading, Loading, ReadError, where } from "./common"
 
 const route = getRouteApi("/approve/$namespace/$kind/$name")
@@ -39,13 +39,14 @@ const route = getRouteApi("/approve/$namespace/$kind/$name")
 export function PlanReview() {
   const params = route.useParams()
   const kind = parseKind(params.kind)
-  const { resources, loading, error } = useResources()
+  const { resource, loading, error } = useResource(kind, params.namespace, params.name)
   const session = useSession()
   const offer = useOffer()
-  const [approving, setApproving] = useState(false)
-  const resource = resources.find(
-    (r) => r.kind === kind && r.namespace === params.namespace && r.name === params.name
-  )
+  const [approving, setApproving] = useState<ReviewedPlan>()
+  // The plan this person started reading. When the operator replaces it, the
+  // page shows the new one, says so, and offers no approval until they
+  // confirm they are reading the new one.
+  const [readUid, setReadUid] = useState<string>()
   // While the operator plans again there is no current plan to read.
   const hasPlan = Boolean(resource?.plan)
   const schemaPlan = useQuery(
@@ -60,6 +61,11 @@ export function PlanReview() {
       ? { namespace: params.namespace, migration: params.name }
       : skipToken
   )
+  const shown = schemaPlan.data?.plan ?? migrationPlan.data?.plan
+  if (!readUid && shown?.uid) {
+    setReadUid(shown.uid)
+  }
+  const replaced = Boolean(readUid && shown?.uid && shown.uid !== readUid)
 
   if (loading) {
     return <Loading what="the plan" />
@@ -99,6 +105,17 @@ export function PlanReview() {
         title={planName}
         sub={waiting ? planSummary(resource) : "This plan is not waiting for approval now."}
       />
+      {replaced ? (
+        <Card title="The plan changed">
+          <span role="alert" className="text-sm leading-normal">
+            A newer plan replaced the one you were reading. This page now shows the new plan; read
+            it before you approve anything.
+          </span>
+          <Button className="self-start" onClick={() => setReadUid(shown?.uid)}>
+            I am reading the new plan
+          </Button>
+        </Card>
+      ) : null}
       <Card title="What this changes">
         <FindingList findings={planRisks(resource, sPlan)} />
       </Card>
@@ -130,8 +147,17 @@ export function PlanReview() {
             <Button
               variant="primary"
               className="flex-[1_1_200px]"
-              disabled={!(sPlan ?? mPlan)}
-              onClick={() => setApproving(true)}
+              disabled={!shown || replaced}
+              onClick={() =>
+                shown &&
+                setApproving({
+                  ownerUid: resource.ref.uid,
+                  name: shown.name,
+                  uid: shown.uid,
+                  fingerprint: shown.fingerprint,
+                  contractVersion: shown.contractVersion,
+                })
+              }
             >
               Approve this plan…
             </Button>
@@ -162,7 +188,12 @@ export function PlanReview() {
         </Link>
       </div>
       {approving ? (
-        <ApproveDialog resource={resource} context={context} onClose={() => setApproving(false)} />
+        <ApproveDialog
+          resource={resource}
+          context={context}
+          reviewed={approving}
+          onClose={() => setApproving(undefined)}
+        />
       ) : null}
     </div>
   )

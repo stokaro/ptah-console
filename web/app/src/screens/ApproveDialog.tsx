@@ -3,6 +3,7 @@ import { skipToken, useMutation, useQuery, useTransport } from "@connectrpc/conn
 import { shortDigest } from "@ptah/console-ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
+import { useState } from "react"
 
 import { useSession } from "../api/resources"
 import { DecisionKind, DecisionService } from "../gen/ptah/console/v1/decisions_pb"
@@ -15,28 +16,57 @@ export interface ApproveDialogProps {
   resource: ResourceView
   context?: string
   onClose: () => void
+  /** The plan the person read, when they read it on the plan page. */
+  reviewed?: ReviewedPlan
 }
 
-/** Approves exactly the plan the resource names now, as the session's identity. */
-export function ApproveDialog({ resource, context, onClose }: ApproveDialogProps) {
+/** The plan a person reviewed, as it was when they chose to approve it. */
+export interface ReviewedPlan {
+  ownerUid: string
+  name: string
+  uid: string
+  fingerprint: string
+  contractVersion: number
+}
+
+/**
+ * Approves exactly the plan the person reviewed, as the session's identity.
+ * The plan is held from the moment the dialog opens: if the resource moves on
+ * while it is open, the request still names what was reviewed, and the server,
+ * which reads the resource again, answers that it changed.
+ */
+export function ApproveDialog({ resource, context, onClose, reviewed }: ApproveDialogProps) {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const session = useSession()
   const isSchema = resource.kind === "schema"
+  const [held, setHeld] = useState<ReviewedPlan | undefined>(reviewed)
   const schemaPlan = useQuery(
     SchemaService.method.getSchemaPlan,
-    isSchema
+    isSchema && !held
       ? { namespace: resource.namespace, schema: resource.name, selection: PlanSelection.CURRENT }
       : skipToken
   )
   const migrationPlan = useQuery(
     MigrationService.method.getMigrationPlan,
-    isSchema ? skipToken : { namespace: resource.namespace, migration: resource.name }
+    !isSchema && !held ? { namespace: resource.namespace, migration: resource.name } : skipToken
   )
   const approveSchema = useMutation(DecisionService.method.approveSchemaPlan)
   const approveMigration = useMutation(DecisionService.method.approveMigrationPlan)
 
-  const plan = isSchema ? schemaPlan.data?.plan : migrationPlan.data?.plan
+  const read = isSchema ? schemaPlan.data?.plan : migrationPlan.data?.plan
+  if (!held && read) {
+    // The first reading is the plan this dialog approves, whatever later
+    // readings say.
+    setHeld({
+      ownerUid: resource.ref.uid,
+      name: read.name,
+      uid: read.uid,
+      fingerprint: read.fingerprint,
+      contractVersion: read.contractVersion,
+    })
+  }
+  const plan = held
   const fingerprint = plan?.fingerprint ?? ""
   const kind = isSchema ? DecisionKind.SCHEMA_APPROVAL : DecisionKind.MIGRATION_APPROVAL
 
@@ -51,13 +81,13 @@ export function ApproveDialog({ resource, context, onClose }: ApproveDialogProps
       ? await approveSchema.mutateAsync({
           ...common,
           schemaName: resource.name,
-          schemaUid: resource.ref.uid,
-          contractVersion: schemaPlan.data?.plan?.contractVersion ?? 0,
+          schemaUid: plan?.ownerUid ?? "",
+          contractVersion: plan?.contractVersion ?? 0,
         })
       : await approveMigration.mutateAsync({
           ...common,
           migrationName: resource.name,
-          migrationUid: resource.ref.uid,
+          migrationUid: plan?.ownerUid ?? "",
         })
     void queryClient.invalidateQueries()
     return response.result!

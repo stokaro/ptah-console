@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { getRouteApi } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { can, useOffer, useResources, useSession } from "../api/resources"
+import { can, useOffer, useResource, useSession } from "../api/resources"
 import {
   DiagnosticsService,
   Evidence,
@@ -36,15 +36,12 @@ const route = getRouteApi("/releases/$namespace/$kind/$name")
 export function ReleaseDetail() {
   const params = route.useParams()
   const kind = parseKind(params.kind)
-  const { resources, scope, loading, error } = useResources()
+  const { resource, scope, loading, error } = useResource(kind, params.namespace, params.name)
   const session = useSession()
   const offer = useOffer()
   const now = useNow(5_000)
   const [suspending, setSuspending] = useState(false)
   const [copied, setCopied] = useState<boolean>()
-  const resource = resources.find(
-    (r) => r.kind === kind && r.namespace === params.namespace && r.name === params.name
-  )
   // Events about the resource itself, when the identity may list them.
   const events = useQuery(
     DiagnosticsService.method.getDiagnostics,
