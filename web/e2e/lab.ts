@@ -108,6 +108,7 @@ async function showCaption(page: Page, text: string) {
       document.body.append(box)
     }
     box.textContent = line
+    box.style.display = line ? "block" : "none"
   }, text)
 }
 
@@ -155,8 +156,10 @@ export const test = base.extend<{ lab: Lab }>({
     await provide({
       async signIn(who, namespaces = [fact("NAMESPACE")]) {
         // Starting a console shows a blank page until it is signed in; the
-        // film leaves that out whole.
-        const from = seconds()
+        // film leaves that out whole. Before a row's first sign-in the page
+        // has been blank since the recording started, while the row set the
+        // cluster up.
+        const from = children.length === 0 && cuts.length === 0 ? 0 : seconds()
         // The session cookie is per host, so one browser holds one person.
         for (const child of children.splice(0)) {
           child.kill()
@@ -197,6 +200,9 @@ export const test = base.extend<{ lab: Lab }>({
         expect.soft(findings, `axe on ${screen}`).toEqual([])
       },
       async skip(wait) {
+        // A caption belongs to what it was shown over, not to what comes
+        // after the cut.
+        await showCaption(page, "")
         const from = seconds()
         try {
           return await wait()
