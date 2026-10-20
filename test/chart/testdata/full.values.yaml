@@ -1,0 +1,47 @@
+# Everything the chart can render: an Ingress and an HTTPRoute in front of
+# a console that serves plain HTTP to them, every role, the example policy.
+image:
+  digest: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+installationID: prod-eu-1
+publicURL: https://console.example.com/
+namespaces: [storefront, billing]
+accounts:
+  - id: alex
+    login: alex@example.com
+    displayName: Alex Morgan
+    roles: [viewer, approver]
+  - id: sam
+    login: sam@example.com
+    roles: [desired-state-author, plan-reader]
+  - id: kim
+    login: kim@example.com
+    displayName: Kim Lee
+    roles: [diagnostic-reader, viewer]
+passwords:
+  secretName: ptah-console-passwords
+  key: htpasswd
+tls:
+  terminatedUpstream: true
+readOnly: true
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 1m
+  tls:
+    - secretName: console-example-com
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: public
+      namespace: gateway
+networkPolicy:
+  enabled: true
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
+  apiServer:
+    cidrs: [10.96.0.1/32, 172.18.0.0/16]
+podAnnotations:
+  example.com/team: data

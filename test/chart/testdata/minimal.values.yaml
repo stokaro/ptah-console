@@ -1,0 +1,12 @@
+# The least an installation gives: the console serves TLS itself.
+installationID: prod
+publicURL: https://console.example.com
+namespaces: [storefront]
+accounts:
+  - id: alex
+    login: alex@example.com
+    roles: [viewer, approver]
+passwords:
+  secretName: ptah-console-passwords
+tls:
+  secretName: ptah-console-tls

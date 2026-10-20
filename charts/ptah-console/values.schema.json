@@ -1,0 +1,135 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["installationID", "publicURL", "namespaces", "accounts", "passwords", "tls"],
+  "definitions": {
+    "label": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"
+    }
+  },
+  "properties": {
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "digest": { "type": "string", "pattern": "^(sha256:[0-9a-f]{64})?$" },
+        "pullPolicy": { "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "replicaCount": {
+      "description": "Sessions live in the replica's memory, so at most one.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "installationID": { "$ref": "#/definitions/label" },
+    "publicURL": { "type": "string", "pattern": "^https://[^/?#@\\s]+/?$" },
+    "namespaces": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/label" }
+    },
+    "accounts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "login", "roles"],
+        "properties": {
+          "id": { "$ref": "#/definitions/label" },
+          "login": {
+            "type": "string",
+            "pattern": "^[!-~]{1,254}$",
+            "not": { "pattern": "^[Ss][Yy][Ss][Tt][Ee][Mm]:" }
+          },
+          "displayName": { "type": "string", "maxLength": 128 },
+          "roles": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": ["viewer", "plan-reader", "desired-state-author", "diagnostic-reader", "approver"]
+            }
+          }
+        }
+      }
+    },
+    "approverClusterRole": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "pattern": "^(cluster-admin|admin|edit|system:.*)$" }
+    },
+    "passwords": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["secretName"],
+      "properties": {
+        "secretName": { "type": "string", "minLength": 1 },
+        "key": { "type": "string", "minLength": 1 }
+      }
+    },
+    "tls": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "secretName": { "type": "string" },
+        "terminatedUpstream": { "type": "boolean" }
+      }
+    },
+    "readOnly": { "type": "boolean" },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
+        "port": { "type": ["integer", "null"], "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } },
+        "tls": { "type": "array" }
+      }
+    },
+    "httpRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } },
+        "parentRefs": { "type": "array" }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "ingressFrom": { "type": "array" },
+        "apiServer": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cidrs": { "type": "array", "items": { "type": "string" } },
+            "ports": { "type": "array", "items": { "type": "integer", "minimum": 1, "maximum": 65535 } }
+          }
+        }
+      }
+    },
+    "resources": { "type": "object" },
+    "nodeSelector": { "type": "object" },
+    "tolerations": { "type": "array" },
+    "affinity": { "type": "object" },
+    "podAnnotations": { "type": "object" }
+  }
+}

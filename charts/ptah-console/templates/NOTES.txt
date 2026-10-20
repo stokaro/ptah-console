@@ -1,0 +1,9 @@
+Ptah Console for installation {{ .Values.installationID }} serves {{ .Values.publicURL }}.
+
+The accounts act in Kubernetes as:
+{{- range .Values.accounts }}
+  {{ include "ptah-console.username" (dict "installationID" $.Values.installationID "id" .id) }}  ({{ .login }}: {{ join ", " .roles }})
+{{- end }}
+
+A changed password takes effect when the Pod restarts:
+  kubectl -n {{ .Release.Namespace }} rollout restart deployment/{{ include "ptah-console.fullname" . }}

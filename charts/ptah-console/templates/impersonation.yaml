@@ -1,0 +1,37 @@
+{{- $usernames := list -}}
+{{- range .Values.accounts -}}
+{{- $usernames = append $usernames (include "ptah-console.username" (dict "installationID" $.Values.installationID "id" .id)) -}}
+{{- end -}}
+{{- if not $usernames -}}
+{{- fail "accounts: an empty list would leave the impersonation rule without resourceNames, which grants every user" -}}
+{{- end -}}
+# The console's one grant: impersonate exactly the accounts' usernames. No
+# groups, UIDs, extras or ServiceAccounts, so each account may do what RBAC
+# grants its username and nothing the console's ServiceAccount may.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "ptah-console.fullname" . }}-impersonate
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["users"]
+    verbs: ["impersonate"]
+    resourceNames:
+      {{- toYaml $usernames | nindent 6 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "ptah-console.fullname" . }}-impersonate
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "ptah-console.fullname" . }}-impersonate
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "ptah-console.fullname" . }}
+    namespace: {{ .Release.Namespace }}

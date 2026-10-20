@@ -1,0 +1,12 @@
+apiVersion: v2
+name: ptah-console
+description: Web console for Ptah Operator, for people who sign in with a Console account
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.35.0-0 <1.38.0-0"
+home: https://github.com/stokaro/ptah-console
+sources:
+  - https://github.com/stokaro/ptah-console
+annotations:
+  artifacthub.io/license: MIT

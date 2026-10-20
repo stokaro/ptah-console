@@ -1,0 +1,17 @@
+{{- $portName := ternary "https" "http" (eq (include "ptah-console.tls" .) "true") -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ptah-console.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "ptah-console.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: {{ $portName }}
+      port: {{ include "ptah-console.port" . }}
+      targetPort: {{ $portName }}
+      protocol: TCP

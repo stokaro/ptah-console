@@ -1,0 +1,24 @@
+{{- include "ptah-console.validate" . -}}
+{{- $accounts := list -}}
+{{- range .Values.accounts -}}
+{{- $account := dict "id" .id "login" .login -}}
+{{- if .displayName -}}
+{{- $_ := set $account "displayName" .displayName -}}
+{{- end -}}
+{{- $accounts = append $accounts $account -}}
+{{- end -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ptah-console.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+data:
+  configuration.yaml: |
+    apiVersion: console.ptah.run/v1alpha1
+    kind: HostedConfiguration
+    installationID: {{ .Values.installationID | quote }}
+    publicURL: {{ .Values.publicURL | quote }}
+    namespaces: {{ toJson .Values.namespaces }}
+    accounts: {{ toJson $accounts }}
