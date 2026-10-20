@@ -34,8 +34,11 @@ lab_docker() { DOCKER_CONTEXT=$E2E_DOCKER_CONTEXT DOCKER_CONFIG=$E2E_DOCKER_CONF
 # forward, and waits until the console answers through it.
 forward() {
 	stop_forward
-	admin -n "$CONSOLE_NS" port-forward "service/console-ptah-console" "$PORT:443" \
-		>"$OUT_DIR/hosted-port-forward.log" 2>&1 &
+	# kubectl itself, not the admin function: dash runs a backgrounded function
+	# in a subshell that keeps the caller's output open, so act.sh's caller
+	# waited for it to end, and $! named the subshell rather than kubectl.
+	kubectl --kubeconfig "$E2E_KUBECONFIG" -n "$CONSOLE_NS" port-forward \
+		"service/console-ptah-console" "$PORT:443" </dev/null >"$OUT_DIR/hosted-port-forward.log" 2>&1 &
 	echo $! >"$FORWARD_PID"
 	for _ in $(seq 1 60); do
 		if curl --silent --insecure --fail --max-time 2 "$HOSTED_URL/healthz" >/dev/null 2>&1; then
