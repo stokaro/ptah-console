@@ -58,9 +58,9 @@ identities through impersonation, follows.
 
 ## Demo
 
-[![An approver approves a plan in Ptah Console and follows it until the operator has applied and verified it](docs/demo/poster.png)](docs/demo/ptah-console-demo.mp4)
+[![An approver reviews a plan that drops a column and grants SELECT, with what it changes and its exact SQL](docs/demo/poster.png)](docs/demo/ptah-console-demo.mp4)
 
-[The recording](docs/demo/ptah-console-demo.mp4) runs the scenarios of
+[The recording](docs/demo/ptah-console-demo.mp4) (4 minutes 33 seconds) runs the scenarios of
 [stokaro/ptah-operator#587](https://github.com/stokaro/ptah-operator/issues/587)
 against a real operator, one person at a time, each signed in to a
 `ptah-console local` of their own with a client certificate the cluster
@@ -88,7 +88,8 @@ issued:
 The Acceptance workflow records it against the operator's own demonstration
 lab, from the operator commit `go.mod` requires, cuts out the minutes the
 operator spends applying, and checks every decision against the cluster rather
-than the page. A run's `ptah-console-acceptance` artifact holds a fresh film.
+than the page. This file comes from run 39367996294; a new run's
+`ptah-console-acceptance` artifact holds a fresh one.
 
 ## Building
 
