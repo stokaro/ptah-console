@@ -11,21 +11,34 @@ reconciliation stay the authority.
 The console is not required to run the operator, and removing it does not
 affect anything the operator does.
 
-## Status
+## Install
 
-Under construction; there is no release yet. The plan and its steps are in
+The console runs two ways:
+
+- **On your workstation**, as `ptah-console local` with your own kubeconfig.
+  Nothing is installed in the cluster. See [Run the console on your
+  workstation](docs/install/local.md).
+- **In the cluster**, from the chart, for people who sign in with a Console
+  account that acts as its own Kubernetes username. See [Install a hosted
+  console](docs/install/hosted.md) and [Running a hosted
+  console](docs/hosted/runbook.md).
+
+[Security model](docs/security.md) says whom each mode's requests run as and
+what impersonation cannot contain. [Compatibility](docs/compatibility.md)
+names the operator and Kubernetes versions, and [Releases](docs/releases.md)
+how to verify what you download.
+
+The plan this console follows is
 [stokaro/ptah-operator#587](https://github.com/stokaro/ptah-operator/issues/587),
-and the architecture and security contract is
+and its architecture and security contract is
 [stokaro/ptah-operator#588](https://github.com/stokaro/ptah-operator/issues/588).
-[docs/design](docs/design/README.md) says what each screen reads, how the
-console authenticates, and which operator versions it works with.
+[docs/design](docs/design/README.md) says what each screen reads.
 
-## Running it on your workstation
+## What it shows
 
-```bash
-make build
-./bin/ptah-console local --context <context> --namespace <namespace>
-```
+From a checkout, `make build` builds the binary with the web app, and
+`./bin/ptah-console local --context <context> --namespace <namespace>` runs
+it.
 
 `local` acts with your own kubeconfig: every read and every decision goes to
 the API server as you, so RBAC and the operator's admission judge you and
@@ -52,9 +65,6 @@ The page has four views of the same resources:
 
 The page follows changes live. What a button offers depends on what RBAC says
 you may do; the server decides.
-
-A hosted mode, with personal Console accounts mapped to exact Kubernetes
-identities through impersonation, follows.
 
 ## Demo
 
