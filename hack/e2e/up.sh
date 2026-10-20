@@ -10,12 +10,7 @@ set -eu
 . "$(dirname "$0")/lib.sh"
 
 if [ ! -d "$OPERATOR_DIR/.git" ]; then
-	version=$(cd "$ROOT_DIR" && go list -m -f '{{.Version}}' github.com/stokaro/ptah-operator)
-	revision=${version##*-}
-	printf '%s\n' "$revision" | grep -Eq '^[0-9a-f]{12}$' || fail "cannot read a commit from $version"
-	say "checking out the operator at $revision"
-	git clone --quiet --filter=blob:none https://github.com/stokaro/ptah-operator.git "$OPERATOR_DIR"
-	git -C "$OPERATOR_DIR" checkout --quiet "$revision"
+	"$E2E_DIR/operator.sh" "$OPERATOR_DIR" >/dev/null
 fi
 (cd "$OPERATOR_DIR" && make demo-up)
 "$E2E_DIR/personas.sh"

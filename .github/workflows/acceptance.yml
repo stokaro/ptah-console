@@ -58,13 +58,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version="$(go list -m -f '{{.Version}}' github.com/stokaro/ptah-operator)"
-          revision="${version##*-}"
-          [[ "$revision" =~ ^[0-9a-f]{12}$ ]] || { echo "cannot read a commit from $version" >&2; exit 1; }
-          git clone --quiet --filter=blob:none https://github.com/stokaro/ptah-operator.git "$RUNNER_TEMP/operator"
-          git -C "$RUNNER_TEMP/operator" checkout --quiet "$revision"
+          commit="$(./hack/e2e/operator.sh "$RUNNER_TEMP/operator")"
           printf 'dir=%s\n' "$RUNNER_TEMP/operator" >> "$GITHUB_OUTPUT"
-          printf 'commit=%s\n' "$(git -C "$RUNNER_TEMP/operator" rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          printf 'commit=%s\n' "$commit" >> "$GITHUB_OUTPUT"
       # Read from the operator checkout, as its own demo workflow does.
       - name: Read the operator's support window and Ptah commit
         id: support
