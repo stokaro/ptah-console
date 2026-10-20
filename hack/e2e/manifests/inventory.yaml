@@ -1,0 +1,34 @@
+# A schema whose plans are safe, applied without an approval.
+apiVersion: operator.ptah.run/v1alpha1
+kind: PtahSchema
+metadata:
+  name: inventory
+  namespace: ${NAMESPACE}
+spec:
+  target:
+    engine: PostgreSQL
+    coordinationKey: e2e/inventory
+    urlFrom:
+      name: e2e-database-inventory
+      key: url
+  desired:
+    ociRef: oci://${REGISTRY}/schemas/inventory@${DIGEST}
+    registryAuthFrom:
+      name: demo-registry
+      mode: Environment
+      usernameKey: username
+      passwordKey: password
+    verificationPolicyFrom:
+      name: demo-verification-policy
+      key: policy.yaml
+    transport:
+      plainHTTP: true
+  policy:
+    apply: ${APPLY}
+    allowDestructive: false
+    driftSeverity: all
+  interval: ${INTERVAL}
+  execution:
+    activeDeadlineSeconds: 300
+    failureRetryInterval: 30m
+    connectTimeout: 30s

@@ -1,35 +1,36 @@
-name: Demo
+name: Acceptance
 
-# The basic scenario, recorded against a real operator: an approver signs in
-# to `ptah-console local` with a kubeconfig of their own, reviews the plan
-# the operator made, approves it, and follows it until the database holds
-# it. The lab is the operator's own demonstration lab, from the operator
-# commit this module requires, so the console is shown against the
-# environment the operator proves rather than one built for the video.
+# The rows of stokaro/ptah-operator#587 against a real operator: the
+# operator's own demonstration lab, from the operator commit this module
+# requires, with the personas and fixtures hack/e2e adds. Each person signs in
+# to a `ptah-console local` of their own, with a client certificate the
+# cluster issued, and every row is recorded. hack/e2e/verify.sh then checks
+# the cluster's own account of what the rows decided, and the recordings are
+# joined into the demo film.
 #
-# It runs on request, and on a pull request that changes the demo itself: a
-# run takes a cluster and about half an hour.
+# It runs on request, and on a pull request that changes the environment or
+# the rows: a run takes a cluster and about an hour.
 
 on:
   workflow_dispatch:
   pull_request:
     paths:
-      - .github/workflows/demo.yml
-      - hack/demo/**
+      - .github/workflows/acceptance.yml
+      - hack/e2e/**
       - web/e2e/**
 
 permissions:
   contents: read
 
 concurrency:
-  group: demo-${{ github.ref }}
+  group: acceptance-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  record:
-    name: Record the demo
+  rows:
+    name: Run and record the rows
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
     steps:
       - name: Check out the console
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -99,15 +100,15 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install --yes apache2-utils openssh-server ffmpeg
-          ssh_key="$RUNNER_TEMP/ptah-demo-ssh"
-          known_hosts="$RUNNER_TEMP/ptah-demo-known-hosts"
+          ssh_key="$RUNNER_TEMP/ptah-e2e-ssh"
+          known_hosts="$RUNNER_TEMP/ptah-e2e-known-hosts"
           install -d -m 0700 "$HOME/.ssh"
           ssh-keygen -q -t ed25519 -N '' -f "$ssh_key"
           install -m 0600 "$ssh_key.pub" "$HOME/.ssh/authorized_keys"
           sudo systemctl restart ssh
           ssh-keyscan -H 127.0.0.1 > "$known_hosts"
           {
-            printf '%s\n' 'Host ptah-demo-docker'
+            printf '%s\n' 'Host ptah-e2e-docker'
             printf '%s\n' '  HostName 127.0.0.1'
             printf '  User %s\n' "$USER"
             printf '  IdentityFile %s\n' "$ssh_key"
@@ -116,110 +117,66 @@ jobs:
             printf '  UserKnownHostsFile %s\n' "$known_hosts"
           } > "$HOME/.ssh/config"
           chmod 0600 "$HOME/.ssh/config"
-          context_name="ptah-console-demo-${{ steps.support.outputs.minor_slug }}"
-          docker context create "$context_name" --docker host=ssh://ptah-demo-docker
+          context_name="ptah-console-e2e-${{ steps.support.outputs.minor_slug }}"
+          docker context create "$context_name" --docker host=ssh://ptah-e2e-docker
           docker --context "$context_name" info >/dev/null
           printf 'name=%s\n' "$context_name" >> "$GITHUB_OUTPUT"
-      - name: Bring the operator's lab up
-        working-directory: ${{ steps.operator.outputs.dir }}
+      - name: Install the web app and the browser
+        working-directory: web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Bring the acceptance environment up
         env:
+          OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
+          OUT_DIR: ${{ runner.temp }}/e2e
           DOCKER_CONTEXT: ${{ steps.docker-context.outputs.name }}
           E2E_DIRECT_HOST_ACCESS: "1"
           E2E_PTAH_REVISION: ${{ steps.support.outputs.ptah_commit }}
           DEMO_KUBERNETES_VERSION: ${{ steps.support.outputs.kubernetes_version }}
-          DEMO_RUN_ID: console-demo-${{ github.run_id }}-${{ github.run_attempt }}
-        run: make demo-up
-      - name: Build the console with its web app
-        run: |
-          (cd web && npm ci)
-          make build
-      - name: Install the browser
-        working-directory: web
-        run: npx playwright install --with-deps chromium
-      - name: Put a schema in front of an approver
+          DEMO_RUN_ID: console-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+        run: make e2e-up
+      - name: Run the rows
         env:
           OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
-          OUT_DIR: ${{ runner.temp }}/demo
-        run: ./hack/demo/prepare.sh
-      # Each person gets a console of their own, run with their kubeconfig;
-      # the browser opens the link it printed and nothing else.
-      - name: Record the scenario
-        env:
-          OUT_DIR: ${{ runner.temp }}/demo
-        shell: bash
-        run: |
-          set -euo pipefail
-          # shellcheck disable=SC1091
-          . "$OUT_DIR/facts"
-          export DEMO_NAMESPACE="$NAMESPACE" DEMO_APPROVER="$APPROVER" DEMO_AUTHOR="$AUTHOR" \
-            DEMO_VIEWER="$VIEWER" DEMO_OUTSIDER="$OUTSIDER"
-          consoles=()
-          trap 'kill "${consoles[@]}" 2>/dev/null || true' EXIT
-          # start_console runs ptah-console local as one person and prints the
-          # sign-in link it offered.
-          start_console() {
-            local who=$1
-            ./bin/ptah-console local --kubeconfig "$OUT_DIR/$who.kubeconfig" --namespace "$NAMESPACE" \
-              --no-open > "$OUT_DIR/$who.out" 2> "$OUT_DIR/$who-audit.log" &
-            consoles+=("$!")
-            local link=""
-            for _ in $(seq 1 60); do
-              link="$(sed -n 's|^  \(http://[^ ]*/#t=[A-Za-z0-9_-]*\)$|\1|p' "$OUT_DIR/$who.out" | head -n 1)"
-              [ -n "$link" ] && break
-              sleep 1
-            done
-            [ -n "$link" ] || { cat "$OUT_DIR/$who.out" "$OUT_DIR/$who-audit.log" >&2; return 1; }
-            printf '%s\n' "$link"
-          }
-          # run_row signs one person in to a console of their own and runs
-          # their spec, keeping its results apart from the recorded run's.
-          run_row() {
-            local who=$1 link
-            link="$(start_console "$who")"
-            (cd web && DEMO_LINK="$link" DEMO_RESULTS_DIR="../test-results-$who" DEMO_REPORT_DIR="../playwright-report-$who" \
-              npx playwright test -c e2e/playwright.config.ts "e2e/$who.spec.ts")
-          }
-          run_row outsider
-          run_row viewer
-          run_row author
-          link="$(start_console approver)"
-          (cd web && DEMO_LINK="$link" npx playwright test -c e2e/playwright.config.ts e2e/demo.spec.ts)
+          OUT_DIR: ${{ runner.temp }}/e2e
+        run: make e2e-rows
       - name: Check the outcome against the cluster
+        if: always() && steps.operator.outputs.dir != ''
         env:
           OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
-          OUT_DIR: ${{ runner.temp }}/demo
-        run: ./hack/demo/verify.sh
-      - name: Convert the video
+          OUT_DIR: ${{ runner.temp }}/e2e
+        run: make e2e-verify
+      - name: Join the recordings into a film
         if: always()
+        env:
+          FILM: ${{ github.workspace }}/film/ptah-console-demo.mp4
         shell: bash
         run: |
           set -euo pipefail
-          video="$(find web/test-results -name 'video.webm' | head -n 1)"
-          [ -n "$video" ] || exit 0
-          mkdir -p demo-video
-          cp "$video" demo-video/ptah-console-demo.webm
-          ffmpeg -loglevel error -i "$video" -c:v libx264 -pix_fmt yuv420p -movflags +faststart \
-            demo-video/ptah-console-demo.mp4
-          cp "${{ runner.temp }}/demo/approver-audit.log" demo-video/approver-audit.log || true
-          for who in author viewer outsider; do
-            cp "${{ runner.temp }}/demo/$who-audit.log" "demo-video/$who-audit.log" || true
+          [ -d web/test-results ] || exit 0
+          make e2e-film
+          for who in outsider viewer reviewer author lead approver diag; do
+            cp "${{ runner.temp }}/e2e/$who-audit.log" "film/$who-audit.log" 2>/dev/null || true
           done
-          printf 'operator %s\n' "${{ steps.operator.outputs.commit }}" > demo-video/versions.txt
-      - name: Keep the recording
+          printf 'operator %s\n' "${{ steps.operator.outputs.commit }}" > film/versions.txt
+      - name: Keep the recordings
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ptah-console-demo
+          name: ptah-console-acceptance
           path: |
-            demo-video/
-            web/test-results*/
-            web/playwright-report*/
+            film/
+            web/test-results/
+            web/playwright-report/
           if-no-files-found: warn
           retention-days: 30
-      - name: Remove the lab
-        if: always()
-        working-directory: ${{ steps.operator.outputs.dir }}
-        run: make demo-down
+      - name: Remove the environment
+        if: always() && steps.operator.outputs.dir != ''
+        env:
+          OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
+          OUT_DIR: ${{ runner.temp }}/e2e
+        run: make e2e-down
       - name: Remove the Docker context
         if: always() && steps.docker-context.outputs.name != ''
         run: docker context rm --force "${{ steps.docker-context.outputs.name }}"

@@ -1,0 +1,172 @@
+import { test as base, expect, type Page } from "@playwright/test"
+import { execFile, spawn, type ChildProcess } from "node:child_process"
+import { closeSync, openSync, readFileSync, writeFileSync } from "node:fs"
+import path from "node:path"
+import { promisify } from "node:util"
+
+// The acceptance rows run against the environment `make e2e-up` built. Its
+// scripts wrote a kubeconfig per person and the facts below into OUT_DIR.
+const root = path.resolve(import.meta.dirname, "../..")
+const outDir = process.env.OUT_DIR ?? path.join(root, ".e2e/out")
+const binary = process.env.CONSOLE_BIN ?? path.join(root, "bin/ptah-console")
+const run = promisify(execFile)
+
+/** The people the rows sign in as; personas.sh says what each may do. */
+export type Persona = "outsider" | "viewer" | "reviewer" | "author" | "lead" | "approver" | "diag"
+
+/** One fact the environment scripts recorded, such as NAMESPACE or APPROVER. */
+export function fact(name: string): string {
+  const line = readFileSync(path.join(outDir, "facts"), "utf8")
+    .split("\n")
+    .find((entry) => entry.startsWith(`${name}=`))
+  if (!line) {
+    throw new Error(`the environment recorded no ${name}; run make e2e-up first`)
+  }
+  return line.slice(name.length + 1)
+}
+
+/**
+ * Changes something in the cluster as its administrator, the way another team
+ * or a failure would, and returns what the action printed.
+ */
+export async function act(...args: string[]): Promise<string> {
+  const { stdout } = await run(path.join(root, "hack/e2e/act.sh"), args, {
+    env: { ...process.env, OUT_DIR: outDir },
+    timeout: 15 * 60_000,
+  })
+  return stdout.trim()
+}
+
+/** Starts `ptah-console local` as one person and returns the link it printed. */
+async function start(who: Persona): Promise<{ link: string; child: ChildProcess }> {
+  const audit = openSync(path.join(outDir, `${who}-audit.log`), "a")
+  const child = spawn(
+    binary,
+    [
+      "local",
+      "--kubeconfig",
+      path.join(outDir, `${who}.kubeconfig`),
+      "--namespace",
+      fact("NAMESPACE"),
+      "--no-open",
+    ],
+    { stdio: ["ignore", "pipe", audit] }
+  )
+  closeSync(audit)
+  const link = await new Promise<string>((resolve, reject) => {
+    let printed = ""
+    const timer = setTimeout(() => {
+      reject(new Error(`ptah-console as ${who} printed no link: ${printed}`))
+    }, 60_000)
+    child.stdout?.on("data", (chunk: Buffer) => {
+      printed += chunk.toString()
+      const found = /^\s+(http:\/\/\S+\/#t=[A-Za-z0-9_-]+)$/m.exec(printed)
+      if (found) {
+        clearTimeout(timer)
+        resolve(found[1])
+      }
+    })
+    child.on("exit", (code) => {
+      clearTimeout(timer)
+      reject(new Error(`ptah-console as ${who} exited with ${code}: ${printed}`))
+    })
+  })
+  return { link, child }
+}
+
+/**
+ * Shows a caption near the top of the page for the recording. It is built
+ * with the DOM and CSSOM, which the page's Content Security Policy allows.
+ */
+async function showCaption(page: Page, text: string) {
+  await page.evaluate((line) => {
+    let box = document.getElementById("e2e-caption")
+    if (!box) {
+      box = document.createElement("div")
+      box.id = "e2e-caption"
+      Object.assign(box.style, {
+        position: "fixed",
+        left: "50%",
+        top: "74px",
+        transform: "translateX(-50%)",
+        zIndex: "100",
+        maxWidth: "860px",
+        padding: "12px 18px",
+        borderRadius: "14px",
+        background: "rgba(12, 15, 34, 0.88)",
+        color: "#fff",
+        font: "500 16px/1.45 system-ui, sans-serif",
+        textAlign: "center",
+        pointerEvents: "none",
+      })
+      document.body.append(box)
+    }
+    box.textContent = line
+  }, text)
+}
+
+export interface Console {
+  /** Starts a console as this person and opens the link it printed. */
+  signIn(who: Persona): Promise<void>
+  /** The origin of the console the page is signed in to. */
+  origin(): string
+  /** Shows a caption and holds it long enough to read. */
+  caption(text: string, holdMs?: number): Promise<void>
+  /**
+   * Waits for something slow, such as the operator applying a plan, and
+   * marks the wait so the recording can leave it out.
+   */
+  skip<T>(wait: () => Promise<T>): Promise<T>
+}
+
+/** What a row's recording needs to be cut and put in order. */
+export interface Film {
+  title: string
+  startedAt: number
+  cuts: { from: number; to: number }[]
+}
+
+export const test = base.extend<{ console: Console }>({
+  console: async ({ page }, provide, testInfo) => {
+    // The video starts with the page, which exists by now.
+    const startedAt = Date.now()
+    const seconds = () => (Date.now() - startedAt) / 1000
+    const children: ChildProcess[] = []
+    const cuts: Film["cuts"] = []
+    let origin = ""
+    await provide({
+      async signIn(who) {
+        // The session cookie is per host, so one browser holds one person.
+        for (const child of children.splice(0)) {
+          child.kill()
+        }
+        const started = await start(who)
+        children.push(started.child)
+        origin = new URL(started.link).origin
+        await page.goto(started.link)
+        // Signed in once the page names the identity the session acts as.
+        await expect(page.getByText(`e2e-${who}`).first()).toBeVisible({ timeout: 60_000 })
+      },
+      origin: () => origin,
+      async caption(text, holdMs = 3500) {
+        await showCaption(page, text)
+        await page.waitForTimeout(holdMs)
+      },
+      async skip(wait) {
+        const from = seconds()
+        try {
+          return await wait()
+        } finally {
+          cuts.push({ from, to: seconds() })
+        }
+      },
+    })
+    for (const child of children) {
+      child.kill()
+    }
+    const film: Film = { title: testInfo.title, startedAt, cuts }
+    writeFileSync(testInfo.outputPath("film.json"), JSON.stringify(film))
+  },
+})
+
+export { expect }
