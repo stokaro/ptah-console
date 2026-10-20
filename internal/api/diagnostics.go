@@ -227,8 +227,13 @@ func podEvidence(ctx context.Context, c client.Client, pod *corev1.Pod, logs log
 		Reason: pod.Status.Reason, Message: pod.Status.Message,
 		Events: events(ctx, c, pod.Namespace, pod.UID),
 	}
-	statuses := append(append([]corev1.ContainerStatus(nil), pod.Status.InitContainerStatuses...), pod.Status.ContainerStatuses...)
-	for _, status := range statuses {
+	for _, status := range pod.Status.InitContainerStatuses {
+		container := containerEvidence(status)
+		container.Init = true
+		container.Log = logs(pod, status.Name)
+		out.Containers = append(out.Containers, container)
+	}
+	for _, status := range pod.Status.ContainerStatuses {
 		container := containerEvidence(status)
 		container.Log = logs(pod, status.Name)
 		out.Containers = append(out.Containers, container)

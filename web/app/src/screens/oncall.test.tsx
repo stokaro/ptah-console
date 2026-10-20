@@ -12,7 +12,8 @@ import {
 } from "../gen/ptah/console/v1/decisions_pb"
 import { Evidence } from "../gen/ptah/console/v1/diagnostics_pb"
 import { AttentionKind, MigrationSchema, StageState } from "../gen/ptah/console/v1/resources_pb"
-import { minutesAgo, renderConsole, result } from "../test/console"
+import { WatchedKind } from "../gen/ptah/console/v1/watch_pb"
+import { heartbeat, minutesAgo, renderConsole, result, scriptedWatch } from "../test/console"
 
 const unresolved = create(MigrationSchema, {
   ref: { namespace: "application", name: "billing", uid: "uid-migration", resourceVersion: "7" },
@@ -28,6 +29,13 @@ const unresolved = create(MigrationSchema, {
   ],
   unresolvedRun: { operationId: "op-2", outcome: "Unknown", jobName: "billing-run-2" },
 })
+
+const settledInvalidation = {
+  event: {
+    case: "invalidate" as const,
+    value: { kind: WatchedKind.MIGRATION, namespace: "application", name: "billing" },
+  },
+}
 
 const diagnostics = {
   events: {
@@ -131,6 +139,127 @@ describe("On call", () => {
       migrationUid: "uid-migration",
       operationId: "op-2",
     })
+  })
+
+  it("keeps saying how the acknowledgment ended once the operator has settled the run", async () => {
+    const user = userEvent.setup()
+    const watch = scriptedWatch()
+    const settled = create(MigrationSchema, {
+      ref: unresolved.ref,
+      phase: "Pending",
+      statusCurrent: true,
+      stages: [{ name: "Apply", state: StageState.WAITING }],
+      attention: [
+        {
+          kind: AttentionKind.WAITING_FOR_APPROVAL,
+          reason: "1 planned migration needs an approval naming this plan",
+        },
+      ],
+    })
+    let current = unresolved
+    renderConsole("/incidents/application/migration/billing", {
+      migrations: () => [current],
+      diagnostics,
+      watch: watch.stream,
+      acknowledge: () =>
+        result({
+          outcome: DecisionOutcome.ADMITTED,
+          decision: create(DecisionSchema, {
+            kind: DecisionKind.RUN_ACKNOWLEDGMENT,
+            decidedBy: "oncall",
+          }),
+        }),
+    })
+    watch.push(heartbeat())
+
+    await user.click(await screen.findByRole("button", { name: "Acknowledge this run…" }))
+    const dialog = await screen.findByRole("alertdialog")
+    await user.click(within(dialog).getByRole("checkbox"))
+    await user.click(within(dialog).getByRole("button", { name: "Confirm" }))
+    expect(await within(dialog).findByText("Acknowledgment admitted")).toBeInTheDocument()
+
+    // The operator settles the run as soon as the acknowledgment is in, and
+    // the page reads it.
+    current = settled
+    watch.push(settledInvalidation)
+    expect(
+      await screen.findByRole("heading", { name: "Waiting for approval", hidden: true })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Acknowledge this run…", hidden: true })
+    ).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole("alertdialog")).getByText("Acknowledgment admitted")
+    ).toBeVisible()
+  })
+
+  it("shows the log of the run the incident is about, from the container that ran it", async () => {
+    renderConsole("/incidents/application/migration/billing", {
+      migrations: [unresolved],
+      diagnostics: {
+        jobs: [
+          {
+            namedBy: "status.activeOperation",
+            name: "billing-history-3",
+            evidence: Evidence.SHOWN,
+            podsEvidence: Evidence.SHOWN,
+            pods: [
+              {
+                name: "billing-history-3-q1w2e",
+                phase: "Pending",
+                containers: [
+                  {
+                    name: "fetch-migrations",
+                    init: true,
+                    state: "terminated",
+                    log: { evidence: Evidence.SHOWN, text: "Pulled the artifact\n" },
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            namedBy: "status.unresolvedRun",
+            name: "billing-run-2",
+            evidence: Evidence.SHOWN,
+            podsEvidence: Evidence.SHOWN,
+            pods: [
+              {
+                name: "billing-run-2-x7k2p",
+                phase: "Succeeded",
+                containers: [
+                  {
+                    name: "install-runner",
+                    init: true,
+                    state: "terminated",
+                    reason: "Completed",
+                    log: { evidence: Evidence.SHOWN, text: "installed the runner\n" },
+                  },
+                  {
+                    name: "ptah",
+                    state: "terminated",
+                    reason: "Completed",
+                    log: {
+                      evidence: Evidence.SHOWN,
+                      text: "relation ledger_entries does not exist\n",
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    expect(await screen.findByLabelText("Log excerpt")).toHaveTextContent(
+      "relation ledger_entries does not exist"
+    )
+    expect(
+      screen.getByText("Log excerpt · billing-run-2-x7k2p / ptah · plain text")
+    ).toBeInTheDocument()
+    const kept = screen.getByRole("list", { name: "Evidence" })
+    expect(within(kept).getByText("ptah exited 0 (Completed)")).toBeInTheDocument()
   })
 
   it("lists what needs a person and says what is not offered", async () => {

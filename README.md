@@ -58,21 +58,38 @@ identities through impersonation, follows.
 
 ## Demo
 
-[![An approver approves a plan in Ptah Console and follows it until the operator has applied and verified it](docs/demo/poster.png)](docs/demo/ptah-console-demo.mp4)
+[![An approver reviews a plan that drops a column and grants SELECT, with what it changes and its exact SQL](docs/demo/poster.png)](docs/demo/ptah-console-demo.mp4)
 
-[The recording](docs/demo/ptah-console-demo.mp4) (68 seconds) is the basic
-scenario against a real operator: an approver signs in with the link
-`ptah-console local` printed, reviews the exact SQL, approves the plan as
-their own Kubernetes identity, and follows it until the operator has applied
-it and verified it by a fresh read. The auditor view then shows who approved,
-as admission recorded it.
+[The recording](docs/demo/ptah-console-demo.mp4) (4 minutes 33 seconds) runs the scenarios of
+[stokaro/ptah-operator#587](https://github.com/stokaro/ptah-operator/issues/587)
+against a real operator, one person at a time, each signed in to a
+`ptah-console local` of their own with a client certificate the cluster
+issued:
 
-The Demo workflow records it against the operator's own demonstration lab,
-from the operator commit `go.mod` requires, and checks the outcome against the
-cluster rather than the page. Before the recorded run, an author who may not
-approve is shown no approval, and one sent anyway is refused by the API
-server. This file comes from run 39337386467; a new run's
-`ptah-console-demo` artifact holds a fresh one.
+- an outsider, a viewer and a SQL reviewer see what their RBAC lets them see,
+  and are told what it does not, including a namespace they may not read;
+- an author is not offered approval, and one sent anyway is forbidden;
+- a lead who wrote the change is refused their own approval by the operator's
+  four-eyes control;
+- an approver approves a plan that drops a column and grants access, and
+  follows it until the operator has applied it and verified it by a fresh read;
+- a plan replaced while the approver decides is not approved, and the page
+  says so;
+- migrations 14 to 17 are approved without SQL the operator API does not carry;
+- on call, a failed run shows the evidence Kubernetes still keeps and the end
+  of its log;
+- a MySQL run that stopped halfway is settled by an acknowledgment, not a
+  retry;
+- a run whose Job was deleted mid-Apply is unknown until acknowledged, and an
+  API server that stops answering meanwhile is reported while the decision
+  waits;
+- the auditor view shows who decided what, as admission recorded it.
+
+The Acceptance workflow records it against the operator's own demonstration
+lab, from the operator commit `go.mod` requires, cuts out the minutes the
+operator spends applying, and checks every decision against the cluster rather
+than the page. This file comes from run 39367996294; a new run's
+`ptah-console-acceptance` artifact holds a fresh one.
 
 ## Building
 

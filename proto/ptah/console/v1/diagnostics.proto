@@ -108,6 +108,9 @@ message ContainerEvidence {
   string message = 6;
   int32 exit_code = 7;
   LogExcerpt log = 8;
+  // An init container: it prepares the Pod and runs before the containers
+  // that do the work.
+  bool init = 9;
 }
 
 // LogExcerpt is the end of a container's log, as plain text.

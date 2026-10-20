@@ -173,7 +173,8 @@ export interface Fixture {
   readOnly?: boolean
   capabilities?: MessageInitShape<typeof CapabilitiesSchema>
   schemas?: Schema[]
-  migrations?: Migration[]
+  /** The migrations, read again on every request. */
+  migrations?: Migration[] | (() => Migration[])
   decisions?: Decision[]
   /** The current plan, read again on every request. */
   plan?: SchemaPlan | (() => SchemaPlan)
@@ -260,7 +261,12 @@ export function consoleTransport(fixture: Fixture) {
       },
     })
     service(MigrationService, {
-      listMigrations: () => ({ migrations: fixture.migrations ?? [] }),
+      listMigrations: () => ({
+        migrations:
+          typeof fixture.migrations === "function"
+            ? fixture.migrations()
+            : (fixture.migrations ?? []),
+      }),
     })
     service(DecisionService, {
       listDecisions: () => ({ decisions: fixture.decisions ?? [] }),

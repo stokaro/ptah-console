@@ -26,6 +26,7 @@
     "lhci": "npm run lhci --workspace app"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@babel/core": "7.29.7",
     "@bufbuild/protoc-gen-es": "2.16.0",
     "@eslint/js": "10.0.1",

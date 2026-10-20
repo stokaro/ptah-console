@@ -29,7 +29,8 @@ ENVTEST_BIN_DIR ?=
 .PHONY: build build-go test test-web-go vet fmt-check verify-go-mod check \
 	web-storybook lint lint-golangci lint-qtlint lint-nolintguard lint-teststyle vulncheck \
 	web-install web-build web-lint web-test web-size web-check embed-smoke \
-	generate verify-generated buf-lint buf-breaking contract test-envtest verify
+	generate verify-generated buf-lint buf-breaking contract test-envtest verify \
+	e2e-up e2e e2e-rows e2e-verify e2e-film e2e-down
 
 # The binary with the web app embedded, into bin/. Never the repository root:
 # a binary written there gets committed.
@@ -148,3 +149,27 @@ test-envtest:
 
 # Everything CI runs.
 verify: check lint vulncheck web-check embed-smoke contract test-envtest
+
+# The acceptance environment: the operator's own demonstration lab on kind, at
+# the operator commit go.mod requires, with this repository's personas and
+# fixtures (hack/e2e). The lab runs on DOCKER_CONTEXT, remote-dev-container by
+# default; the Acceptance workflow runs it on a GitHub runner.
+e2e-up:
+	./hack/e2e/up.sh
+
+# The rows of stokaro/ptah-operator#587 against it, recorded, and then the
+# cluster's own account of what they decided.
+e2e: e2e-rows e2e-verify
+
+e2e-rows: build
+	cd web && npx playwright test -c e2e/playwright.config.ts
+
+e2e-verify:
+	./hack/e2e/verify.sh
+
+# The rows' recordings, joined into one film with the waits cut out.
+e2e-film:
+	./hack/e2e/film.sh
+
+e2e-down:
+	./hack/e2e/down.sh

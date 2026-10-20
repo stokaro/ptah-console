@@ -98,6 +98,12 @@ func arrange(t *testing.T, user string, recorded func(job *batchv1.Job) types.UI
 
 	l.pod = runPod(l.namespace, "billing-run-1-x7k2p", l.job, true)
 	c.Assert(plane.Admin.Create(ctx, l.pod), qt.IsNil)
+	// What the kubelet would report: the init container that prepared the
+	// Pod, then the one that ran.
+	statuses := `{"status":{"phase":"Failed",` +
+		`"initContainerStatuses":[{"name":"install-runner","image":"registry.example/runner:1","imageID":"","ready":false,"restartCount":0,"state":{"terminated":{"exitCode":0,"reason":"Completed"}}}],` +
+		`"containerStatuses":[{"name":"runner","image":"registry.example/runner:1","imageID":"","ready":false,"restartCount":0,"state":{"terminated":{"exitCode":1,"reason":"Error"}}}]}}`
+	c.Assert(plane.Admin.Status().Patch(ctx, l.pod, client.RawPatch(types.MergePatchType, []byte(statuses))), qt.IsNil)
 	c.Assert(plane.Admin.Create(ctx, runPod(l.namespace, "impostor", l.job, false)), qt.IsNil)
 	c.Assert(plane.Admin.Create(ctx, event(l.namespace, "PtahMigration", l.migration.Name, l.migration.UID, "ApplyFailed")), qt.IsNil)
 	c.Assert(plane.Admin.Create(ctx, event(l.namespace, "Job", l.job.Name, l.job.UID, "BackoffLimitExceeded")), qt.IsNil)
@@ -130,8 +136,9 @@ func runPod(namespace, name string, job *batchv1.Job, controlled bool) *corev1.P
 			Labels: map[string]string{batchv1.ControllerUidLabel: string(job.UID)},
 		},
 		Spec: corev1.PodSpec{
-			RestartPolicy: corev1.RestartPolicyNever,
-			Containers:    []corev1.Container{{Name: "runner", Image: "registry.example/runner:1"}},
+			RestartPolicy:  corev1.RestartPolicyNever,
+			InitContainers: []corev1.Container{{Name: "install-runner", Image: "registry.example/runner:1"}},
+			Containers:     []corev1.Container{{Name: "runner", Image: "registry.example/runner:1"}},
 		},
 	}
 	controller := true
@@ -210,6 +217,21 @@ func TestDiagnosticsShowTheRecordedRun(t *testing.T) {
 	pod := job.GetPods()[0]
 	c.Assert(pod.GetName(), qt.Equals, l.pod.Name)
 	c.Assert(reasons(pod.GetEvents()), qt.DeepEquals, []string{"Started"})
+	c.Assert(containers(pod), qt.DeepEquals, []string{"install-runner init exit 0", "runner exit 1"})
+}
+
+// containers names each container of a Pod, whether it is an init
+// container, and how it ended.
+func containers(pod *consolev1.PodEvidence) []string {
+	out := make([]string, 0, len(pod.GetContainers()))
+	for _, container := range pod.GetContainers() {
+		name := container.GetName()
+		if container.GetInit() {
+			name += " init"
+		}
+		out = append(out, fmt.Sprintf("%s exit %d", name, container.GetExitCode()))
+	}
+	return out
 }
 
 // A Job under the recorded name with another UID is not the run's, and is

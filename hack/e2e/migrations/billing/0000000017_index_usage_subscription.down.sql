@@ -1,0 +1,1 @@
+DROP INDEX usage_records_subscription_id;

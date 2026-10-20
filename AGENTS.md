@@ -69,6 +69,10 @@ make generate       # Go and TypeScript from proto/; needs make web-install
 make contract       # buf lint, buf breaking against origin/main, stale generated code
 make test-envtest   # test/envtest against a real kube-apiserver and etcd
 make verify         # everything CI runs, apart from Lighthouse
+make e2e-up         # the acceptance environment on kind, through the operator's lab
+make e2e            # the acceptance rows against it, recorded, then hack/e2e/verify.sh
+make e2e-film       # the rows' recordings joined into one film, waits cut out
+make e2e-down       # remove the lab and every container it created
 ```
 
 `make test-envtest` runs the packages under `test/envtest`, one control plane
@@ -78,6 +82,18 @@ verdict (authentication, RBAC, the operator's CRD schemas), not what the
 operator does with an object. Without `KUBEBUILDER_ASSETS` a plain `go test`
 skips them and says so; the target sets `PTAH_CONSOLE_REQUIRE_ENVTEST=1`, so a
 missing control plane fails there.
+
+The acceptance environment is the operator's own demonstration lab, at the
+operator commit `go.mod` requires, with the personas and fixtures in
+`hack/e2e`. Each person has a client certificate the cluster issued through
+the CSR API, bound to the operator's example roles; `hack/e2e/personas.sh`
+refuses to continue when an identity has a grant its rows assume it lacks, or
+lacks one they assume it has. The rows in `web/e2e/acceptance.spec.ts` run in
+order, one `ptah-console local` per person, and `hack/e2e/verify.sh` checks
+what they decided against the cluster rather than the page. The lab runs kind
+on a Docker context (`remote-dev-container` unless `DOCKER_CONTEXT` names
+another) and never on a local daemon; the Acceptance workflow runs it on a
+GitHub runner, which is where cluster work belongs.
 
 The browser and the server speak Connect. `proto/ptah/console/v1` is the
 contract; `internal/gen` and `web/app/src/gen` are generated from it and
