@@ -7,7 +7,9 @@ A release of the console publishes:
   Windows), with an SPDX SBOM beside each archive;
 - `SHA256SUMS` for the archives;
 - the image `ghcr.io/stokaro/ptah-console:<version>` for `linux/amd64` and
-  `linux/arm64`, on distroless as a non-root user, with its own SBOM;
+  `linux/arm64`, on distroless as a non-root user, with its own SBOM, and the
+  same digest at `docker.io/stokaro/ptah-console:<version>`, which anyone can
+  pull without signing in;
 - the chart, as the release asset `ptah-console-<version>.tgz` and as the OCI
   artifact `oci://ghcr.io/stokaro/charts/ptah-console`.
 
@@ -32,6 +34,8 @@ gh attestation verify "ptah-console_${version}_linux_amd64.tar.gz" \
   --repo "$repository" --signer-workflow "$workflow"
 
 gh attestation verify "oci://ghcr.io/stokaro/ptah-console:$version" \
+  --repo "$repository" --signer-workflow "$workflow"
+gh attestation verify "oci://docker.io/stokaro/ptah-console:$version" \
   --repo "$repository" --signer-workflow "$workflow"
 gh attestation verify "oci://ghcr.io/stokaro/charts/ptah-console:$version" \
   --repo "$repository" --signer-workflow "$workflow"
