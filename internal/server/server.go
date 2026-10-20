@@ -31,6 +31,9 @@ import (
 // APIPrefix is where the Connect services are served.
 const APIPrefix = "/api"
 
+// HealthPath answers "ok" to anyone who asks.
+const HealthPath = "/healthz"
+
 // Defaults for the limits Options leaves at zero.
 const (
 	DefaultMaxRequestBytes = 1 << 20
@@ -126,7 +129,7 @@ func New(options Options) (http.Handler, error) {
 
 	mux := http.NewServeMux()
 	mux.Handle(APIPrefix+"/", http.StripPrefix(APIPrefix, apiHandler))
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET "+HealthPath, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = w.Write([]byte("ok\n"))
 	})

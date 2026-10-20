@@ -27,6 +27,8 @@ const (
 	// SessionServiceExchangeLaunchTokenProcedure is the procedure name of the SessionService's
 	// ExchangeLaunchToken RPC.
 	SessionServiceExchangeLaunchTokenProcedure = "/ptah.console.v1.SessionService/ExchangeLaunchToken"
+	// SessionServiceLoginProcedure is the procedure name of the SessionService's Login RPC.
+	SessionServiceLoginProcedure = "/ptah.console.v1.SessionService/Login"
 	// SessionServiceGetSessionProcedure is the procedure name of the SessionService's GetSession RPC.
 	SessionServiceGetSessionProcedure = "/ptah.console.v1.SessionService/GetSession"
 	// SessionServiceLogoutProcedure is the procedure name of the SessionService's Logout RPC.
@@ -39,6 +41,13 @@ var (
 			StreamType: connect.StreamTypeUnary,
 			Schema:     v1.File_ptah_console_v1_session_proto.Services().ByName("SessionService").Methods().ByName("ExchangeLaunchToken"),
 			Procedure:  SessionServiceExchangeLaunchTokenProcedure,
+		}
+	})
+	sessionServiceLoginSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_ptah_console_v1_session_proto.Services().ByName("SessionService").Methods().ByName("Login"),
+			Procedure:  SessionServiceLoginProcedure,
 		}
 	})
 	sessionServiceGetSessionSpec = sync.OnceValue(func() connect.Spec {
@@ -63,6 +72,9 @@ type SessionServiceClient interface {
 	// ExchangeLaunchToken trades the single-use token ptah-console local put in
 	// the URL fragment for a session cookie.
 	ExchangeLaunchToken(context.Context, *v1.ExchangeLaunchTokenRequest) (*v1.ExchangeLaunchTokenResponse, error)
+	// Login signs a browser in to a hosted console with an account's login and
+	// password. An unknown login and a wrong password get the same answer.
+	Login(context.Context, *v1.LoginRequest) (*v1.LoginResponse, error)
 	// GetSession says whom the session's requests act for, as the API server
 	// sees it.
 	GetSession(context.Context, *v1.GetSessionRequest) (*v1.GetSessionResponse, error)
@@ -81,6 +93,9 @@ type SessionServiceHandler interface {
 	// ExchangeLaunchToken trades the single-use token ptah-console local put in
 	// the URL fragment for a session cookie.
 	ExchangeLaunchToken(context.Context, *v1.ExchangeLaunchTokenRequest) (*v1.ExchangeLaunchTokenResponse, error)
+	// Login signs a browser in to a hosted console with an account's login and
+	// password. An unknown login and a wrong password get the same answer.
+	Login(context.Context, *v1.LoginRequest) (*v1.LoginResponse, error)
 	// GetSession says whom the session's requests act for, as the API server
 	// sees it.
 	GetSession(context.Context, *v1.GetSessionRequest) (*v1.GetSessionResponse, error)
@@ -94,6 +109,7 @@ func RegisterSessionServiceHandler(server *connect.Server, svc SessionServiceHan
 	adapter := sessionServiceHandler{svc: svc}
 	server.Register(
 		connect.Method{Spec: sessionServiceExchangeLaunchTokenSpec(), Handler: adapter.exchangeLaunchToken},
+		connect.Method{Spec: sessionServiceLoginSpec(), Handler: adapter.login},
 		connect.Method{Spec: sessionServiceGetSessionSpec(), Handler: adapter.getSession},
 		connect.Method{Spec: sessionServiceLogoutSpec(), Handler: adapter.logout},
 	)
@@ -104,6 +120,10 @@ type UnimplementedSessionServiceHandler struct{}
 
 func (UnimplementedSessionServiceHandler) ExchangeLaunchToken(context.Context, *v1.ExchangeLaunchTokenRequest) (*v1.ExchangeLaunchTokenResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.SessionService.ExchangeLaunchToken is not implemented")
+}
+
+func (UnimplementedSessionServiceHandler) Login(context.Context, *v1.LoginRequest) (*v1.LoginResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.SessionService.Login is not implemented")
 }
 
 func (UnimplementedSessionServiceHandler) GetSession(context.Context, *v1.GetSessionRequest) (*v1.GetSessionResponse, error) {
@@ -121,6 +141,14 @@ type sessionServiceClient struct {
 func (c *sessionServiceClient) ExchangeLaunchToken(ctx context.Context, req *v1.ExchangeLaunchTokenRequest) (*v1.ExchangeLaunchTokenResponse, error) {
 	var res v1.ExchangeLaunchTokenResponse
 	if err := c.client.CallUnary(ctx, sessionServiceExchangeLaunchTokenSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *sessionServiceClient) Login(ctx context.Context, req *v1.LoginRequest) (*v1.LoginResponse, error) {
+	var res v1.LoginResponse
+	if err := c.client.CallUnary(ctx, sessionServiceLoginSpec(), req, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -150,6 +178,18 @@ func (h sessionServiceHandler) exchangeLaunchToken(ctx context.Context, _ connec
 		return err
 	}
 	res, err := h.svc.ExchangeLaunchToken(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h sessionServiceHandler) login(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.LoginRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.Login(ctx, &req)
 	if err != nil {
 		return err
 	}

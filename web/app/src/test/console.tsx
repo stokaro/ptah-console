@@ -40,7 +40,7 @@ import {
   type Schema,
   type SchemaPlan,
 } from "../gen/ptah/console/v1/resources_pb"
-import { SessionService } from "../gen/ptah/console/v1/session_pb"
+import { SessionService, type LoginRequest } from "../gen/ptah/console/v1/session_pb"
 import { WatchService, type SubscribeResponseSchema } from "../gen/ptah/console/v1/watch_pb"
 
 export const minutesAgo = (minutes: number) =>
@@ -193,6 +193,11 @@ export interface Fixture {
   truncated?: string[]
   /** The live stream; one heartbeat, then quiet, by default. */
   watch?: (signal: AbortSignal) => AsyncIterable<MessageInitShape<typeof SubscribeResponseSchema>>
+  /**
+   * A hosted console. The browser starts signed out; login throws to refuse
+   * a sign-in, and returning signs the account in.
+   */
+  hosted?: { login: (request: LoginRequest) => void }
 }
 
 /** A watch that says it is live once and then stays quiet. */
@@ -215,23 +220,60 @@ export function result(init: MessageInitShape<typeof DecisionResultSchema>) {
 
 /** The console's API in memory, answering from the fixture. */
 export function consoleTransport(fixture: Fixture) {
+  const hosted = fixture.hosted
+  let signedIn = hosted === undefined
+  const requireSession = () => {
+    if (!signedIn) {
+      throw new ConnectError("sign in first", Code.Unauthenticated)
+    }
+  }
   return createRouterTransport(({ service }) => {
-    service(InfoService, { getInfo: () => ({ version: "v0.1.0", mode: Mode.LOCAL }) })
+    service(InfoService, {
+      getInfo: () => ({ version: "v0.1.0", mode: hosted ? Mode.HOSTED : Mode.LOCAL }),
+    })
     service(SessionService, {
-      getSession: () => ({
-        mode: Mode.LOCAL,
-        context: "kind-ptah",
-        kubernetesUsername: fixture.username ?? "alice",
-        readOnly: fixture.readOnly ?? false,
-      }),
+      getSession: () => {
+        requireSession()
+        return hosted
+          ? {
+              mode: Mode.HOSTED,
+              context: "in-cluster",
+              kubernetesUsername: fixture.username ?? "ptah-console:prod:alex",
+              accountId: "alex",
+              displayName: "Alex Morgan",
+              readOnly: fixture.readOnly ?? false,
+            }
+          : {
+              mode: Mode.LOCAL,
+              context: "kind-ptah",
+              kubernetesUsername: fixture.username ?? "alice",
+              readOnly: fixture.readOnly ?? false,
+            }
+      },
+      login: (request) => {
+        hosted?.login(request)
+        signedIn = true
+        return {}
+      },
+      logout: () => {
+        signedIn = false
+        return {}
+      },
     })
     service(ScopeService, {
-      listNamespaces: () => ({
-        namespaces: [
-          { name: "application", access: Access.OK, capabilities: fixture.capabilities ?? allowed },
-        ],
-        operatorApi: fixture.operatorApi ?? { served: true },
-      }),
+      listNamespaces: () => {
+        requireSession()
+        return {
+          namespaces: [
+            {
+              name: "application",
+              access: Access.OK,
+              capabilities: fixture.capabilities ?? allowed,
+            },
+          ],
+          operatorApi: fixture.operatorApi ?? { served: true },
+        }
+      },
     })
     service(SchemaService, {
       listSchemas: () => {

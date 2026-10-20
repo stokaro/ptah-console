@@ -36,10 +36,12 @@ func securityHeaders(next http.Handler) http.Handler {
 
 // requireHost refuses a request whose Host the console was not configured to
 // answer to. A page that rebinds its own DNS name to the loopback address
-// sends its own name as the Host, and stops here.
+// sends its own name as the Host, and stops here. The health check is the
+// exception: a kubelet probes it by the Pod's address, and it answers "ok"
+// and nothing else.
 func requireHost(next http.Handler, hosts map[string]bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !hosts[r.Host] {
+		if !hosts[r.Host] && (r.Method != http.MethodGet || r.URL.Path != HealthPath) {
 			http.Error(w, "misdirected request", http.StatusMisdirectedRequest)
 			return
 		}

@@ -101,6 +101,94 @@ func (*ExchangeLaunchTokenResponse) Descriptor() ([]byte, []int) {
 	return file_ptah_console_v1_session_proto_rawDescGZIP(), []int{1}
 }
 
+type LoginRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Login         string                 `protobuf:"bytes,1,opt,name=login,proto3" json:"login,omitempty"`
+	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LoginRequest) Reset() {
+	*x = LoginRequest{}
+	mi := &file_ptah_console_v1_session_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginRequest) ProtoMessage() {}
+
+func (x *LoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_session_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginRequest.ProtoReflect.Descriptor instead.
+func (*LoginRequest) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_session_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *LoginRequest) GetLogin() string {
+	if x != nil {
+		return x.Login
+	}
+	return ""
+}
+
+func (x *LoginRequest) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+type LoginResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LoginResponse) Reset() {
+	*x = LoginResponse{}
+	mi := &file_ptah_console_v1_session_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginResponse) ProtoMessage() {}
+
+func (x *LoginResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_session_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginResponse.ProtoReflect.Descriptor instead.
+func (*LoginResponse) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_session_proto_rawDescGZIP(), []int{3}
+}
+
 type GetSessionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -109,7 +197,7 @@ type GetSessionRequest struct {
 
 func (x *GetSessionRequest) Reset() {
 	*x = GetSessionRequest{}
-	mi := &file_ptah_console_v1_session_proto_msgTypes[2]
+	mi := &file_ptah_console_v1_session_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -121,7 +209,7 @@ func (x *GetSessionRequest) String() string {
 func (*GetSessionRequest) ProtoMessage() {}
 
 func (x *GetSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_session_proto_msgTypes[2]
+	mi := &file_ptah_console_v1_session_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -134,7 +222,7 @@ func (x *GetSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSessionRequest.ProtoReflect.Descriptor instead.
 func (*GetSessionRequest) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_session_proto_rawDescGZIP(), []int{2}
+	return file_ptah_console_v1_session_proto_rawDescGZIP(), []int{4}
 }
 
 type GetSessionResponse struct {
@@ -161,7 +249,7 @@ type GetSessionResponse struct {
 
 func (x *GetSessionResponse) Reset() {
 	*x = GetSessionResponse{}
-	mi := &file_ptah_console_v1_session_proto_msgTypes[3]
+	mi := &file_ptah_console_v1_session_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -173,7 +261,7 @@ func (x *GetSessionResponse) String() string {
 func (*GetSessionResponse) ProtoMessage() {}
 
 func (x *GetSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_session_proto_msgTypes[3]
+	mi := &file_ptah_console_v1_session_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -186,7 +274,7 @@ func (x *GetSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSessionResponse.ProtoReflect.Descriptor instead.
 func (*GetSessionResponse) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_session_proto_rawDescGZIP(), []int{3}
+	return file_ptah_console_v1_session_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetSessionResponse) GetMode() Mode {
@@ -260,7 +348,7 @@ type LogoutRequest struct {
 
 func (x *LogoutRequest) Reset() {
 	*x = LogoutRequest{}
-	mi := &file_ptah_console_v1_session_proto_msgTypes[4]
+	mi := &file_ptah_console_v1_session_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -272,7 +360,7 @@ func (x *LogoutRequest) String() string {
 func (*LogoutRequest) ProtoMessage() {}
 
 func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_session_proto_msgTypes[4]
+	mi := &file_ptah_console_v1_session_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -285,7 +373,7 @@ func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutRequest.ProtoReflect.Descriptor instead.
 func (*LogoutRequest) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_session_proto_rawDescGZIP(), []int{4}
+	return file_ptah_console_v1_session_proto_rawDescGZIP(), []int{6}
 }
 
 type LogoutResponse struct {
@@ -296,7 +384,7 @@ type LogoutResponse struct {
 
 func (x *LogoutResponse) Reset() {
 	*x = LogoutResponse{}
-	mi := &file_ptah_console_v1_session_proto_msgTypes[5]
+	mi := &file_ptah_console_v1_session_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -308,7 +396,7 @@ func (x *LogoutResponse) String() string {
 func (*LogoutResponse) ProtoMessage() {}
 
 func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_session_proto_msgTypes[5]
+	mi := &file_ptah_console_v1_session_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -321,7 +409,7 @@ func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutResponse.ProtoReflect.Descriptor instead.
 func (*LogoutResponse) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_session_proto_rawDescGZIP(), []int{5}
+	return file_ptah_console_v1_session_proto_rawDescGZIP(), []int{7}
 }
 
 var File_ptah_console_v1_session_proto protoreflect.FileDescriptor
@@ -331,7 +419,11 @@ const file_ptah_console_v1_session_proto_rawDesc = "" +
 	"\x1dptah/console/v1/session.proto\x12\x0fptah.console.v1\x1a\x1aptah/console/v1/info.proto\"2\n" +
 	"\x1aExchangeLaunchTokenRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\"\x1d\n" +
-	"\x1bExchangeLaunchTokenResponse\"\x13\n" +
+	"\x1bExchangeLaunchTokenResponse\"@\n" +
+	"\fLoginRequest\x12\x14\n" +
+	"\x05login\x18\x01 \x01(\tR\x05login\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"\x0f\n" +
+	"\rLoginResponse\"\x13\n" +
 	"\x11GetSessionRequest\"\xf2\x02\n" +
 	"\x12GetSessionResponse\x12)\n" +
 	"\x04mode\x18\x01 \x01(\x0e2\x15.ptah.console.v1.ModeR\x04mode\x12\x18\n" +
@@ -345,9 +437,10 @@ const file_ptah_console_v1_session_proto_rawDesc = "" +
 	"\x17kubeconfig_impersonates\x18\b \x01(\tR\x16kubeconfigImpersonates\x12!\n" +
 	"\finsecure_tls\x18\t \x01(\bR\vinsecureTls\"\x0f\n" +
 	"\rLogoutRequest\"\x10\n" +
-	"\x0eLogoutResponse2\xad\x02\n" +
+	"\x0eLogoutResponse2\xf7\x02\n" +
 	"\x0eSessionService\x12r\n" +
-	"\x13ExchangeLaunchToken\x12+.ptah.console.v1.ExchangeLaunchTokenRequest\x1a,.ptah.console.v1.ExchangeLaunchTokenResponse\"\x00\x12Z\n" +
+	"\x13ExchangeLaunchToken\x12+.ptah.console.v1.ExchangeLaunchTokenRequest\x1a,.ptah.console.v1.ExchangeLaunchTokenResponse\"\x00\x12H\n" +
+	"\x05Login\x12\x1d.ptah.console.v1.LoginRequest\x1a\x1e.ptah.console.v1.LoginResponse\"\x00\x12Z\n" +
 	"\n" +
 	"GetSession\x12\".ptah.console.v1.GetSessionRequest\x1a#.ptah.console.v1.GetSessionResponse\"\x03\x90\x02\x01\x12K\n" +
 	"\x06Logout\x12\x1e.ptah.console.v1.LogoutRequest\x1a\x1f.ptah.console.v1.LogoutResponse\"\x00BHZFgithub.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1b\x06proto3"
@@ -364,26 +457,30 @@ func file_ptah_console_v1_session_proto_rawDescGZIP() []byte {
 	return file_ptah_console_v1_session_proto_rawDescData
 }
 
-var file_ptah_console_v1_session_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_ptah_console_v1_session_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_ptah_console_v1_session_proto_goTypes = []any{
 	(*ExchangeLaunchTokenRequest)(nil),  // 0: ptah.console.v1.ExchangeLaunchTokenRequest
 	(*ExchangeLaunchTokenResponse)(nil), // 1: ptah.console.v1.ExchangeLaunchTokenResponse
-	(*GetSessionRequest)(nil),           // 2: ptah.console.v1.GetSessionRequest
-	(*GetSessionResponse)(nil),          // 3: ptah.console.v1.GetSessionResponse
-	(*LogoutRequest)(nil),               // 4: ptah.console.v1.LogoutRequest
-	(*LogoutResponse)(nil),              // 5: ptah.console.v1.LogoutResponse
-	(Mode)(0),                           // 6: ptah.console.v1.Mode
+	(*LoginRequest)(nil),                // 2: ptah.console.v1.LoginRequest
+	(*LoginResponse)(nil),               // 3: ptah.console.v1.LoginResponse
+	(*GetSessionRequest)(nil),           // 4: ptah.console.v1.GetSessionRequest
+	(*GetSessionResponse)(nil),          // 5: ptah.console.v1.GetSessionResponse
+	(*LogoutRequest)(nil),               // 6: ptah.console.v1.LogoutRequest
+	(*LogoutResponse)(nil),              // 7: ptah.console.v1.LogoutResponse
+	(Mode)(0),                           // 8: ptah.console.v1.Mode
 }
 var file_ptah_console_v1_session_proto_depIdxs = []int32{
-	6, // 0: ptah.console.v1.GetSessionResponse.mode:type_name -> ptah.console.v1.Mode
+	8, // 0: ptah.console.v1.GetSessionResponse.mode:type_name -> ptah.console.v1.Mode
 	0, // 1: ptah.console.v1.SessionService.ExchangeLaunchToken:input_type -> ptah.console.v1.ExchangeLaunchTokenRequest
-	2, // 2: ptah.console.v1.SessionService.GetSession:input_type -> ptah.console.v1.GetSessionRequest
-	4, // 3: ptah.console.v1.SessionService.Logout:input_type -> ptah.console.v1.LogoutRequest
-	1, // 4: ptah.console.v1.SessionService.ExchangeLaunchToken:output_type -> ptah.console.v1.ExchangeLaunchTokenResponse
-	3, // 5: ptah.console.v1.SessionService.GetSession:output_type -> ptah.console.v1.GetSessionResponse
-	5, // 6: ptah.console.v1.SessionService.Logout:output_type -> ptah.console.v1.LogoutResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
+	2, // 2: ptah.console.v1.SessionService.Login:input_type -> ptah.console.v1.LoginRequest
+	4, // 3: ptah.console.v1.SessionService.GetSession:input_type -> ptah.console.v1.GetSessionRequest
+	6, // 4: ptah.console.v1.SessionService.Logout:input_type -> ptah.console.v1.LogoutRequest
+	1, // 5: ptah.console.v1.SessionService.ExchangeLaunchToken:output_type -> ptah.console.v1.ExchangeLaunchTokenResponse
+	3, // 6: ptah.console.v1.SessionService.Login:output_type -> ptah.console.v1.LoginResponse
+	5, // 7: ptah.console.v1.SessionService.GetSession:output_type -> ptah.console.v1.GetSessionResponse
+	7, // 8: ptah.console.v1.SessionService.Logout:output_type -> ptah.console.v1.LogoutResponse
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -401,7 +498,7 @@ func file_ptah_console_v1_session_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ptah_console_v1_session_proto_rawDesc), len(file_ptah_console_v1_session_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

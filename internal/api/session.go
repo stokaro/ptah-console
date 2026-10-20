@@ -3,12 +3,14 @@ package api
 import (
 	"context"
 	"errors"
+	"net"
 
 	"connectrpc.com/connect/v2"
 
 	"github.com/stokaro/ptah-console/internal/audit"
 	"github.com/stokaro/ptah-console/internal/auth/launch"
 	"github.com/stokaro/ptah-console/internal/auth/session"
+	"github.com/stokaro/ptah-console/internal/auth/signin"
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/v1/consolev1connect"
 	"github.com/stokaro/ptah-console/internal/kube"
@@ -39,6 +41,11 @@ type Session struct {
 	// principal the process acts for.
 	launcher  *launch.Launcher
 	principal kube.Principal
+
+	// Hosted mode signs a browser in with an account's login and password.
+	verifier     *signin.Verifier
+	generation   uint64
+	displayNames map[string]string
 }
 
 // NewLocalSession returns the SessionService of ptah-console local.
@@ -57,6 +64,84 @@ func NewLocalSession(
 	}
 }
 
+// HostedAccounts are what a hosted SessionService signs in against.
+type HostedAccounts struct {
+	Verifier *signin.Verifier
+	// Generation is the configuration's, carried by every principal.
+	Generation uint64
+	// DisplayNames are the accounts' names for people, by account ID.
+	DisplayNames map[string]string
+}
+
+// NewHostedSession returns the SessionService of a hosted console.
+func NewHostedSession(
+	store *session.Store,
+	cookies session.Cookies,
+	hosted HostedAccounts,
+	factory kube.ClientFactory,
+	facts SessionFacts,
+	auditLog *audit.Logger,
+) *Session {
+	return &Session{
+		store: store, cookies: cookies, factory: factory, facts: facts, audit: auditLog,
+		verifier: hosted.Verifier, generation: hosted.Generation, displayNames: hosted.DisplayNames,
+	}
+}
+
+// Login signs a browser in to a hosted console. Every refusal of the login
+// and password is the same answer; too many attempts get their own, which
+// says nothing about the account either.
+func (s *Session) Login(ctx context.Context, request *consolev1.LoginRequest) (*consolev1.LoginResponse, error) {
+	if s.verifier == nil {
+		return nil, connect.NewError(connect.CodeUnimplemented, "this console signs in with the link ptah-console local prints")
+	}
+	info, _ := connect.CallInfoForServerContext(ctx)
+	account, err := s.verifier.Verify(request.GetLogin(), request.GetPassword(), peerHost(info.PeerAddr))
+	switch {
+	case errors.Is(err, signin.ErrThrottled):
+		s.record(ctx, "sign-in", audit.Refused, kube.Principal{}, "too many attempts")
+		return nil, connect.NewError(connect.CodeResourceExhausted, "too many sign-in attempts; wait a minute and try again")
+	case err != nil:
+		s.record(ctx, "sign-in", audit.Refused, kube.Principal{}, "wrong login or password")
+		return nil, connect.NewError(connect.CodeUnauthenticated, "the login or the password is wrong")
+	}
+	principal := kube.Principal{
+		Mode: kube.ModeHosted, AccountID: account.ID, Context: kube.HostedConnection, Generation: s.generation,
+	}
+	if err := s.start(ctx, info, principal); err != nil {
+		return nil, err
+	}
+	s.record(ctx, "sign-in", audit.Admitted, principal, "password")
+	return &consolev1.LoginResponse{}, nil
+}
+
+// start revokes the session the browser already had, if any, and issues a
+// new one, so signing in always rotates.
+func (s *Session) start(_ context.Context, info *connect.CallInfo, principal kube.Principal) error {
+	if old, ok := s.cookies.Token(info.RequestHeader().Values("Cookie")); ok {
+		s.store.Revoke(old)
+	}
+	token, _, err := s.store.Create(principal)
+	if errors.Is(err, session.ErrFull) {
+		return connect.NewError(connect.CodeResourceExhausted, "too many sessions are open").WithCause(err)
+	}
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, "the session could not be started").WithCause(err)
+	}
+	info.ResponseHeader().Add("Set-Cookie", s.cookies.Issue(token).String())
+	return nil
+}
+
+// peerHost is the address part of a peer, or the whole of it when it has no
+// port.
+func peerHost(peer string) string {
+	host, _, err := net.SplitHostPort(peer)
+	if err != nil {
+		return peer
+	}
+	return host
+}
+
 // ExchangeLaunchToken trades a launch token for a session cookie. A cookie
 // the browser already had is revoked, so signing in always rotates.
 func (s *Session) ExchangeLaunchToken(ctx context.Context, request *consolev1.ExchangeLaunchTokenRequest) (*consolev1.ExchangeLaunchTokenResponse, error) {
@@ -69,17 +154,9 @@ func (s *Session) ExchangeLaunchToken(ctx context.Context, request *consolev1.Ex
 			"this link is not valid any more; press Enter where ptah-console local runs to open a new one").WithCause(err)
 	}
 	info, _ := connect.CallInfoForServerContext(ctx)
-	if old, ok := s.cookies.Token(info.RequestHeader().Values("Cookie")); ok {
-		s.store.Revoke(old)
+	if err := s.start(ctx, info, s.principal); err != nil {
+		return nil, err
 	}
-	token, _, err := s.store.Create(s.principal)
-	if errors.Is(err, session.ErrFull) {
-		return nil, connect.NewError(connect.CodeResourceExhausted, "too many sessions are open").WithCause(err)
-	}
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, "the session could not be started").WithCause(err)
-	}
-	info.ResponseHeader().Add("Set-Cookie", s.cookies.Issue(token).String())
 	s.record(ctx, "sign-in", audit.Admitted, s.principal, "launch token")
 	return &consolev1.ExchangeLaunchTokenResponse{}, nil
 }
@@ -105,6 +182,7 @@ func (s *Session) GetSession(ctx context.Context, _ *consolev1.GetSessionRequest
 		KubernetesUsername:     identity.Username,
 		KubernetesGroups:       identity.Groups,
 		AccountId:              principal.AccountID,
+		DisplayName:            s.displayNames[principal.AccountID],
 		ReadOnly:               s.facts.ReadOnly,
 		KubeconfigImpersonates: s.facts.Impersonates,
 		InsecureTls:            s.facts.InsecureTLS,

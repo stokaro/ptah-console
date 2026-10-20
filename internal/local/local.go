@@ -15,7 +15,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"net"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -26,7 +25,6 @@ import (
 	"github.com/stokaro/ptah-console/internal/audit"
 	"github.com/stokaro/ptah-console/internal/auth/launch"
 	"github.com/stokaro/ptah-console/internal/auth/session"
-	"github.com/stokaro/ptah-console/internal/decision"
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/v1/consolev1connect"
 	"github.com/stokaro/ptah-console/internal/kube"
@@ -125,13 +123,7 @@ func Run(ctx context.Context, options Options) error {
 		Logger:       options.Logger,
 		Interceptors: interceptors,
 		Services: []func(*connect.Server){func(rpc *connect.Server) {
-			consolev1connect.RegisterSessionServiceHandler(rpc, sessions)
-			consolev1connect.RegisterScopeServiceHandler(rpc, api.NewScopeService(factory, scope))
-			consolev1connect.RegisterSchemaServiceHandler(rpc, api.NewSchemaService(factory, scope))
-			consolev1connect.RegisterMigrationServiceHandler(rpc, api.NewMigrationService(factory, scope))
-			consolev1connect.RegisterDecisionServiceHandler(rpc, api.NewDecisionService(factory, scope, decision.NewLedger(), options.Audit))
-			consolev1connect.RegisterWatchServiceHandler(rpc, api.NewWatchService(factory, scope, api.WatchOptions{}))
-			consolev1connect.RegisterDiagnosticsServiceHandler(rpc, api.NewDiagnosticsService(factory, scope, nil))
+			api.Register(rpc, sessions, factory, scope, options.Audit)
 		}},
 	})
 	if err != nil {
@@ -142,7 +134,7 @@ func Run(ctx context.Context, options Options) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go store.Run(ctx, time.Minute)
-	served := serve(ctx, handler, listeners, options.Logger)
+	served := server.Serve(ctx, server.NewHTTPServer(handler, nil, options.Logger), listeners)
 
 	fmt.Fprintf(options.Stdout, "Ptah Console for context %q is at %s\n", resolved.Context, origins[0])
 	if resolved.InsecureTLS {
@@ -224,37 +216,6 @@ func origins(listeners []net.Listener, port int) []string {
 		out = append(out, "http://[::1]:"+strconv.Itoa(port))
 	}
 	return append(out, "http://localhost:"+strconv.Itoa(port))
-}
-
-func serve(ctx context.Context, handler http.Handler, listeners []net.Listener, logger *slog.Logger) <-chan error {
-	httpServer := &http.Server{
-		Handler:           handler,
-		ReadHeaderTimeout: 10 * time.Second,
-		IdleTimeout:       2 * time.Minute,
-		MaxHeaderBytes:    64 << 10,
-		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
-	}
-	errs := make(chan error, len(listeners))
-	for _, listener := range listeners {
-		go func() { errs <- httpServer.Serve(listener) }()
-	}
-	done := make(chan error, 1)
-	go func() {
-		select {
-		case <-ctx.Done():
-		case err := <-errs:
-			if !errors.Is(err, http.ErrServerClosed) {
-				done <- err
-				_ = httpServer.Close()
-				return
-			}
-		}
-		shutdown, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer cancel()
-		_ = httpServer.Shutdown(shutdown)
-		done <- nil
-	}()
-	return done
 }
 
 // offer issues a launch link and opens it, or prints it.

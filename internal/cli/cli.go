@@ -78,6 +78,7 @@ func newRoot(stdin io.Reader, stdout, stderr io.Writer) *cobra.Command {
 	root.AddCommand(
 		newVersion(stdout),
 		newLocal(stdin, stdout),
+		newServe(stdout),
 		newAccounts(stdin, stdout, stderr),
 		newConfig(stdout),
 	)

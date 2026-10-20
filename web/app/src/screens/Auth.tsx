@@ -1,8 +1,12 @@
-import { EmptyState } from "@ptah/console-ui"
-import { Navigate } from "@tanstack/react-router"
+import { Code, ConnectError } from "@connectrpc/connect"
+import { useMutation } from "@connectrpc/connect-query"
+import { Button, EmptyState } from "@ptah/console-ui"
+import { useQueryClient } from "@tanstack/react-query"
+import { Navigate, useNavigate } from "@tanstack/react-router"
+import { useState, type FormEvent } from "react"
 
-import { canAnywhere, useScope, useSession } from "../api/resources"
-import { Mode } from "../gen/ptah/console/v1/info_pb"
+import { canAnywhere, useHosted, useScope, useSession } from "../api/resources"
+import { SessionService } from "../gen/ptah/console/v1/session_pb"
 import { Loading } from "./common"
 
 /**
@@ -29,14 +33,102 @@ export function Launch() {
 /** How to sign in, for the mode this console runs in. */
 export function Login() {
   const session = useSession()
-  if (session.data?.mode === Mode.LOCAL) {
+  const hosted = useHosted()
+  if (session.data) {
     return <Navigate to="/" replace />
+  }
+  if (hosted === undefined) {
+    return <Loading what="how this console signs in" />
+  }
+  if (hosted) {
+    return <SignInForm />
   }
   return (
     <EmptyState tone="off" title="Sign in">
       ptah-console local signs you in with the link it prints in your terminal, as the identity in
       your kubeconfig; there is no password. Run it, and open that link.
     </EmptyState>
+  )
+}
+
+/** Why a sign-in did not work, without saying whether the login exists. */
+function signInProblem(error: Error) {
+  switch (ConnectError.from(error).code) {
+    case Code.Unauthenticated:
+      return "The login or the password is wrong."
+    case Code.ResourceExhausted:
+      return "Too many sign-in attempts. Wait a minute and try again."
+    default:
+      return `Signing in did not work: ${ConnectError.from(error).rawMessage}`
+  }
+}
+
+/** The sign-in of a hosted console: a Console account's login and password. */
+function SignInForm() {
+  const [login, setLogin] = useState("")
+  const [password, setPassword] = useState("")
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const signIn = useMutation(SessionService.method.login, {
+    onSuccess: async () => {
+      setPassword("")
+      await queryClient.resetQueries()
+      await navigate({ to: "/", replace: true })
+    },
+    onError: () => setPassword(""),
+  })
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    signIn.mutate({ login, password })
+  }
+  const field =
+    "min-h-11 rounded-xl border border-line bg-card px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-pri"
+  return (
+    <form
+      aria-labelledby="sign-in-title"
+      onSubmit={submit}
+      className="mx-auto flex w-full max-w-[380px] flex-col gap-4 rounded-2xl border border-line bg-card p-6 shadow-card"
+    >
+      <h1 id="sign-in-title" className="m-0 font-display text-xl font-semibold">
+        Sign in
+      </h1>
+      <p className="m-0 text-sm text-mute">
+        With your Console account. What you can see and do is what its Kubernetes identity may.
+      </p>
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
+        Login
+        <input
+          name="login"
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          required
+          value={login}
+          onChange={(event) => setLogin(event.target.value)}
+          className={field}
+        />
+      </label>
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
+        Password
+        <input
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          className={field}
+        />
+      </label>
+      {signIn.error ? (
+        <p role="alert" className="m-0 rounded-xl bg-redbg px-3 py-2 text-sm text-red">
+          {signInProblem(signIn.error)}
+        </p>
+      ) : null}
+      <Button type="submit" variant="primary" disabled={signIn.isPending}>
+        {signIn.isPending ? "Signing in…" : "Sign in"}
+      </Button>
+    </form>
   )
 }
 
