@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 
 	qt "github.com/frankban/quicktest"
 	operatorv1alpha1 "github.com/stokaro/ptah-operator/api/v1alpha1"
@@ -268,6 +269,14 @@ func TestEachMigrationAttentionKindRefusesItsLookAlike(t *testing.T) {
 	t.Parallel()
 	unresolvedRun := &operatorv1alpha1.UnresolvedMigrationRunStatus{OperationID: "op-1", Outcome: operatorv1alpha1.MigrationRunOutcomeUnknown}
 	failedRun := &operatorv1alpha1.MigrationRunStatus{Outcome: operatorv1alpha1.MigrationRunOutcomeFailed, Message: "duplicate key"}
+	// The run ends between two resolutions, so each row's order is its own.
+	before := metav1.NewTime(time.Date(2026, 10, 20, 9, 0, 0, 0, time.UTC))
+	ended := metav1.NewTime(before.Add(time.Minute))
+	after := metav1.NewTime(ended.Add(time.Minute))
+	partialRun := &operatorv1alpha1.MigrationRunStatus{
+		Outcome: operatorv1alpha1.MigrationRunOutcomePartial, Message: "committed some of its statements",
+		StartedAt: before, FinishedAt: &ended,
+	}
 	tests := []struct {
 		name      string
 		migration *operatorv1alpha1.PtahMigration
@@ -307,6 +316,22 @@ func TestEachMigrationAttentionKindRefusesItsLookAlike(t *testing.T) {
 			kind:      consolev1.AttentionKind_ATTENTION_KIND_FAILED, shown: true,
 		},
 		{
+			name: "a partial run a person settled after it ended",
+			migration: migrationWith(operatorv1alpha1.PtahMigrationStatus{
+				LastRun:     partialRun,
+				ResolvedRun: &operatorv1alpha1.ResolvedMigrationRunStatus{OperationID: "op-1", ResolvedAt: after},
+			}),
+			kind: consolev1.AttentionKind_ATTENTION_KIND_FAILED,
+		},
+		{
+			name: "a partial run that ended after an older settlement",
+			migration: migrationWith(operatorv1alpha1.PtahMigrationStatus{
+				LastRun:     partialRun,
+				ResolvedRun: &operatorv1alpha1.ResolvedMigrationRunStatus{OperationID: "op-0", ResolvedAt: before},
+			}),
+			kind: consolev1.AttentionKind_ATTENTION_KIND_FAILED, shown: true,
+		},
+		{
 			name: "a failed run the history has since caught up with",
 			migration: migrationWith(operatorv1alpha1.PtahMigrationStatus{LastRun: failedRun, Conditions: []metav1.Condition{
 				condition("Ready", metav1.ConditionTrue, "HistoryMatched"),
@@ -324,6 +349,48 @@ func TestEachMigrationAttentionKindRefusesItsLookAlike(t *testing.T) {
 			c.Assert(contains(got, test.kind), qt.Equals, test.shown, qt.Commentf("attention: %v", got))
 		})
 	}
+}
+
+// A run a person accounted for is not a failed Apply any more; a run that
+// failed after an older settlement still is.
+func TestASettledRunIsNotAFailedApply(t *testing.T) {
+	t.Parallel()
+	before := metav1.NewTime(time.Date(2026, 10, 20, 9, 0, 0, 0, time.UTC))
+	ended := metav1.NewTime(before.Add(time.Minute))
+	after := metav1.NewTime(ended.Add(time.Minute))
+	run := &operatorv1alpha1.MigrationRunStatus{
+		Outcome: operatorv1alpha1.MigrationRunOutcomePartial, StartedAt: before, FinishedAt: &ended,
+	}
+	tests := []struct {
+		name       string
+		resolvedAt metav1.Time
+		apply      consolev1.StageState
+	}{
+		{name: "settled after the run ended", resolvedAt: after, apply: consolev1.StageState_STAGE_STATE_WAITING},
+		{name: "settled before the run started", resolvedAt: before, apply: consolev1.StageState_STAGE_STATE_FAILED},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+
+			out := model.Migration(migrationWith(operatorv1alpha1.PtahMigrationStatus{
+				LastRun:     run,
+				ResolvedRun: &operatorv1alpha1.ResolvedMigrationRunStatus{OperationID: "op-1", ResolvedAt: test.resolvedAt},
+			}))
+
+			c.Assert(stateOf(out.GetStages(), model.StageApply), qt.Equals, test.apply)
+		})
+	}
+}
+
+func stateOf(stages []*consolev1.Stage, name string) consolev1.StageState {
+	for _, s := range stages {
+		if s.GetName() == name {
+			return s.GetState()
+		}
+	}
+	return consolev1.StageState_STAGE_STATE_UNSPECIFIED
 }
 
 // A Secret is named, never read: the target carries the reference only.

@@ -178,8 +178,7 @@ func migrationApply(status operatorv1alpha1.PtahMigrationStatus, ready bool) *co
 		return stage(StageApply, consolev1.StageState_STAGE_STATE_UNKNOWN, "a run ended without proof of what it applied")
 	case status.ActiveOperation != nil && status.ActiveOperation.Type == operatorv1alpha1.MigrationOperationApply:
 		return stage(StageApply, consolev1.StageState_STAGE_STATE_ACTIVE, "")
-	case status.LastRun != nil && (status.LastRun.Outcome == operatorv1alpha1.MigrationRunOutcomeFailed ||
-		status.LastRun.Outcome == operatorv1alpha1.MigrationRunOutcomePartial) && !ready:
+	case failedRun(status.LastRun) && !settled(status) && !ready:
 		return stage(StageApply, consolev1.StageState_STAGE_STATE_FAILED, status.LastRun.Message)
 	case ready:
 		return stage(StageApply, consolev1.StageState_STAGE_STATE_DONE, "")
@@ -197,6 +196,22 @@ func migrationVerify(status operatorv1alpha1.PtahMigrationStatus, c conditions, 
 	default:
 		return stage(StageVerifyHistory, consolev1.StageState_STAGE_STATE_WAITING, "")
 	}
+}
+
+// settled says a person, or the operator, accounted for the last run after
+// it ended. The operator holds one run unresolved at a time and records its
+// resolution, so a last run that ended before the resolution is the one that
+// was settled; a run that ended after it is a new failure.
+func settled(status operatorv1alpha1.PtahMigrationStatus) bool {
+	run, resolved := status.LastRun, status.ResolvedRun
+	if run == nil || resolved == nil {
+		return false
+	}
+	ended := run.StartedAt.Time
+	if run.FinishedAt != nil {
+		ended = run.FinishedAt.Time
+	}
+	return !resolved.ResolvedAt.Time.Before(ended)
 }
 
 // unresolved is a run the migration recorded as unresolved and that nothing
@@ -234,7 +249,7 @@ func migrationAttention(migration *operatorv1alpha1.PtahMigration, c conditions)
 			operatorv1alpha1.ConditionMigrationBlocked)
 	}
 	// A failed run that left the history blocked is said once, as the block.
-	if run := status.LastRun; !blocked && failedRun(run) && !unresolved(status) &&
+	if run := status.LastRun; !blocked && failedRun(run) && !unresolved(status) && !settled(status) &&
 		!c.is(operatorv1alpha1.ConditionMigrationReady, metav1.ConditionTrue) {
 		add(consolev1.AttentionKind_ATTENTION_KIND_FAILED, run.Message,
 			"Fix the cause the run reported; the operator reads the history again at spec.interval and plans from there.",

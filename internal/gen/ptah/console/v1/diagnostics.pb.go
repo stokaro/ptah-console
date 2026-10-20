@@ -665,11 +665,14 @@ type ContainerEvidence struct {
 	Ready        bool                   `protobuf:"varint,2,opt,name=ready,proto3" json:"ready,omitempty"`
 	RestartCount int32                  `protobuf:"varint,3,opt,name=restart_count,json=restartCount,proto3" json:"restart_count,omitempty"`
 	// waiting, running or terminated.
-	State         string      `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
-	Reason        string      `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
-	Message       string      `protobuf:"bytes,6,opt,name=message,proto3" json:"message,omitempty"`
-	ExitCode      int32       `protobuf:"varint,7,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
-	Log           *LogExcerpt `protobuf:"bytes,8,opt,name=log,proto3" json:"log,omitempty"`
+	State    string      `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
+	Reason   string      `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
+	Message  string      `protobuf:"bytes,6,opt,name=message,proto3" json:"message,omitempty"`
+	ExitCode int32       `protobuf:"varint,7,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
+	Log      *LogExcerpt `protobuf:"bytes,8,opt,name=log,proto3" json:"log,omitempty"`
+	// An init container: it prepares the Pod and runs before the containers
+	// that do the work.
+	Init          bool `protobuf:"varint,9,opt,name=init,proto3" json:"init,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -758,6 +761,13 @@ func (x *ContainerEvidence) GetLog() *LogExcerpt {
 		return x.Log
 	}
 	return nil
+}
+
+func (x *ContainerEvidence) GetInit() bool {
+	if x != nil {
+		return x.Init
+	}
+	return false
 }
 
 // LogExcerpt is the end of a container's log, as plain text.
@@ -888,7 +898,7 @@ const file_ptah_console_v1_diagnostics_proto_rawDesc = "" +
 	"\n" +
 	"containers\x18\x06 \x03(\v2\".ptah.console.v1.ContainerEvidenceR\n" +
 	"containers\x122\n" +
-	"\x06events\x18\a \x01(\v2\x1a.ptah.console.v1.EventListR\x06events\"\xf6\x01\n" +
+	"\x06events\x18\a \x01(\v2\x1a.ptah.console.v1.EventListR\x06events\"\x8a\x02\n" +
 	"\x11ContainerEvidence\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05ready\x18\x02 \x01(\bR\x05ready\x12#\n" +
@@ -897,7 +907,8 @@ const file_ptah_console_v1_diagnostics_proto_rawDesc = "" +
 	"\x06reason\x18\x05 \x01(\tR\x06reason\x12\x18\n" +
 	"\amessage\x18\x06 \x01(\tR\amessage\x12\x1b\n" +
 	"\texit_code\x18\a \x01(\x05R\bexitCode\x12-\n" +
-	"\x03log\x18\b \x01(\v2\x1b.ptah.console.v1.LogExcerptR\x03log\"\x8f\x01\n" +
+	"\x03log\x18\b \x01(\v2\x1b.ptah.console.v1.LogExcerptR\x03log\x12\x12\n" +
+	"\x04init\x18\t \x01(\bR\x04init\"\x8f\x01\n" +
 	"\n" +
 	"LogExcerpt\x125\n" +
 	"\bevidence\x18\x01 \x01(\x0e2\x19.ptah.console.v1.EvidenceR\bevidence\x12\x18\n" +

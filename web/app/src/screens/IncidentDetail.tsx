@@ -16,6 +16,7 @@ import { useState } from "react"
 import { can, offerText, useOffer, useResource, useSession } from "../api/resources"
 import { DecisionKind, DecisionService, ResourceKind } from "../gen/ptah/console/v1/decisions_pb"
 import {
+  type ContainerEvidence,
   DiagnosticsService,
   Evidence,
   type EventList as EventListMessage,
@@ -30,6 +31,8 @@ import {
   parseKind,
   type ResourceView,
 } from "../model/resource"
+
+type UnresolvedRun = NonNullable<ResourceView["unresolvedRun"]>
 import { BackButton, DetailHeading, Loading, ReadError, where } from "./common"
 import { DecisionDialog } from "./DecisionDialog"
 
@@ -50,7 +53,10 @@ export function IncidentDetail() {
   const { resource, scope, loading, error } = useResource(kind, params.namespace, params.name)
   const session = useSession()
   const offer = useOffer()
-  const [acknowledging, setAcknowledging] = useState(false)
+  // The run the dialog acknowledges, held from the moment it opens: the
+  // operator settles the run seconds after the acknowledgment is admitted,
+  // and the dialog still has to say how the decision ended.
+  const [acknowledging, setAcknowledging] = useState<UnresolvedRun>()
   const readLogs = resource ? can(scope.scopes, resource.namespace, "readLogs") : false
   const diagnostics = useQuery(
     DiagnosticsService.method.getDiagnostics,
@@ -110,7 +116,7 @@ export function IncidentDetail() {
             <Button
               variant="attention"
               className="self-start"
-              onClick={() => setAcknowledging(true)}
+              onClick={() => setAcknowledging(resource.unresolvedRun)}
             >
               Acknowledge this run…
             </Button>
@@ -145,11 +151,12 @@ export function IncidentDetail() {
           ) : null}
         </Card>
       ) : null}
-      {acknowledging && unresolved ? (
+      {acknowledging ? (
         <AcknowledgeDialog
           resource={resource}
+          run={acknowledging}
           context={session.data?.context}
-          onClose={() => setAcknowledging(false)}
+          onClose={() => setAcknowledging(undefined)}
         />
       ) : null}
     </div>
@@ -225,7 +232,7 @@ export function evidence(response: GetDiagnosticsResponse): TimelineEvent[] {
       })
     }
     for (const pod of job.pods) {
-      const exit = pod.containers.find((c) => c.state === "terminated")
+      const exit = byRelevance(pod.containers).find((c) => c.state === "terminated")
       rows.push({
         key: `pod-${pod.name}`,
         time: "",
@@ -241,13 +248,37 @@ export function evidence(response: GetDiagnosticsResponse): TimelineEvent[] {
   return rows
 }
 
+// The Jobs a status names, from the run an incident is about to the work in
+// flight: a failed or unsettled run is what a person reads first, and a
+// history read the operator started since is not.
+const jobOrder = [
+  "status.unresolvedRun",
+  "status.lastRun",
+  "status.pendingObservation",
+  "status.activeOperation",
+]
+
+function jobRank(namedBy: string) {
+  const rank = jobOrder.indexOf(namedBy)
+  return rank === -1 ? jobOrder.length : rank
+}
+
+/**
+ * A Pod's containers, the most telling first: one that failed, then the
+ * containers that did the work before the init containers that prepared
+ * the Pod for them.
+ */
+function byRelevance(containers: ContainerEvidence[]): ContainerEvidence[] {
+  const weight = (c: ContainerEvidence) => (c.exitCode !== 0 ? 0 : c.init ? 2 : 1)
+  return [...containers].sort((a, b) => weight(a) - weight(b))
+}
+
+/** The log excerpt of the run the incident is about, if any is kept. */
 function lastLog(response: GetDiagnosticsResponse) {
-  for (const job of response.jobs) {
+  const jobs = [...response.jobs].sort((a, b) => jobRank(a.namedBy) - jobRank(b.namedBy))
+  for (const job of jobs) {
     for (const pod of job.pods) {
-      const containers = [...pod.containers].sort(
-        (a, b) => Number(b.exitCode !== 0) - Number(a.exitCode !== 0)
-      )
-      for (const container of containers) {
+      for (const container of byRelevance(pod.containers)) {
         if (container.log?.evidence === Evidence.SHOWN && container.log.text) {
           return {
             where: `${pod.name} / ${container.name}`,
@@ -263,10 +294,12 @@ function lastLog(response: GetDiagnosticsResponse) {
 
 function AcknowledgeDialog({
   resource,
+  run,
   context,
   onClose,
 }: {
   resource: ResourceView
+  run: UnresolvedRun
   context?: string
   onClose: () => void
 }) {
@@ -274,7 +307,6 @@ function AcknowledgeDialog({
   const transport = useTransport()
   const queryClient = useQueryClient()
   const acknowledge = useMutation(DecisionService.method.acknowledgeMigrationRun)
-  const run = resource.unresolvedRun!
 
   async function send() {
     const response = await acknowledge.mutateAsync({
