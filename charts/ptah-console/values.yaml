@@ -1,0 +1,101 @@
+# The image the console runs. The tag defaults to the chart's appVersion; a
+# digest, when given, pins it.
+image:
+  repository: ghcr.io/stokaro/ptah-console
+  tag: ""
+  digest: ""
+  pullPolicy: IfNotPresent
+
+# One replica, or none: sessions live in the replica's memory, so more than
+# one would sign people out at random. More are refused.
+replicaCount: 1
+
+# Required. A DNS label that tells this installation's Kubernetes usernames,
+# ptah-console:<installationID>:<account id>, apart from another's.
+installationID: ""
+
+# Required. The https address people open the console at, with no path.
+publicURL: ""
+
+# Required. The namespaces the console shows, and the ones accounts get their
+# roles in. The console reads nothing outside them.
+namespaces: []
+
+# Required. Who may sign in, and what each account may do in every namespace
+# above. An id never changes: RBAC names it. roles are any of:
+#   viewer                reads every Ptah kind except the chunks a plan's SQL is in
+#   plan-reader           reads schemas, plans and their SQL (operator example)
+#   desired-state-author  edits schemas and migrations (operator example)
+#   diagnostic-reader     reads Ptah kinds, Jobs, Pods, logs, Events (operator example)
+#   approver              the operator chart's approver ClusterRole, bound per namespace
+accounts: []
+#  - id: alex
+#    login: alex@example.com
+#    displayName: Alex Morgan
+#    roles: [viewer, approver]
+
+# The operator chart's approver ClusterRole, which the approver role binds.
+# The operator chart names it <its fullname>-approver; for the release name its
+# documentation uses, ptah-operator, that is ptah-operator-ptah-operator-approver.
+approverClusterRole: ptah-operator-ptah-operator-approver
+
+# Required. An existing Secret with the passwords file under key: one line of
+# <account id>:<bcrypt hash> per account. ptah-console accounts hash makes a
+# hash. A changed password takes effect when the Pod restarts.
+passwords:
+  secretName: ""
+  key: passwords
+
+# Exactly one of the two. secretName names an existing kubernetes.io/tls
+# Secret the console serves HTTPS with, read again when it is renewed.
+# terminatedUpstream declares that an Ingress or a Gateway in front of the
+# console terminates TLS, and the console serves plain HTTP to it.
+tls:
+  secretName: ""
+  terminatedUpstream: false
+
+# Refuse every change the console could send, whatever an account may do.
+readOnly: false
+
+service:
+  type: ClusterIP
+  # Defaults to 443 when the console serves TLS, 80 when a proxy does.
+  port: null
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # The Ingress's own TLS, for terminatedUpstream: [{secretName: ...}]. The
+  # host is publicURL's.
+  tls: []
+
+httpRoute:
+  enabled: false
+  annotations: {}
+  # The Gateway listeners to attach to, such as [{name: public, namespace: gateway}].
+  parentRefs: []
+
+# An example policy, off by default: it admits the given peers to the console
+# and lets the console reach only the API server.
+networkPolicy:
+  enabled: false
+  # NetworkPolicy peers that may reach the console, such as the ingress
+  # controller's namespace.
+  ingressFrom: []
+  apiServer:
+    # The API server's addresses as CIDRs. Required when enabled.
+    cidrs: []
+    ports: [443, 6443]
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}

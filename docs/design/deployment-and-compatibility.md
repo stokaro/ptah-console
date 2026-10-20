@@ -8,8 +8,9 @@ workstation, or from a container image in a cluster.
 
 ## Hosted installation
 
-A Helm chart in this repository installs the console in a namespace of its
-own, never the operator's. It renders:
+A Helm chart in this repository, [charts/ptah-console](../../charts/ptah-console/README.md),
+installs the console in a namespace of its own, never the operator's. It
+renders:
 
 - one Deployment with one replica and the Recreate strategy; more replicas are
   refused, because sessions live in memory;

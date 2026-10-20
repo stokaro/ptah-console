@@ -16,7 +16,7 @@ QTLINT_RULES := -require-qt-c-receiver -require-data-rows -require-testing-run
 BUF := $(GO) tool -modfile=tools/buf/go.mod buf
 # The contract a change is compared with.
 BUF_BASE ?= origin/main
-GENERATED := internal/gen web/app/src/gen
+GENERATED := internal/gen web/app/src/gen charts/ptah-console/files/operator-roles.yaml
 
 # envtest, pinned as stokaro/ptah-operator pins it: setup-envtest by version,
 # its release index by commit, and the Kubernetes release inside the
@@ -26,7 +26,7 @@ ENVTEST_KUBERNETES_VERSION ?= 1.37.0
 ENVTEST_INDEX ?= https://raw.githubusercontent.com/kubernetes-sigs/controller-tools/1031496fc98a4f51010c3bdfdeb57b5d67bea7bd/envtest-releases.yaml
 ENVTEST_BIN_DIR ?=
 
-.PHONY: build build-go test test-web-go vet fmt-check verify-go-mod check \
+.PHONY: chart-conform build build-go test test-web-go vet fmt-check verify-go-mod check \
 	web-storybook lint lint-golangci lint-qtlint lint-nolintguard lint-teststyle vulncheck \
 	web-install web-build web-lint web-test web-size web-check embed-smoke \
 	generate verify-generated buf-lint buf-breaking contract test-envtest verify \
@@ -62,6 +62,7 @@ verify-go-mod:
 	$(GO) mod tidy -diff
 	cd web && $(GO) mod tidy -diff
 	cd tools/buf && $(GO) mod tidy -diff
+	cd tools/chart && $(GO) mod tidy -diff
 
 # What the Verify job runs.
 check: fmt-check verify-go-mod vet build-go test
@@ -117,6 +118,7 @@ embed-smoke: build
 # web/node_modules, so run make web-install first.
 generate:
 	$(BUF) generate
+	$(GO) run ./hack/chartroles
 
 # Generated code is committed, and has to be what the generators write today.
 verify-generated: generate
@@ -148,7 +150,13 @@ test-envtest:
 	KUBEBUILDER_ASSETS="$$assets" PTAH_CONSOLE_REQUIRE_ENVTEST=1 $(GO) test -count=1 -timeout=10m ./test/envtest/...
 
 # Everything CI runs.
-verify: check lint vulncheck web-check embed-smoke contract test-envtest
+# The chart's renders against the API schemas of every Kubernetes minor the
+# operator supports. Its golden renders and refusals are Go tests under
+# test/chart, which make test runs.
+chart-conform:
+	./hack/chart-conform.sh
+
+verify: check lint vulncheck web-check embed-smoke contract test-envtest chart-conform
 
 # The acceptance environment: the operator's own demonstration lab on kind, at
 # the operator commit go.mod requires, with this repository's personas and

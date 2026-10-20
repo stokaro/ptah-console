@@ -1,0 +1,36 @@
+{{- if .Values.networkPolicy.enabled -}}
+# The console takes requests from the peers given, and opens connections to
+# the API server and nowhere else: it reads no database, no registry and no
+# Secret of the operator's.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ptah-console.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ptah-console.selectorLabels" . | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - ports:
+        - port: 8443
+          protocol: TCP
+      {{- with .Values.networkPolicy.ingressFrom }}
+      from:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  egress:
+    - to:
+        {{- range .Values.networkPolicy.apiServer.cidrs }}
+        - ipBlock:
+            cidr: {{ . }}
+        {{- end }}
+      ports:
+        {{- range .Values.networkPolicy.apiServer.ports }}
+        - port: {{ . }}
+          protocol: TCP
+        {{- end }}
+{{- end }}

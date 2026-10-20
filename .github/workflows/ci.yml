@@ -29,6 +29,8 @@ jobs:
           cache-dependency-path: go.sum
       - name: make check
         run: make check
+      - name: make chart-conform
+        run: make chart-conform
 
   envtest:
     name: Envtest

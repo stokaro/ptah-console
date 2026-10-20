@@ -1,0 +1,123 @@
+{{- $tls := include "ptah-console.tls" . -}}
+{{- $scheme := ternary "HTTPS" "HTTP" (eq $tls "true") -}}
+{{- $portName := ternary "https" "http" (eq $tls "true") -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ptah-console.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+spec:
+  # Sessions live in the one replica's memory; a rollout replaces it whole.
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "ptah-console.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ptah-console.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/configuration: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "ptah-console.fullname" . }}
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: console
+          image: {{ include "ptah-console.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - serve
+            - --config=/etc/ptah-console/configuration/configuration.yaml
+            - --passwords=/etc/ptah-console/passwords/{{ .Values.passwords.key }}
+            - --listen=:8443
+            {{- if eq $tls "true" }}
+            - --tls-cert-file=/etc/ptah-console/tls/tls.crt
+            - --tls-key-file=/etc/ptah-console/tls/tls.key
+            {{- else }}
+            - --tls-terminated-upstream
+            {{- end }}
+            {{- if .Values.readOnly }}
+            - --read-only
+            {{- end }}
+          ports:
+            - name: {{ $portName }}
+              containerPort: 8443
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ $portName }}
+              scheme: {{ $scheme }}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ $portName }}
+              scheme: {{ $scheme }}
+            periodSeconds: 20
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: configuration
+              mountPath: /etc/ptah-console/configuration
+              readOnly: true
+            - name: passwords
+              mountPath: /etc/ptah-console/passwords
+              readOnly: true
+            {{- if eq $tls "true" }}
+            - name: tls
+              mountPath: /etc/ptah-console/tls
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: configuration
+          configMap:
+            name: {{ include "ptah-console.fullname" . }}
+        - name: passwords
+          secret:
+            secretName: {{ .Values.passwords.secretName }}
+            items:
+              - key: {{ .Values.passwords.key }}
+                path: {{ .Values.passwords.key }}
+        {{- if eq $tls "true" }}
+        - name: tls
+          secret:
+            secretName: {{ .Values.tls.secretName }}
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
