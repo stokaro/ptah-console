@@ -167,13 +167,24 @@ export const test = base.extend<{ lab: Lab }>({
         await page.waitForTimeout(holdMs)
       },
       async audit(screen) {
+        // A page or dialog fades in; measured halfway, its text blends with
+        // what is behind it. Wait for every animation and transition that
+        // ends, and leave the ones that never do, such as a spinner.
+        await page.evaluate(async () => {
+          const ending = document
+            .getAnimations()
+            .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+          await Promise.all(ending.map((animation) => animation.finished.catch(() => undefined)))
+        })
         const results = await new AxeBuilder({ page })
           .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
           .exclude("#e2e-caption")
           .analyze()
-        const findings = results.violations.map(
-          (violation) =>
-            `${violation.id}: ${violation.help} (${violation.nodes.map((node) => node.target.join(" ")).join(", ")})`
+        const findings = results.violations.flatMap((violation) =>
+          violation.nodes.map(
+            (node) =>
+              `${violation.id}: ${node.target.join(" ")}: ${node.any.map((check) => check.message).join("; ")}`
+          )
         )
         expect.soft(findings, `axe on ${screen}`).toEqual([])
       },

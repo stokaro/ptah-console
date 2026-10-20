@@ -399,22 +399,29 @@ test("on call, a failed run shows its evidence and the next supported step", asy
   await expect(evidence.getByText(/^Job /).first()).toBeVisible()
   // The excerpt is the failed run's: the Apply Job the status names as the
   // last run, and the container that ran the migrations, not the history
-  // read the operator started since or an init container.
+  // read the operator started since or an init container. The runner logs
+  // only how Ptah exited; the database's own words are kept nowhere a
+  // reader may look (stokaro/ptah-operator#678).
   await expect(
     page.getByRole("region", {
       name: /^Log excerpt · ptah-m-apply-journal-\S+ \/ ptah · plain text$/,
     })
   ).toBeVisible()
-  const log = page.getByLabel("Log excerpt")
-  await test.info().attach("journal log excerpt", { body: (await log.textContent()) ?? "" })
-  await expect(log).toContainText("ledger_entries")
+  const log = page.getByLabel("Log excerpt", { exact: true })
+  await expect(log).toContainText("ptah exited with code")
+  await expect(
+    page.getByText("A migration failed and committed nothing", { exact: false }).first()
+  ).toBeVisible()
   await lab.audit("an incident with its evidence")
   await lab.caption(
     "The evidence Kubernetes still keeps: the Job the status names, its Pod and Events, and the end of its log as plain text.",
     6000
   )
-  await page.getByLabel("Log excerpt").scrollIntoViewIfNeeded()
-  await lab.caption("The run's own words say what failed.", 4500)
+  await log.scrollIntoViewIfNeeded()
+  await lab.caption(
+    "The run's own log says how Ptah exited. Which statement failed is not kept where a reader may look: stokaro/ptah-operator#678.",
+    5500
+  )
 })
 
 test("an outcome nobody can prove is settled by an acknowledgment, not a retry", async ({
@@ -595,7 +602,7 @@ test("an auditor reads who decided what, as admission recorded it", async ({ pag
   await expect(
     page.getByText(`by ${approver}, recorded by admission`, { exact: false })
   ).toBeVisible()
-  await expect(page.getByLabel("Approved SQL")).toContainText(/note/)
+  await expect(page.getByLabel("Approved SQL", { exact: true })).toContainText(/note/)
   await lab.audit("one decision with its approved SQL")
   await lab.caption(
     "The exact SQL that was approved, read from the plan the operator still keeps.",
