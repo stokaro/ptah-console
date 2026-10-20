@@ -204,7 +204,7 @@ jobs:
           [[ "$checked" == 14 ]] || { echo "verified $checked files, expected 14" >&2; exit 1; }
           verify "oci://$IMAGE@$IMAGE_DIGEST"
           verify "oci://$CHARTS/ptah-console@$CHART_DIGEST"
-          sha256sum --check dist/SHA256SUMS
+          (cd dist && sha256sum --check --strict SHA256SUMS)
       - name: Publish the release
         if: env.DRY_RUN == '0'
         env:
