@@ -9,6 +9,7 @@
 #   - billing applied migrations 14 to 17 after their approval
 #   - journal's run failed and was not retried behind anyone's back
 #   - deliveries' partial run was settled by the approver's acknowledgment
+#   - reports' interrupted run was settled the same way, and then applied
 set -eu
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
@@ -85,5 +86,11 @@ consumed=$(ns get ptahmigrationrunacknowledgment "$acknowledgment" \
 deliveries=$(ns get ptahmigrationapprovals -o json |
 	jq '[.items[] | select(.spec.migrationRef.name == "deliveries")] | length')
 [ "$deliveries" = 1 ] || fail "deliveries has $deliveries approvals, not one"
+
+wait_condition ptahmigration reports Ready
+reports=$(ns get ptahmigration reports -o json |
+	jq -r '"\(.status.resolvedRun.acknowledgedBy.username // "") \(.status.lastRun.outcome // "")"')
+[ "$reports" = "$APPROVER Applied" ] ||
+	fail "reports reads '$reports': not settled by $APPROVER and then applied"
 
 say "verified: every decision was $APPROVER's, and each one did what the rows show"

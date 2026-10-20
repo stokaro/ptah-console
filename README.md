@@ -67,7 +67,7 @@ against a real operator, one person at a time, each signed in to a
 issued:
 
 - an outsider, a viewer and a SQL reviewer see what their RBAC lets them see,
-  and are told what it does not;
+  and are told what it does not, including a namespace they may not read;
 - an author is not offered approval, and one sent anyway is forbidden;
 - a lead who wrote the change is refused their own approval by the operator's
   four-eyes control;
@@ -80,8 +80,9 @@ issued:
   of its log;
 - a MySQL run that stopped halfway is settled by an acknowledgment, not a
   retry;
-- an API server that stops answering is reported, and decisions wait until it
-  answers again;
+- a run whose Job was deleted mid-Apply is unknown until acknowledged, and an
+  API server that stops answering meanwhile is reported while the decision
+  waits;
 - the auditor view shows who decided what, as admission recorded it.
 
 The Acceptance workflow records it against the operator's own demonstration

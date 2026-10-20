@@ -7,6 +7,8 @@
 #   inventory   InSync, applied without an approval
 #   billing     migrations 1-13 applied, 14-17 waiting for an approval
 #   deliveries  MySQL; release 1 applied, release 2 waiting for an approval
+#   reports     published, not applied: a row applies it and interrupts it
+#   payroll     a schema in another namespace no persona may read
 #
 # The installation is switched to the four-eyes control first, so every
 # resource written here has a recorded writer for admission to compare an
@@ -73,7 +75,7 @@ jq -n --arg namespace "$NAMESPACE" --arg image "$E2E_POSTGRES_IMAGE" '
     ]
   }' | admin apply -f - >/dev/null
 admin -n "$NAMESPACE" rollout status deployment/e2e-postgres --timeout=180s >/dev/null
-for database in inventory billing journal; do
+for database in inventory billing journal reports; do
 	postgres -c "DROP DATABASE IF EXISTS $database WITH (FORCE)" -c "CREATE DATABASE $database"
 	admin -n "$NAMESPACE" create secret generic "e2e-database-$database" \
 		--from-literal=url="postgres://postgres:$PASSWORD@e2e-postgres.$NAMESPACE.svc.cluster.local:5432/$database?sslmode=disable" \
@@ -100,6 +102,7 @@ done
 push_migrations billing-release-1 migrations/billing "$STAGE/billing-release-1"
 push_migrations billing-release-2 migrations/billing "$E2E_DIR/migrations/billing"
 push_migrations journal-release-1 migrations/journal "$E2E_DIR/migrations/journal"
+push_migrations reports-release-1 migrations/reports "$E2E_DIR/migrations/reports"
 for release in 1 2; do
 	push_migrations "deliveries-release-$release" migrations/deliveries "$OPERATOR_DIR/demo/mysql/release-$release"
 done
@@ -146,7 +149,20 @@ admin -n "$NAMESPACE" get "ptahmigrationplan/$BILLING_PLAN" -o json |
 	fail "the plan $BILLING_PLAN does not hold migrations 14 to 17"
 DELIVERIES_PLAN=$(wait_plan ptahmigration deliveries)
 
+# A namespace with a schema in it and no grant for any persona: a console
+# started for both namespaces must show this one as not readable, and
+# nothing in it.
+OTHER=ptah-console-e2e-other
+say "payroll, in $OTHER, which no persona may read"
+admin create namespace "$OTHER" --dry-run=client -o yaml | admin apply -f - >/dev/null
+APPLY=OnApproval SUSPEND=true "$LAB" manifest storefront "$(digest storefront-v2)" |
+	sed -e "s|namespace: $NAMESPACE|namespace: $OTHER|" -e 's|name: storefront|name: payroll|' \
+		-e 's|coordinationKey: demo/storefront/primary|coordinationKey: e2e/payroll|' |
+	admin apply -f - >/dev/null
+admin -n "$OTHER" get ptahschema payroll >/dev/null || fail "payroll was not stored in $OTHER"
+
 fact STOREFRONT_V3_PLAN "$STOREFRONT_PLAN"
 fact BILLING_PLAN "$BILLING_PLAN"
 fact DELIVERIES_PLAN "$DELIVERIES_PLAN"
+fact OTHER_NAMESPACE "$OTHER"
 say "ready: storefront waits for $STOREFRONT_PLAN, inventory is InSync"

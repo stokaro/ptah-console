@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright"
 import { test as base, expect, type Page } from "@playwright/test"
 import { execFile, spawn, type ChildProcess } from "node:child_process"
 import { closeSync, openSync, readFileSync, writeFileSync } from "node:fs"
@@ -37,8 +38,14 @@ export async function act(...args: string[]): Promise<string> {
   return stdout.trim()
 }
 
-/** Starts `ptah-console local` as one person and returns the link it printed. */
-async function start(who: Persona): Promise<{ link: string; child: ChildProcess }> {
+/**
+ * Starts `ptah-console local` as one person, for some namespaces, and
+ * returns the link it printed.
+ */
+async function start(
+  who: Persona,
+  namespaces: string[]
+): Promise<{ link: string; child: ChildProcess }> {
   const audit = openSync(path.join(outDir, `${who}-audit.log`), "a")
   const child = spawn(
     binary,
@@ -46,8 +53,7 @@ async function start(who: Persona): Promise<{ link: string; child: ChildProcess 
       "local",
       "--kubeconfig",
       path.join(outDir, `${who}.kubeconfig`),
-      "--namespace",
-      fact("NAMESPACE"),
+      ...namespaces.flatMap((namespace) => ["--namespace", namespace]),
       "--no-open",
     ],
     { stdio: ["ignore", "pipe", audit] }
@@ -105,13 +111,21 @@ async function showCaption(page: Page, text: string) {
   }, text)
 }
 
-export interface Console {
-  /** Starts a console as this person and opens the link it printed. */
-  signIn(who: Persona): Promise<void>
+export interface Lab {
+  /**
+   * Starts a console as this person, for the lab namespace unless others are
+   * named, and opens the link it printed.
+   */
+  signIn(who: Persona, namespaces?: string[]): Promise<void>
   /** The origin of the console the page is signed in to. */
   origin(): string
   /** Shows a caption and holds it long enough to read. */
   caption(text: string, holdMs?: number): Promise<void>
+  /**
+   * Checks the page as it stands against WCAG 2.1 A and AA with axe. A
+   * finding fails the row at its end, so the rest of the row still runs.
+   */
+  audit(screen: string): Promise<void>
   /**
    * Waits for something slow, such as the operator applying a plan, and
    * marks the wait so the recording can leave it out.
@@ -126,8 +140,8 @@ export interface Film {
   cuts: { from: number; to: number }[]
 }
 
-export const test = base.extend<{ console: Console }>({
-  console: async ({ page }, provide, testInfo) => {
+export const test = base.extend<{ lab: Lab }>({
+  lab: async ({ page }, provide, testInfo) => {
     // The video starts with the page, which exists by now.
     const startedAt = Date.now()
     const seconds = () => (Date.now() - startedAt) / 1000
@@ -135,12 +149,12 @@ export const test = base.extend<{ console: Console }>({
     const cuts: Film["cuts"] = []
     let origin = ""
     await provide({
-      async signIn(who) {
+      async signIn(who, namespaces = [fact("NAMESPACE")]) {
         // The session cookie is per host, so one browser holds one person.
         for (const child of children.splice(0)) {
           child.kill()
         }
-        const started = await start(who)
+        const started = await start(who, namespaces)
         children.push(started.child)
         origin = new URL(started.link).origin
         await page.goto(started.link)
@@ -151,6 +165,17 @@ export const test = base.extend<{ console: Console }>({
       async caption(text, holdMs = 3500) {
         await showCaption(page, text)
         await page.waitForTimeout(holdMs)
+      },
+      async audit(screen) {
+        const results = await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+          .exclude("#e2e-caption")
+          .analyze()
+        const findings = results.violations.map(
+          (violation) =>
+            `${violation.id}: ${violation.help} (${violation.nodes.map((node) => node.target.join(" ")).join(", ")})`
+        )
+        expect.soft(findings, `axe on ${screen}`).toEqual([])
       },
       async skip(wait) {
         const from = seconds()

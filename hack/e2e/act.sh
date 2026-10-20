@@ -10,9 +10,12 @@
 #   act.sh plan <kind> <name>         print the plan a resource waits on
 #   act.sh applied storefront         print the plan storefront last applied
 #   act.sh fail journal               apply the journal migrations that fail
+#   act.sh run reports                apply the reports migrations
+#   act.sh interrupt reports          delete the Apply Job while it runs, and
+#                                     wait for the run to be recorded unresolved
 #   act.sh wait-run <name> <outcome>  wait for a migration's last run to
 #                                     end with an outcome
-#   act.sh repair deliveries          undo what the partial run committed
+#   act.sh repair deliveries|reports  undo what an unsettled run left
 #   act.sh outage start|stop          freeze or release the API server's
 #                                     load balancer
 set -eu
@@ -46,6 +49,32 @@ fail)
 	[ "${1:-}" = journal ] || fail 'only journal fails'
 	APPLY=Always INTERVAL=10m render journal "$(digest journal-release-1)" | admin apply -f - >/dev/null
 	;;
+run)
+	[ "${1:-}" = reports ] || fail 'only reports is run'
+	APPLY=Always INTERVAL=10m render reports "$(digest reports-release-1)" | admin apply -f - >/dev/null
+	;;
+interrupt)
+	[ "${1:-}" = reports ] || fail 'only reports is interrupted'
+	# The operator's own unresolved-run row does the same: wait until the
+	# Apply is really running the migration that sleeps, then delete its
+	# Job. Nothing then says what the run did.
+	deadline=$(($(date +%s) + 600))
+	job=""
+	while [ "$(date +%s)" -lt "$deadline" ]; do
+		job=$(admin -n "$NAMESPACE" get ptahmigration/reports -o jsonpath='{.status.activeOperation.jobName}')
+		sleeping=$(postgres -d reports -c "SELECT count(*) FROM pg_stat_activity WHERE datname = 'reports' AND query LIKE '%pg_sleep(60)%' AND pid <> pg_backend_pid()")
+		[ -n "$job" ] && [ "$sleeping" = 1 ] && break
+		sleep 2
+	done
+	[ -n "$job" ] && [ "${sleeping:-0}" = 1 ] || fail 'the reports Apply never reached the migration that sleeps'
+	admin -n "$NAMESPACE" delete job "$job" --cascade=background --wait=false >/dev/null
+	while [ "$(date +%s)" -lt "$deadline" ]; do
+		outcome=$(admin -n "$NAMESPACE" get ptahmigration/reports -o jsonpath='{.status.unresolvedRun.outcome}')
+		[ -n "$outcome" ] && exit 0
+		sleep 2
+	done
+	fail 'the interrupted reports run was never recorded as unresolved'
+	;;
 wait-run)
 	deadline=$(($(date +%s) + 600))
 	while [ "$(date +%s)" -lt "$deadline" ]; do
@@ -58,11 +87,27 @@ wait-run)
 	fail "ptahmigration/$1's last run never ended $2"
 	;;
 repair)
-	[ "${1:-}" = deliveries ] || fail 'only deliveries is repaired'
-	# What the partial run committed, undone the way the operator's own
-	# scenario undoes it: the column it added, and its row in the revision
-	# table. A real database needs its changes judged first.
-	mysql_demo "ALTER TABLE deliveries DROP COLUMN status; DELETE FROM schema_migrations WHERE version = 2"
+	case "${1:-}" in
+	deliveries)
+		# What the partial run committed, undone the way the operator's own
+		# scenario undoes it: the column it added, and its row in the
+		# revision table. A real database needs its changes judged first.
+		mysql_demo "ALTER TABLE deliveries DROP COLUMN status; DELETE FROM schema_migrations WHERE version = 2"
+		;;
+	reports)
+		# The interrupted migration only slept, so once no session of it is
+		# left, its unfinished revision is all there is to remove.
+		deadline=$(($(date +%s) + 300))
+		while [ "$(date +%s)" -lt "$deadline" ]; do
+			left=$(postgres -d reports -c "SELECT count(*) FROM pg_stat_activity WHERE datname = 'reports' AND query LIKE '%pg_sleep(60)%' AND pid <> pg_backend_pid()")
+			[ "$left" = 0 ] && break
+			sleep 2
+		done
+		[ "${left:-1}" = 0 ] || fail 'the interrupted session never ended'
+		postgres -d reports -c "DELETE FROM schema_migrations WHERE version = 2 AND state <> 'applied'" >/dev/null
+		;;
+	*) fail 'repair deliveries or reports' ;;
+	esac
 	;;
 outage)
 	balancer="${E2E_KIND_CLUSTER_NAME:?the lab names no cluster}-external-load-balancer"
