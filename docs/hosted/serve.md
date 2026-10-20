@@ -42,8 +42,33 @@ cut short.
 
 Attempts are limited before any hash is compared: five per login at once and
 one more every 12 seconds, thirty per source address and one more every 2
-seconds. Behind a proxy the source address is the proxy's, so the address
-limit applies to everyone who comes through it.
+seconds. An IPv6 address counts under its /64, so one network cannot spread
+its attempts over its own addresses.
+
+### Behind a proxy
+
+Behind an ingress or a load balancer every connection comes from the proxy,
+so one address limit would hold everyone. Name the proxies' networks in
+`trustedProxies`, and the console reads `X-Forwarded-For` to find each
+client:
+
+- The header is read only when the connection comes from a trusted network.
+  From anywhere else it is ignored, whatever it says.
+- It is read from the right. Each proxy appends the address it received the
+  request from, so the console skips trusted proxies and stops at the first
+  address that is not one. Anything a client wrote into the header itself is
+  to the left of that and is never read.
+- An entry it cannot read in the part it has to read, or more than 16 trusted
+  hops, means the header is not believed, and the connection's address
+  counts.
+- `/0` is refused: a network that holds every address would let any client
+  name any other.
+
+Name only the proxies themselves, such as the ingress controller's Pod
+network, and make sure clients cannot reach the console's Service around them.
+A NetworkPolicy that admits only the proxies does that; the chart's example
+policy takes them in `networkPolicy.ingressFrom`. The resolved address is
+written into the audit line of every sign-in.
 
 Signing in replaces the session the browser had. A session ends after 30
 minutes without an action or 8 hours after sign-in, on sign-out, and when the

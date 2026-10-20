@@ -24,6 +24,7 @@ import (
 	"github.com/stokaro/ptah-console/internal/api"
 	"github.com/stokaro/ptah-console/internal/audit"
 	"github.com/stokaro/ptah-console/internal/auth/accounts"
+	"github.com/stokaro/ptah-console/internal/auth/clientaddr"
 	"github.com/stokaro/ptah-console/internal/auth/session"
 	"github.com/stokaro/ptah-console/internal/auth/signin"
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
@@ -61,6 +62,9 @@ type Options struct {
 	Listening func(net.Addr)
 	// Now is the clock sign-in limits are kept by; nil is time.Now.
 	Now func() time.Time
+	// PerLogin and PerAddress override the sign-in limits; zero keeps
+	// signin's defaults.
+	PerLogin, PerAddress signin.Limits
 }
 
 // transportProblem says why the options do not serve HTTPS.
@@ -112,7 +116,10 @@ func Run(ctx context.Context, options Options) error {
 	if err != nil {
 		return err
 	}
-	verifier, err := signin.New(signin.Options{Config: config, Passwords: passwords, Now: options.Now})
+	verifier, err := signin.New(signin.Options{
+		Config: config, Passwords: passwords, Now: options.Now,
+		PerLogin: options.PerLogin, PerAddress: options.PerAddress,
+	})
 	if err != nil {
 		return err
 	}
@@ -129,6 +136,7 @@ func Run(ctx context.Context, options Options) error {
 	cookies := session.Cookies{Secure: true}
 	sessions := api.NewHostedSession(store, cookies, api.HostedAccounts{
 		Verifier: verifier, Generation: generation, DisplayNames: displayNames,
+		Addresses: clientaddr.New(config.Proxies()),
 	}, factory, api.SessionFacts{Mode: consolev1.Mode_MODE_HOSTED, ReadOnly: options.ReadOnly}, options.Audit)
 	scope := api.Scope{Candidates: config.Namespaces, Ceiling: config.Namespaces}
 	interceptors := []connect.ServerInterceptor{

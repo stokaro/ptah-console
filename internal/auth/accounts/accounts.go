@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/netip"
 	"net/url"
 	"os"
 	"regexp"
@@ -35,6 +36,7 @@ const (
 	maxFileBytes        = 1 << 20
 	maxLoginBytes       = 254
 	maxDisplayNameBytes = 128
+	maxTrustedProxies   = 64
 )
 
 // Config is the hosted console's configuration file.
@@ -50,6 +52,24 @@ type Config struct {
 	// whatever an account's RBAC allows.
 	Namespaces []string  `json:"namespaces"`
 	Accounts   []Account `json:"accounts"`
+	// TrustedProxies are the networks of the proxies in front of the console,
+	// such as the ingress controller's Pods. Only a request whose connection
+	// comes from one of them has its X-Forwarded-For read, to count sign-in
+	// attempts per client rather than per proxy. Empty, the header is never
+	// read.
+	TrustedProxies []string `json:"trustedProxies,omitempty"`
+}
+
+// Proxies is TrustedProxies, parsed. A configuration ParseConfig accepted
+// parses whole.
+func (c *Config) Proxies() []netip.Prefix {
+	prefixes := make([]netip.Prefix, 0, len(c.TrustedProxies))
+	for _, text := range c.TrustedProxies {
+		if prefix, err := netip.ParsePrefix(text); err == nil {
+			prefixes = append(prefixes, prefix)
+		}
+	}
+	return prefixes
 }
 
 // Account is one person who may sign in.
@@ -167,7 +187,42 @@ func (c *Config) problems() []string {
 	if len(c.Accounts) == 0 {
 		add("accounts", "lists no account")
 	}
+	problems = append(problems, proxyProblems(c.TrustedProxies)...)
 	return append(problems, accountProblems(c.Accounts)...)
+}
+
+// proxyProblems refuses a network that cannot be read one way only, and one
+// that would let anyone name any client.
+func proxyProblems(proxies []string) []string {
+	var problems []string
+	add := func(field, format string, args ...any) {
+		problems = append(problems, field+": "+fmt.Sprintf(format, args...))
+	}
+	if len(proxies) > maxTrustedProxies {
+		add("trustedProxies", "lists more than %d networks", maxTrustedProxies)
+	}
+	seen := make(map[netip.Prefix]int)
+	for i, text := range proxies {
+		field := fmt.Sprintf("trustedProxies[%d]", i)
+		prefix, err := netip.ParsePrefix(text)
+		switch {
+		case err != nil:
+			add(field, "is not a network in CIDR notation, such as 10.244.0.0/16 or 192.0.2.10/32")
+		case prefix.Bits() == 0:
+			add(field, "is every address, which would let any client say it is any other")
+		case prefix.Addr().Is4In6():
+			add(field, "is an IPv4 network written as IPv6; write it as IPv4")
+		case prefix != prefix.Masked():
+			add(field, "is not a network address; write %s", prefix.Masked())
+		default:
+			if first, repeated := seen[prefix]; repeated {
+				add(field, "repeats trustedProxies[%d]", first)
+				continue
+			}
+			seen[prefix] = i
+		}
+	}
+	return problems
 }
 
 func accountProblems(accounts []Account) []string {

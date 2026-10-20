@@ -50,6 +50,8 @@ type Event struct {
 	AuditID string
 	// Reason is a short, fixed explanation chosen by the console.
 	Reason string
+	// Address is where a sign-in came from, as the console resolved it.
+	Address string
 }
 
 // Logger writes events.
@@ -85,6 +87,7 @@ func (l *Logger) Record(ctx context.Context, event Event) {
 		slog.String("requestID", event.RequestID),
 		slog.String("auditID", event.AuditID),
 		slog.String("reason", event.Reason),
+		slog.String("address", event.Address),
 		slog.Time("at", time.Now().UTC()),
 	)
 }

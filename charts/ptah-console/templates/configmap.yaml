@@ -22,3 +22,6 @@ data:
     publicURL: {{ .Values.publicURL | quote }}
     namespaces: {{ toJson .Values.namespaces }}
     accounts: {{ toJson $accounts }}
+    {{- with .Values.trustedProxies }}
+    trustedProxies: {{ toJson . }}
+    {{- end }}

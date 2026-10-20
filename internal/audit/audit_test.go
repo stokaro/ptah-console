@@ -30,7 +30,7 @@ func TestALineHasExactlyTheFixedFields(t *testing.T) {
 	c.Assert(json.Unmarshal(out.Bytes(), &line), qt.IsNil)
 
 	c.Assert(slices.Sorted(maps.Keys(line)), qt.DeepEquals, []string{
-		"account", "action", "at", "auditID", "context", "identity", "kind", "level", "msg",
+		"account", "action", "address", "at", "auditID", "context", "identity", "kind", "level", "msg",
 		"name", "namespace", "outcome", "plan", "planFingerprint", "planUID", "reason",
 		"requestID", "time", "uid",
 	})

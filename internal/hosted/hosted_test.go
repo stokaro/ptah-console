@@ -10,6 +10,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net"
 	"net/http"
@@ -25,6 +26,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/stokaro/ptah-console/internal/auth/accounts"
+	"github.com/stokaro/ptah-console/internal/auth/signin"
 	"github.com/stokaro/ptah-console/internal/hosted"
 )
 
@@ -59,15 +61,16 @@ var passwords = sync.OnceValues(func() (string, error) {
 	return file, nil
 })
 
-// files writes the configuration and its passwords and returns their paths.
-func files(t *testing.T) (configPath, passwordsPath string) {
+// files writes the configuration, with extra lines, and its passwords and
+// returns their paths.
+func files(t *testing.T, extra ...string) (configPath, passwordsPath string) {
 	t.Helper()
 	c := qt.New(t)
 	dir := t.TempDir()
 	content, err := passwords()
 	c.Assert(err, qt.IsNil)
 	configPath, passwordsPath = filepath.Join(dir, "configuration.yaml"), filepath.Join(dir, "passwords")
-	c.Assert(os.WriteFile(configPath, []byte(configuration), 0o600), qt.IsNil)
+	c.Assert(os.WriteFile(configPath, []byte(configuration+strings.Join(extra, "")), 0o600), qt.IsNil)
 	c.Assert(os.WriteFile(passwordsPath, []byte(content), 0o600), qt.IsNil)
 	return configPath, passwordsPath
 }
@@ -160,8 +163,21 @@ type console struct {
 // points nowhere: signing in never reaches the API server.
 func start(t *testing.T) *console {
 	t.Helper()
+	return startWith(t, setup{})
+}
+
+// setup is what a console under test starts with beyond the common files.
+type setup struct {
+	// config is appended to the configuration.
+	config string
+	// perAddress replaces the per-address sign-in limit.
+	perAddress signin.Limits
+}
+
+func startWith(t *testing.T, with setup) *console {
+	t.Helper()
 	c := qt.New(t)
-	configPath, passwordsPath := files(t)
+	configPath, passwordsPath := files(t, with.config)
 	dir := t.TempDir()
 	served := &console{roots: x509.NewCertPool(), certFile: filepath.Join(dir, "tls.crt"), keyFile: filepath.Join(dir, "tls.key")}
 	served.roots.AddCert(certificate(t, served.certFile, served.keyFile, 1))
@@ -176,7 +192,8 @@ func start(t *testing.T) *console {
 			Listening: func(addr net.Addr) { listening <- addr },
 			// Sign-in limits refill with time. A clock that stands still
 			// keeps a run on a slow machine from refilling one mid-test.
-			Now: func() time.Time { return stopped },
+			Now:        func() time.Time { return stopped },
+			PerAddress: with.perAddress,
 		})
 	}()
 	t.Cleanup(func() {
@@ -207,6 +224,13 @@ type answer struct {
 // shows the certificate the console serves at that moment.
 func (s *console) call(t *testing.T, procedure, body string, cookies ...*http.Cookie) answer {
 	t.Helper()
+	return s.callForwarded(t, procedure, body, nil, cookies...)
+}
+
+// callForwarded is call with X-Forwarded-For lines, as a proxy in front of
+// the console would send them.
+func (s *console) callForwarded(t *testing.T, procedure, body string, forwardedFor []string, cookies ...*http.Cookie) answer {
+	t.Helper()
 	c := qt.New(t)
 	client := &http.Client{Transport: &http.Transport{
 		TLSClientConfig:   &tls.Config{RootCAs: s.roots, ServerName: publicHost, MinVersion: tls.VersionTLS12},
@@ -218,6 +242,7 @@ func (s *console) call(t *testing.T, procedure, body string, cookies ...*http.Co
 	request.Host = publicHost
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Connect-Protocol-Version", "1")
+	request.Header["X-Forwarded-For"] = forwardedFor
 	for _, cookie := range cookies {
 		request.AddCookie(cookie)
 	}
@@ -340,4 +365,48 @@ func TestARenewedCertificateIsServedWithoutARestart(t *testing.T) {
 	c.Assert(before.serial.Int64(), qt.Equals, int64(1))
 	c.Assert(after.status, qt.Equals, http.StatusOK)
 	c.Assert(after.serial.Int64(), qt.Equals, int64(2))
+}
+
+// attempts makes n sign-in attempts with logins no account has, from one
+// client behind the proxy, and returns the code of each answer.
+func (s *console) attempts(t *testing.T, n int, forwardedFor ...string) []string {
+	t.Helper()
+	codes := make([]string, n)
+	for i := range codes {
+		codes[i] = s.callForwarded(t, "SessionService/Login", login(fmt.Sprintf("guess-%d@example.com", i), "guess"), forwardedFor).code
+	}
+	return codes
+}
+
+// Behind a trusted proxy each client has a limit of its own, which writing
+// another address in front of its own does not escape.
+func TestBehindATrustedProxyEachClientHasItsOwnLimit(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	// The test's connections come from 127.0.0.1, the proxy here.
+	console := startWith(t, setup{
+		config:     "trustedProxies: [127.0.0.1/32]\n",
+		perAddress: signin.Limits{Every: time.Hour, Burst: 3, MaxKeys: 100},
+	})
+	refused, throttled := "unauthenticated", "resource_exhausted"
+
+	c.Assert(console.attempts(t, 3, "198.51.100.7"), qt.DeepEquals, []string{refused, refused, refused})
+	c.Assert(console.attempts(t, 1, "198.51.100.7"), qt.DeepEquals, []string{throttled})
+	c.Assert(console.attempts(t, 1, "203.0.113.9, 198.51.100.7"), qt.DeepEquals, []string{throttled})
+	c.Assert(console.attempts(t, 1, "203.0.113.9", "198.51.100.7"), qt.DeepEquals, []string{throttled})
+	c.Assert(console.attempts(t, 1, "198.51.100.8"), qt.DeepEquals, []string{refused})
+	c.Assert(console.attempts(t, 3, "2001:db8:0:1::1"), qt.DeepEquals, []string{refused, refused, refused})
+	c.Assert(console.attempts(t, 1, "2001:db8:0:1::2"), qt.DeepEquals, []string{throttled})
+}
+
+// Without trusted proxies the header is not read: every attempt counts
+// against the connection's address, whatever it names.
+func TestWithoutTrustedProxiesTheHeaderIsIgnored(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	console := startWith(t, setup{perAddress: signin.Limits{Every: time.Hour, Burst: 3, MaxKeys: 100}})
+	refused, throttled := "unauthenticated", "resource_exhausted"
+
+	c.Assert(console.attempts(t, 3, "198.51.100.7"), qt.DeepEquals, []string{refused, refused, refused})
+	c.Assert(console.attempts(t, 1, "198.51.100.8"), qt.DeepEquals, []string{throttled})
 }
