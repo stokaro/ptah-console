@@ -288,6 +288,8 @@ func TestEachRefusal(t *testing.T) {
 		{name: "a system: role as the approver role", overlay: "approverClusterRole: 'system:aggregate-to-admin'",
 			says: `/approverClusterRole.*'not' failed`},
 		{name: "two replicas", overlay: "replicaCount: 2", says: `/replicaCount.*maximum`},
+		{name: "a pull secret given as a bare name", overlay: "imagePullSecrets: [ghcr-pull]",
+			says: `/imagePullSecrets/0.*got string, want object`},
 		{name: "the same id twice",
 			overlay: "accounts: [{id: alex, login: a@example.com, roles: [viewer]}, {id: alex, login: b@example.com, roles: [viewer]}]",
 			says:    `accounts: the id alex is given twice`},

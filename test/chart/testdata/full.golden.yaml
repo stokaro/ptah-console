@@ -672,6 +672,8 @@ spec:
         example.com/team: data
     spec:
       serviceAccountName: console-ptah-console
+      imagePullSecrets:
+        - name: ghcr-pull
       automountServiceAccountToken: true
       securityContext:
         runAsNonRoot: true

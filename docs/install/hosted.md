@@ -84,6 +84,17 @@ helm install console oci://ghcr.io/stokaro/charts/ptah-console --version 0.1.0 \
 kubectl -n ptah-console rollout status deployment/console-ptah-console
 ```
 
+If ghcr.io asks you to sign in, run `helm registry login ghcr.io` with your
+GitHub account first. The cluster pulls the image itself, so if ghcr.io asks
+it for credentials too, give it a pull Secret made from a GitHub token with
+`read:packages`, and name the Secret in the values as
+`imagePullSecrets: [{name: ghcr-pull}]`:
+
+```sh
+kubectl -n ptah-console create secret docker-registry ghcr-pull \
+  --docker-server=ghcr.io --docker-username="$github_user" --docker-password="$github_token"
+```
+
 The chart refuses values it cannot install safely: no accounts, a wildcard or
 unknown role, a `system:` name, an administrator ClusterRole as the approver
 role, more than one replica, a public URL that is not the `https` root of a

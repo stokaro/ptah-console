@@ -5,6 +5,9 @@ image:
   tag: ""
   digest: ""
   pullPolicy: IfNotPresent
+# Secrets the kubelet pulls the image with, by name, when the registry asks
+# for credentials: [{name: ghcr-pull}].
+imagePullSecrets: []
 
 # One replica, or none: sessions live in the replica's memory, so more than
 # one would sign people out at random. More are refused.

@@ -2,6 +2,8 @@
 # a console that serves plain HTTP to them, every role, the example policy.
 image:
   digest: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+imagePullSecrets:
+  - name: ghcr-pull
 installationID: prod-eu-1
 publicURL: https://console.example.com/
 namespaces: [storefront, billing]
