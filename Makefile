@@ -26,7 +26,7 @@ ENVTEST_KUBERNETES_VERSION ?= 1.37.0
 ENVTEST_INDEX ?= https://raw.githubusercontent.com/kubernetes-sigs/controller-tools/1031496fc98a4f51010c3bdfdeb57b5d67bea7bd/envtest-releases.yaml
 ENVTEST_BIN_DIR ?=
 
-.PHONY: chart-conform build build-go test test-web-go vet fmt-check verify-go-mod check \
+.PHONY: chart-conform build build-linux image require-docker-context build-go test test-web-go vet fmt-check verify-go-mod check \
 	web-storybook lint lint-golangci lint-qtlint lint-nolintguard lint-teststyle vulncheck \
 	web-install web-build web-lint web-test web-size web-check embed-smoke \
 	generate verify-generated buf-lint buf-breaking contract test-envtest verify \
@@ -36,6 +36,26 @@ ENVTEST_BIN_DIR ?=
 # a binary written there gets committed.
 build: web-build
 	$(GO) build -trimpath -tags with_frontend -ldflags "$(LDFLAGS)" -o $(BIN)/ptah-console ./cmd/ptah-console
+
+# The binary with the web app for Linux, for an image: ARCH is the image's
+# architecture, the build machine's by default.
+ARCH ?= $(shell $(GO) env GOARCH)
+build-linux: web-build
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) $(GO) build -trimpath -tags with_frontend -ldflags "$(LDFLAGS)" \
+		-o $(BIN)/linux_$(ARCH)/ptah-console ./cmd/ptah-console
+
+# The image, built on the Docker context DOCKER_CONTEXT names, from a context
+# that holds the Dockerfile and the binary alone.
+IMAGE ?= ptah-console:dev
+image: require-docker-context build-linux
+	@context=$$(mktemp -d) && trap 'rm -rf "$$context"' EXIT && \
+	cp Dockerfile $(BIN)/linux_$(ARCH)/ptah-console "$$context"/ && \
+	docker build --platform linux/$(ARCH) --build-arg VERSION=$(VERSION) --build-arg REVISION=$(COMMIT) \
+		--tag $(IMAGE) "$$context"
+
+# Docker work names its context: never whichever one happens to be current.
+require-docker-context:
+	@[ -n "$$DOCKER_CONTEXT" ] || { echo "name the Docker context to build on in DOCKER_CONTEXT"; exit 1; }
 
 # The binary without the web app: no Node toolchain needed.
 build-go:

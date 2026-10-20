@@ -4,12 +4,14 @@ name: Acceptance
 # operator's own demonstration lab, from the operator commit this module
 # requires, with the personas and fixtures hack/e2e adds. Each person signs in
 # to a `ptah-console local` of their own, with a client certificate the
-# cluster issued, and every row is recorded. hack/e2e/verify.sh then checks
+# cluster issued, and every row is recorded. The hosted rows follow: this
+# repository's chart, installed in the lab with the image built from this
+# commit, signed in to with Console accounts. hack/e2e/verify.sh then checks
 # the cluster's own account of what the rows decided, and the recordings are
 # joined into the demo film.
 #
-# It runs on request, and on a pull request that changes the environment or
-# the rows: a run takes a cluster and about an hour.
+# It runs on request, and on a pull request that changes the environment, the
+# rows, the chart or the image: a run takes a cluster and about an hour.
 
 on:
   workflow_dispatch:
@@ -18,6 +20,8 @@ on:
       - .github/workflows/acceptance.yml
       - hack/e2e/**
       - web/e2e/**
+      - charts/**
+      - Dockerfile
 
 permissions:
   contents: read

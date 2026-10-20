@@ -3,13 +3,16 @@
 # acceptance rows did what the recording shows:
 #
 #   - every decision admission stored was made by e2e-approver: the lead's
-#     own approval and the author's were refused, and nothing else approved
+#     own approval and the author's were refused, and nothing else approved,
+#     apart from inventory v2, which the hosted rows approved
 #   - storefront applied the plan the approver approved after the change, and
 #     the database dropped the column and granted SELECT
 #   - billing applied migrations 14 to 17 after their approval
 #   - journal's run failed and was not retried behind anyone's back
 #   - deliveries' partial run was settled by the approver's acknowledgment
 #   - reports' interrupted run was settled the same way, and then applied
+#   - inventory v2 was approved once, by the hosted approver's mapped
+#     username, and applied after the console was uninstalled
 set -eu
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
@@ -23,9 +26,11 @@ ns() {
 	admin -n "$NAMESPACE" "$@"
 }
 
-# deciders prints who admission recorded on each stored decision of a kind.
+# deciders prints who admission recorded on each stored decision of a kind,
+# apart from the hosted rows' approval of inventory.
 deciders() {
-	ns get "$1" -o json | jq -r --arg field "$2" '[.items[] | .spec[$field].username] | unique | join(",")'
+	ns get "$1" -o json | jq -r --arg field "$2" \
+		'[.items[] | select(.spec.schemaRef.name != "inventory") | .spec[$field].username] | unique | join(",")'
 }
 for kind in ptahschemaapprovals:approver ptahmigrationapprovals:approver ptahmigrationrunacknowledgments:acknowledgedBy; do
 	who=$(deciders "${kind%%:*}" "${kind##*:}")
@@ -93,4 +98,17 @@ reports=$(ns get ptahmigration reports -o json |
 [ "$reports" = "$APPROVER Applied" ] ||
 	fail "reports reads '$reports': not settled by $APPROVER and then applied"
 
-say "verified: every decision was $APPROVER's, and each one did what the rows show"
+# The hosted rows: admission recorded the account's mapped username, because
+# the console impersonated it, and the operator applied the plan after the
+# console was gone.
+hosted=$(ns get ptahschemaapprovals -o json | jq -r \
+	'[.items[] | select(.spec.schemaRef.name == "inventory") | "\(.spec.approver.username) \(.spec.planRef.name)"] | join(",")')
+[ "$hosted" = "$HOSTED_APPROVER $HOSTED_INVENTORY_PLAN" ] ||
+	fail "inventory's approvals read '$hosted', not one by $HOSTED_APPROVER for $HOSTED_INVENTORY_PLAN"
+wait_condition ptahschema inventory InSync
+location=$(postgres -d inventory -c \
+	"SELECT count(*) FROM information_schema.columns WHERE table_name = 'items' AND column_name = 'location'")
+[ "$location" = 1 ] || fail 'inventory has no items.location column'
+[ -z "$(admin -n ptah-console get deployments -o name)" ] || fail 'the hosted console is still installed'
+
+say "verified: every decision was $APPROVER's or, for inventory, $HOSTED_APPROVER's, and each one did what the rows show"
