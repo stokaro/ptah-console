@@ -14,8 +14,14 @@ import (
 )
 
 func run(args ...string) (code int, stdout, stderr string) {
+	return runWithInput("", args...)
+}
+
+// runWithInput runs the command with input on its standard input, as a pipe
+// gives it: not a terminal.
+func runWithInput(input string, args ...string) (code int, stdout, stderr string) {
 	var out, errOut bytes.Buffer
-	code = cli.Run(context.Background(), args, &out, &errOut)
+	code = cli.Run(context.Background(), args, strings.NewReader(input), &out, &errOut)
 	return code, out.String(), errOut.String()
 }
 
