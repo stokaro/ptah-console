@@ -110,27 +110,34 @@ func (w *WatchService) Subscribe(ctx context.Context, request *consolev1.Subscri
 	defer cancel()
 	events := make(chan *consolev1.SubscribeResponse)
 	opened := make(chan struct{})
+	recovered := make(chan string)
 	stopped := make(chan error, len(namespaces)*len(watchedKinds))
 	followers := 0
 	for _, namespace := range namespaces {
 		for _, kind := range watchedKinds {
 			followers++
-			f := follower{watcher: watcher, namespace: namespace, kind: kind.kind, list: kind.list, window: w.options.Window, events: events, opened: opened}
+			f := follower{
+				watcher: watcher, namespace: namespace, kind: kind.kind, list: kind.list, window: w.options.Window,
+				events: events, opened: opened, recovered: recovered,
+			}
 			go func() { stopped <- f.run(ctx) }()
 		}
 	}
-	return w.relay(ctx, current, stream, followers, events, opened, stopped)
+	return w.relay(ctx, current, stream, followers, events, opened, recovered, stopped)
 }
 
 // relay sends what the followers report, and a heartbeat once every watch is
 // open and at each tick after. It ends when the session or the caller does,
 // or when nothing is left that the identity may watch.
 func (w *WatchService) relay(ctx context.Context, current *session.Session, stream consolev1connect.WatchServiceSubscribeServerStream,
-	followers int, events <-chan *consolev1.SubscribeResponse, opened <-chan struct{}, stopped <-chan error,
+	followers int, events <-chan *consolev1.SubscribeResponse, opened <-chan struct{}, recovered <-chan string, stopped <-chan error,
 ) error {
 	ticker := time.NewTicker(w.options.Heartbeat)
 	defer ticker.Stop()
 	waiting, active := followers, followers
+	// Watches lost and being opened again. While any is, a heartbeat would
+	// say the page is current when it is not.
+	behind := make(map[string]bool)
 	var last error
 	for {
 		var heartbeat bool
@@ -141,9 +148,15 @@ func (w *WatchService) relay(ctx context.Context, current *session.Session, stre
 			}
 			return nil
 		case event := <-events:
+			if lost := event.GetLost(); lost.GetReconnecting() {
+				behind[lost.GetKind().String()+"/"+lost.GetNamespace()] = true
+			}
 			if err := stream.Send(event); err != nil {
 				return err
 			}
+		case key := <-recovered:
+			delete(behind, key)
+			heartbeat = waiting <= 0 && len(behind) == 0
 		case <-opened:
 			waiting--
 			heartbeat = waiting == 0
@@ -154,7 +167,7 @@ func (w *WatchService) relay(ctx context.Context, current *session.Session, stre
 				return connect.NewError(connect.CodePermissionDenied, "this identity may no longer watch anything here").WithCause(last)
 			}
 		case <-ticker.C:
-			heartbeat = waiting <= 0
+			heartbeat = waiting <= 0 && len(behind) == 0
 		}
 		if heartbeat {
 			beat := &consolev1.SubscribeResponse{Event: &consolev1.SubscribeResponse_Heartbeat{Heartbeat: &consolev1.Heartbeat{ObservedAt: timestamppb.Now()}}}
@@ -192,7 +205,17 @@ type follower struct {
 	window    time.Duration
 	events    chan<- *consolev1.SubscribeResponse
 	opened    chan<- struct{}
+	// recovered hears the follower's key when a watch opens again after it
+	// was lost.
+	recovered chan<- string
 }
+
+// key names the kind and namespace a follower watches.
+func (f follower) key() string { return f.kind.String() + "/" + f.namespace }
+
+// listTimeout bounds the list a watch resumes from: an API server that does
+// not answer is a lost watch to report, not a call to wait on.
+const listTimeout = 10 * time.Second
 
 // run follows until the context ends, or until the identity may not watch
 // the kind here, which it returns.
@@ -206,6 +229,17 @@ func (f follower) run(ctx context.Context) error {
 		}
 	})
 	defer announce()
+	lost := false
+	opened := func() {
+		announce()
+		if lost {
+			lost = false
+			select {
+			case f.recovered <- f.key():
+			case <-ctx.Done():
+			}
+		}
+	}
 	version, stale := "", false
 	for ctx.Err() == nil {
 		listed := func(version string) {
@@ -215,7 +249,7 @@ func (f follower) run(ctx context.Context) error {
 				f.invalidate(ctx, "", version)
 			}
 		}
-		next, err := f.follow(ctx, version, listed, announce)
+		next, err := f.follow(ctx, version, listed, opened)
 		switch {
 		case err == nil:
 			version, stale = next, next == ""
@@ -227,7 +261,7 @@ func (f follower) run(ctx context.Context) error {
 		default:
 			// The page may now be behind; the next open window says so.
 			f.lose(ctx, "The watch stopped and is being opened again.", true)
-			version, stale = "", true
+			lost, version, stale = true, "", true
 			if !sleep(ctx, f.window) {
 				return ctx.Err()
 			}
@@ -243,7 +277,9 @@ func (f follower) follow(ctx context.Context, version string, listed func(string
 		return f.watchOnce(ctx, version, opened)
 	}
 	list := f.list()
-	if err := f.watcher.List(ctx, list, client.InNamespace(f.namespace), client.Limit(1)); err != nil {
+	listCtx, cancel := context.WithTimeout(ctx, min(f.window, listTimeout))
+	defer cancel()
+	if err := f.watcher.List(listCtx, list, client.InNamespace(f.namespace), client.Limit(1)); err != nil {
 		return "", err
 	}
 	listed(list.GetResourceVersion())

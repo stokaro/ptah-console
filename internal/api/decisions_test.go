@@ -506,27 +506,31 @@ func TestListDecisionsListsEveryKind(t *testing.T) {
 // UID it recorded: an auditor reads "not retained", never an empty plan.
 func TestADecisionSaysWhetherItsPlanIsKept(t *testing.T) {
 	t.Parallel()
-	approval := &operatorv1alpha1.PtahSchemaApproval{
-		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "approval"},
-		Spec: operatorv1alpha1.PtahSchemaApprovalSpec{
-			SchemaRef: operatorv1alpha1.ImmutableObjectReference{Name: "storefront", UID: "uid-schema"},
-			PlanRef:   operatorv1alpha1.ImmutableObjectReference{Name: "storefront-plan-1", UID: "uid-plan"},
-		},
+	// Each row builds its own objects: the fake client writes a resource
+	// version into what it is given, and rows run in parallel.
+	approval := func() client.Object {
+		return &operatorv1alpha1.PtahSchemaApproval{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "approval"},
+			Spec: operatorv1alpha1.PtahSchemaApprovalSpec{
+				SchemaRef: operatorv1alpha1.ImmutableObjectReference{Name: "storefront", UID: "uid-schema"},
+				PlanRef:   operatorv1alpha1.ImmutableObjectReference{Name: "storefront-plan-1", UID: "uid-plan"},
+			},
+		}
 	}
 	plan := func(uid string) client.Object {
 		return &operatorv1alpha1.PtahSchemaPlan{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "storefront-plan-1", UID: types.UID(uid)}}
 	}
 	tests := []struct {
 		name    string
-		objects []client.Object
+		objects func() []client.Object
 		get     func(ctx context.Context, c client.WithWatch, key client.ObjectKey, object client.Object, options ...client.GetOption) error
 		want    consolev1.PlanRetention
 	}{
-		{name: "the plan is stored", objects: []client.Object{approval, plan("uid-plan")}, want: consolev1.PlanRetention_PLAN_RETENTION_RETAINED},
-		{name: "the plan is gone", objects: []client.Object{approval}, want: consolev1.PlanRetention_PLAN_RETENTION_NOT_RETAINED},
-		{name: "another plan holds the name", objects: []client.Object{approval, plan("uid-later-plan")}, want: consolev1.PlanRetention_PLAN_RETENTION_NOT_RETAINED},
+		{name: "the plan is stored", objects: func() []client.Object { return []client.Object{approval(), plan("uid-plan")} }, want: consolev1.PlanRetention_PLAN_RETENTION_RETAINED},
+		{name: "the plan is gone", objects: func() []client.Object { return []client.Object{approval()} }, want: consolev1.PlanRetention_PLAN_RETENTION_NOT_RETAINED},
+		{name: "another plan holds the name", objects: func() []client.Object { return []client.Object{approval(), plan("uid-later-plan")} }, want: consolev1.PlanRetention_PLAN_RETENTION_NOT_RETAINED},
 		{
-			name: "the identity may not read plans", objects: []client.Object{approval, plan("uid-plan")},
+			name: "the identity may not read plans", objects: func() []client.Object { return []client.Object{approval(), plan("uid-plan")} },
 			get:  forbidPlans,
 			want: consolev1.PlanRetention_PLAN_RETENTION_NOT_GRANTED,
 		},
@@ -535,7 +539,7 @@ func TestADecisionSaysWhetherItsPlanIsKept(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			c := qt.New(t)
-			service := decisionsWithGet(t, test.get, test.objects...)
+			service := decisionsWithGet(t, test.get, test.objects()...)
 
 			listed, err := service.client.ListDecisions(service.ctx, &consolev1.ListDecisionsRequest{Namespaces: []string{namespace}})
 			c.Assert(err, qt.IsNil)
