@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."
 helm() { go tool -modfile=tools/chart/go.mod helm "$@"; }
 kubeconform() { go tool -modfile=tools/chart/go.mod kubeconform "$@"; }
 
-support="$(go list -m -f '{{.Dir}}' github.com/stokaro/ptah-operator)/support/kubernetes.json"
+support="$(go mod download -json github.com/stokaro/ptah-operator | jq -er .Dir)/support/kubernetes.json"
 minors=$(jq -r '.releases[].minor' "$support")
 [ -n "$minors" ] || {
 	echo "chart-conform: $support names no Kubernetes minor" >&2

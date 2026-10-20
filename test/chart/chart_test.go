@@ -46,6 +46,20 @@ func helm(args ...string) (string, error) {
 	return stdout.String(), nil
 }
 
+// operatorDir is the operator module go.mod requires, downloaded first: go
+// list -m names no directory for a module nothing has downloaded yet.
+func operatorDir() (string, error) {
+	downloaded, err := exec.Command("go", "mod", "download", "-json", "github.com/stokaro/ptah-operator").Output()
+	if err != nil {
+		return "", fmt.Errorf("download the operator module: %w", err)
+	}
+	var module struct{ Dir string }
+	if err := json.Unmarshal(downloaded, &module); err != nil || module.Dir == "" {
+		return "", fmt.Errorf("download the operator module: %q", downloaded)
+	}
+	return module.Dir, nil
+}
+
 // render renders the chart with the value files given, in order.
 func render(valueFiles ...string) (string, error) {
 	args := []string{"template", "console", chartDir, "--namespace", namespace}
@@ -229,9 +243,9 @@ func TestEachAccountGetsItsRolesInEveryNamespace(t *testing.T) {
 func TestTheChartSupportsTheOperatorsKubernetesWindow(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
-	listed, err := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/stokaro/ptah-operator").Output()
+	dir, err := operatorDir()
 	c.Assert(err, qt.IsNil)
-	data, err := os.ReadFile(filepath.Join(strings.TrimSpace(string(listed)), "support", "kubernetes.json"))
+	data, err := os.ReadFile(filepath.Join(dir, "support", "kubernetes.json"))
 	c.Assert(err, qt.IsNil)
 	var support struct {
 		Releases []struct{ Minor string } `json:"releases"`

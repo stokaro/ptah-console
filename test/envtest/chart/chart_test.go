@@ -7,6 +7,7 @@ package chart_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -55,6 +56,20 @@ func helm(args ...string) (string, error) {
 	return stdout.String(), nil
 }
 
+// operatorDir is the operator module go.mod requires, downloaded first: go
+// list -m names no directory for a module nothing has downloaded yet.
+func operatorDir() (string, error) {
+	downloaded, err := exec.Command("go", "mod", "download", "-json", "github.com/stokaro/ptah-operator").Output()
+	if err != nil {
+		return "", fmt.Errorf("download the operator module: %w", err)
+	}
+	var module struct{ Dir string }
+	if err := json.Unmarshal(downloaded, &module); err != nil || module.Dir == "" {
+		return "", fmt.Errorf("download the operator module: %q", downloaded)
+	}
+	return module.Dir, nil
+}
+
 func decode(rendered string) ([]*unstructured.Unstructured, error) {
 	decoder := utilyaml.NewYAMLOrJSONDecoder(strings.NewReader(rendered), 4096)
 	var out []*unstructured.Unstructured
@@ -77,11 +92,11 @@ func decode(rendered string) ([]*unstructured.Unstructured, error) {
 // serve.
 var installed = sync.OnceValues(func() ([]string, error) {
 	ctx := context.Background()
-	listed, err := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/stokaro/ptah-operator").Output()
+	dir, err := operatorDir()
 	if err != nil {
 		return nil, err
 	}
-	operatorRBAC, err := helm("template", "ptah-operator", strings.TrimSpace(string(listed))+"/charts/ptah-operator",
+	operatorRBAC, err := helm("template", "ptah-operator", dir+"/charts/ptah-operator",
 		"--namespace", "ptah-system", "--show-only", "templates/rbac.yaml",
 		"--set", "image.digest="+digest,
 		"--set", "execution.executorImage=example.invalid/ptah@"+digest,

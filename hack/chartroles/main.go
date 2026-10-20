@@ -8,13 +8,13 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
@@ -61,17 +61,18 @@ func run() error {
 }
 
 // operatorModule is where the operator module go.mod requires is, and its
-// version.
+// version. go mod download fetches it first: go list -m names no directory
+// for a module nothing has downloaded yet.
 func operatorModule() (dir, version string, err error) {
-	listed, err := exec.Command("go", "list", "-m", "-f", "{{.Dir}} {{.Version}}", "github.com/stokaro/ptah-operator").Output()
+	downloaded, err := exec.Command("go", "mod", "download", "-json", "github.com/stokaro/ptah-operator").Output()
 	if err != nil {
-		return "", "", fmt.Errorf("locate the operator module: %w", err)
+		return "", "", fmt.Errorf("download the operator module: %w", err)
 	}
-	dir, version, found := strings.Cut(strings.TrimSpace(string(listed)), " ")
-	if !found || dir == "" {
-		return "", "", fmt.Errorf("locate the operator module: %q", listed)
+	var module struct{ Dir, Version string }
+	if err := json.Unmarshal(downloaded, &module); err != nil || module.Dir == "" || module.Version == "" {
+		return "", "", fmt.Errorf("download the operator module: %q", downloaded)
 	}
-	return dir, version, nil
+	return module.Dir, module.Version, nil
 }
 
 // exampleRules is the rules of the one Role in an example file.
