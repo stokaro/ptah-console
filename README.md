@@ -1,6 +1,6 @@
 # Ptah Console
 
-An optional web console for [Ptah Operator](https://github.com/stokaro/ptah-operator).
+A web console for [Ptah Operator](https://github.com/stokaro/ptah-operator).
 
 It answers the questions a person has when a schema change does not reach the
 database on its own: what is happening, why, what is waiting for me, and which
