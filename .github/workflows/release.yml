@@ -10,6 +10,9 @@ name: Release
 # release is made, it is a dry run: the same build, attestations and checks,
 # with the image and the chart pushed to a registry inside the job and no
 # GitHub release. A dry run's version is the chart's.
+#
+# The image goes to GHCR and to its mirror on Docker Hub, which anyone can
+# pull without signing in. Both carry the same digest.
 
 on:
   push:
@@ -81,6 +84,7 @@ jobs:
           if [[ "$DRY_RUN" == 1 ]]; then
             version="$(sed -n 's/^version: //p' charts/ptah-console/Chart.yaml)"
             registry=localhost:5000
+            mirror=localhost:5000/mirror/ptah-console
             go run ./hack/releasecheck -version "$version"
           else
             [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
@@ -89,11 +93,13 @@ jobs:
             }
             version="${GITHUB_REF_NAME#v}"
             registry=ghcr.io/stokaro
+            mirror=docker.io/stokaro/ptah-console
             go run ./hack/releasecheck -version "$version" -release
           fi
           {
             printf 'version=%s\n' "$version"
             printf 'image=%s/ptah-console\n' "$registry"
+            printf 'mirror=%s\n' "$mirror"
             printf 'charts=%s/charts\n' "$registry"
           } >> "$GITHUB_OUTPUT"
       - name: Set up QEMU for the arm64 image
@@ -110,6 +116,16 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # Before anything is pushed, so a bad Docker Hub credential stops the
+      # release before GHCR has the image. stokaro on Docker Hub is an
+      # organization, and the token belongs to a member, as in stokaro/ptah.
+      - name: Sign in to Docker Hub
+        if: env.DRY_RUN == '0'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
       - name: Install Syft for the SBOMs
         uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
       - name: Build the binaries, archives and image
@@ -122,6 +138,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IMAGE: ${{ steps.version.outputs.image }}
+          MIRROR_IMAGE: ${{ steps.version.outputs.mirror }}
           GORELEASER_CURRENT_TAG: v${{ steps.version.outputs.version }}
       - name: Read the image digest
         id: image
@@ -131,6 +148,29 @@ jobs:
           digest="$(jq -er '[.[] | select(.extra.Digest != null and (.type | test("Docker"))) | .extra.Digest] | unique | if length == 1 then .[0] else error("expected one image digest, found \(length)") end' dist/artifacts.json)"
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+      # The mirror is for people who pull without signing in, so it is read
+      # without signing in, and its tag has to name the digest GHCR got.
+      - name: Check the mirror serves the same image
+        env:
+          MIRROR: ${{ steps.version.outputs.mirror }}
+          VERSION: ${{ steps.version.outputs.version }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          accept='application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json'
+          repository="${MIRROR#*/}"
+          if [[ "$DRY_RUN" == 1 ]]; then
+            auth=()
+            manifests="http://${MIRROR%%/*}/v2/$repository/manifests"
+          else
+            token="$(curl -fsS "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$repository:pull" | jq -er .token)"
+            auth=(-H "Authorization: Bearer $token")
+            manifests="https://registry-1.docker.io/v2/$repository/manifests"
+          fi
+          served="$(curl -fsSI "${auth[@]}" -H "Accept: $accept" "$manifests/$VERSION" | tr -d '\r' | sed -n 's/^[Dd]ocker-[Cc]ontent-[Dd]igest: //p')"
+          printf '%s:%s serves %s\n' "$MIRROR" "$VERSION" "${served:-nothing}"
+          [[ "$served" == "$DIGEST" ]] || { echo "the mirror does not serve $DIGEST" >&2; exit 1; }
       - name: Package and push the chart
         id: chart
         env:
@@ -184,6 +224,7 @@ jobs:
       - name: Verify every attestation
         env:
           IMAGE: ${{ steps.version.outputs.image }}
+          MIRROR: ${{ steps.version.outputs.mirror }}
           IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
           CHARTS: ${{ steps.version.outputs.charts }}
           CHART_DIGEST: ${{ steps.chart.outputs.digest }}
@@ -203,6 +244,7 @@ jobs:
           # Six archives, six SBOMs, the checksums and the chart.
           [[ "$checked" == 14 ]] || { echo "verified $checked files, expected 14" >&2; exit 1; }
           verify "oci://$IMAGE@$IMAGE_DIGEST"
+          verify "oci://$MIRROR@$IMAGE_DIGEST"
           verify "oci://$CHARTS/ptah-console@$CHART_DIGEST"
           (cd dist && sha256sum --check --strict SHA256SUMS)
       - name: Publish the release

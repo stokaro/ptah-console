@@ -59,11 +59,14 @@ sboms:
   - id: archives
     artifacts: archive
 
+# One build pushes the image to GHCR and to its Docker Hub mirror, so both
+# serve the same digest. The workflow signs in to both before this runs.
 dockers_v2:
   - id: ptah-console
     ids: [ptah-console]
     images:
       - "{{ .Env.IMAGE }}"
+      - "{{ .Env.MIRROR_IMAGE }}"
     tags:
       - "{{ .Version }}"
     platforms:
