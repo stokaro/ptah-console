@@ -12,7 +12,7 @@ import (
 	"github.com/stokaro/ptah-console/web"
 )
 
-func newLocal(stdout io.Writer) *cobra.Command {
+func newLocal(stdin io.Reader, stdout io.Writer) *cobra.Command {
 	var options local.Options
 	var noOpen bool
 	command := &cobra.Command{
@@ -27,8 +27,9 @@ func newLocal(stdout io.Writer) *cobra.Command {
 			options.Logger = slog.Default()
 			options.Audit = audit.New(os.Stderr)
 			options.Stdout = stdout
-			options.Stdin = os.Stdin
-			options.Interactive = isTerminal(os.Stdin)
+			options.Stdin = stdin
+			file, isFile := stdin.(*os.File)
+			options.Interactive = isFile && isTerminal(file)
 			if !noOpen {
 				options.Open = local.OpenBrowser
 			}

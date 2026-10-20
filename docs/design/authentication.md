@@ -39,7 +39,8 @@ The console runs beside the operator with personal Console accounts.
 - Accounts are configured by the installer: an immutable ID, a login and a
   display name. Passwords are an htpasswd file in a Secret, bcrypt only; other
   hash formats are refused, and so is a password longer than bcrypt's 72 bytes
-  rather than truncating it.
+  rather than truncating it. [Hosted accounts](../hosted/accounts.md) gives
+  both file formats and their rules.
 - Each account maps to exactly one Kubernetes username, built on the server:
   `ptah-console:<installationID>:<accountID>`. Nothing from the browser takes
   part in it.

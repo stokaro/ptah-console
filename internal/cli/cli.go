@@ -1,8 +1,8 @@
 // Package cli is the ptah-console command line.
 //
 // Run is the whole program apart from the process: it takes arguments and the
-// two output streams and returns the exit code, so a test drives it the way a
-// shell does.
+// three standard streams and returns the exit code, so a test drives it the
+// way a shell does.
 package cli
 
 import (
@@ -26,8 +26,8 @@ const (
 var errUsage = errors.New("usage")
 
 // Run executes one invocation and returns its exit code.
-func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
-	root := newRoot(stdout, stderr)
+func Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	root := newRoot(stdin, stdout, stderr)
 	root.SetArgs(args)
 	err := root.ExecuteContext(ctx)
 	switch {
@@ -42,7 +42,7 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	}
 }
 
-func newRoot(stdout, stderr io.Writer) *cobra.Command {
+func newRoot(stdin io.Reader, stdout, stderr io.Writer) *cobra.Command {
 	var logLevel string
 	root := &cobra.Command{
 		Use:   "ptah-console",
@@ -75,7 +75,12 @@ func newRoot(stdout, stderr io.Writer) *cobra.Command {
 		return fmt.Errorf("%w: %w", errUsage, err)
 	})
 	root.PersistentFlags().StringVar(&logLevel, "log-level", "info", "log level: debug, info, warn or error")
-	root.AddCommand(newVersion(stdout), newLocal(stdout))
+	root.AddCommand(
+		newVersion(stdout),
+		newLocal(stdin, stdout),
+		newAccounts(stdin, stdout, stderr),
+		newConfig(stdout),
+	)
 	return root
 }
 
