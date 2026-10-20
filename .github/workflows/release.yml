@@ -1,0 +1,230 @@
+name: Release
+
+# A release of the console: the binary for every supported client platform,
+# the multi-architecture image the chart runs, the chart as a release asset
+# and as an OCI artifact, checksums and SBOMs, and a build provenance
+# attestation for each of them, every one verified before the release is
+# published.
+#
+# A tag v* releases. Run on request, or by a pull request that changes how a
+# release is made, it is a dry run: the same build, attestations and checks,
+# with the image and the chart pushed to a registry inside the job and no
+# GitHub release. A dry run's version is the chart's.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - .goreleaser.yaml
+      - Dockerfile
+      - charts/ptah-console/Chart.yaml
+      - hack/releasecheck/**
+      - internal/release/**
+      - support/compatibility.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, attest, verify and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      DRY_RUN: ${{ github.event_name == 'push' && '0' || '1' }}
+      REPOSITORY: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    services:
+      # Where a dry run pushes the image and the chart. A release never
+      # reaches it.
+      registry:
+        image: registry@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373 # 2.8.3
+        ports:
+          - 5000:5000
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: web/package.json
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install the web app's dependencies
+        working-directory: web
+        run: npm ci
+      - name: Name the version and where it goes
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$DRY_RUN" == 1 ]]; then
+            version="$(sed -n 's/^version: //p' charts/ptah-console/Chart.yaml)"
+            registry=localhost:5000
+            go run ./hack/releasecheck -version "$version"
+          else
+            [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+              echo "a release tag is vMAJOR.MINOR.PATCH, not $GITHUB_REF_NAME" >&2
+              exit 1
+            }
+            version="${GITHUB_REF_NAME#v}"
+            registry=ghcr.io/stokaro
+            go run ./hack/releasecheck -version "$version" -release
+          fi
+          {
+            printf 'version=%s\n' "$version"
+            printf 'image=%s/ptah-console\n' "$registry"
+            printf 'charts=%s/charts\n' "$registry"
+          } >> "$GITHUB_OUTPUT"
+      - name: Set up QEMU for the arm64 image
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e
+        with:
+          # The builder reaches the job's registry on the runner's network.
+          driver-opts: network=host
+      - name: Sign in to GHCR
+        if: env.DRY_RUN == '0'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Syft for the SBOMs
+        uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      - name: Build the binaries, archives and image
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          distribution: goreleaser
+          version: v2.18.2
+          # A dry run builds as the chart's version without a tag of it.
+          args: release --clean ${{ env.DRY_RUN == '1' && '--skip=validate' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ steps.version.outputs.image }}
+          GORELEASER_CURRENT_TAG: v${{ steps.version.outputs.version }}
+      - name: Read the image digest
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          digest="$(jq -er '[.[] | select(.extra.Digest != null and (.type | test("Docker"))) | .extra.Digest] | unique | if length == 1 then .[0] else error("expected one image digest, found \(length)") end' dist/artifacts.json)"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+      - name: Package and push the chart
+        id: chart
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CHARTS: ${{ steps.version.outputs.charts }}
+          REGISTRY_USER: ${{ github.actor }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm() { go tool -modfile=tools/chart/go.mod helm "$@"; }
+          mkdir -p dist/chart
+          helm package charts/ptah-console --version "$VERSION" --app-version "$VERSION" --destination dist/chart
+          chart="dist/chart/ptah-console-$VERSION.tgz"
+          [[ -s "$chart" ]]
+          if [[ "$DRY_RUN" == 1 ]]; then
+            pushed="$(helm push "$chart" "oci://$CHARTS" --plain-http 2>&1)"
+          else
+            printf '%s' "$GH_TOKEN" | helm registry login ghcr.io --username "$REGISTRY_USER" --password-stdin
+            pushed="$(helm push "$chart" "oci://$CHARTS" 2>&1)"
+          fi
+          printf '%s\n' "$pushed"
+          digest="$(printf '%s\n' "$pushed" | sed -n 's/^Digest: //p')"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          {
+            printf 'file=%s\n' "$chart"
+            printf 'digest=%s\n' "$digest"
+          } >> "$GITHUB_OUTPUT"
+      - name: Attest the files
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sbom.json
+            dist/SHA256SUMS
+            dist/chart/*.tgz
+      - name: Attest the image
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-name: ${{ steps.version.outputs.image }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: ${{ env.DRY_RUN == '0' }}
+      - name: Attest the chart in its registry
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-name: ${{ steps.version.outputs.charts }}/ptah-console
+          subject-digest: ${{ steps.chart.outputs.digest }}
+          push-to-registry: ${{ env.DRY_RUN == '0' }}
+      # Each artifact is checked the way a person installing it would: the
+      # attestation names this repository and this workflow.
+      - name: Verify every attestation
+        env:
+          IMAGE: ${{ steps.version.outputs.image }}
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          CHARTS: ${{ steps.version.outputs.charts }}
+          CHART_DIGEST: ${{ steps.chart.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify() {
+            gh attestation verify "$1" --repo "$REPOSITORY" \
+              --signer-workflow "$REPOSITORY/.github/workflows/release.yml" >/dev/null
+            printf 'verified %s\n' "$1"
+          }
+          checked=0
+          for file in dist/*.tar.gz dist/*.zip dist/*.sbom.json dist/SHA256SUMS dist/chart/*.tgz; do
+            verify "$file"
+            checked=$((checked + 1))
+          done
+          # Six archives, six SBOMs, the checksums and the chart.
+          [[ "$checked" == 14 ]] || { echo "verified $checked files, expected 14" >&2; exit 1; }
+          verify "oci://$IMAGE@$IMAGE_DIGEST"
+          verify "oci://$CHARTS/ptah-console@$CHART_DIGEST"
+          (cd dist && sha256sum --check --strict SHA256SUMS)
+      - name: Publish the release
+        if: env.DRY_RUN == '0'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CHART: ${{ steps.chart.outputs.file }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "v$VERSION" "$CHART" --repo "$REPOSITORY"
+          gh release edit "v$VERSION" --draft=false --repo "$REPOSITORY"
+      - name: Keep the dry run's artifacts
+        if: env.DRY_RUN == '1'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ptah-console-release-dry-run
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sbom.json
+            dist/SHA256SUMS
+            dist/chart/*.tgz
+            dist/artifacts.json
+          retention-days: 14

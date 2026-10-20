@@ -1,0 +1,85 @@
+# What a release of the console is: the binary for every supported client
+# platform with the web app in it, the multi-architecture image the chart
+# runs, the checksums and an SBOM for each archive. The chart and the
+# provenance attestations are made by .github/workflows/release.yml around
+# this, so one workflow says what a release publishes.
+#
+# A dry run builds the same set, pushes the image to a registry inside the
+# job, and publishes no GitHub release: DRY_RUN=1 turns the release off and
+# IMAGE names where the image goes.
+version: 2
+
+project_name: ptah-console
+
+before:
+  hooks:
+    # The web app goes into every binary through the with_frontend tag.
+    - make web-build
+
+builds:
+  - id: ptah-console
+    main: ./cmd/ptah-console
+    binary: ptah-console
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    tags:
+      - with_frontend
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w
+      - -X github.com/stokaro/ptah-console/internal/buildinfo.version=v{{ .Version }}
+      - -X github.com/stokaro/ptah-console/internal/buildinfo.commit={{ .FullCommit }}
+
+archives:
+  - id: ptah-console
+    ids: [ptah-console]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "ptah-console_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: SHA256SUMS
+
+sboms:
+  - id: archives
+    artifacts: archive
+
+dockers_v2:
+  - id: ptah-console
+    ids: [ptah-console]
+    images:
+      - "{{ .Env.IMAGE }}"
+    tags:
+      - "{{ .Version }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    dockerfile: Dockerfile
+    build_args:
+      VERSION: "{{ .Version }}"
+      REVISION: "{{ .FullCommit }}"
+    sbom: true
+
+changelog:
+  disable: true
+
+release:
+  # The workflow publishes the draft after every attestation verified.
+  draft: true
+  replace_existing_draft: true
+  disable: '{{ eq .Env.DRY_RUN "1" }}'

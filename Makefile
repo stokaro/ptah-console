@@ -26,7 +26,7 @@ ENVTEST_KUBERNETES_VERSION ?= 1.37.0
 ENVTEST_INDEX ?= https://raw.githubusercontent.com/kubernetes-sigs/controller-tools/1031496fc98a4f51010c3bdfdeb57b5d67bea7bd/envtest-releases.yaml
 ENVTEST_BIN_DIR ?=
 
-.PHONY: chart-conform build build-linux image require-docker-context build-go test test-web-go vet fmt-check verify-go-mod check \
+.PHONY: release-check chart-conform build build-linux image require-docker-context build-go test test-web-go vet fmt-check verify-go-mod check \
 	web-storybook lint lint-golangci lint-qtlint lint-nolintguard lint-teststyle vulncheck \
 	web-install web-build web-lint web-test web-size web-check embed-smoke \
 	generate verify-generated buf-lint buf-breaking contract test-envtest verify \
@@ -48,10 +48,12 @@ build-linux: web-build
 # that holds the Dockerfile and the binary alone.
 IMAGE ?= ptah-console:dev
 image: require-docker-context build-linux
-	@context=$$(mktemp -d) && trap 'rm -rf "$$context"' EXIT && \
-	cp Dockerfile $(BIN)/linux_$(ARCH)/ptah-console "$$context"/ && \
+	@context=$$(mktemp -d); \
+	mkdir -p "$$context/linux/$(ARCH)" && \
+	cp Dockerfile "$$context"/ && cp $(BIN)/linux_$(ARCH)/ptah-console "$$context/linux/$(ARCH)/" && \
 	docker build --platform linux/$(ARCH) --build-arg VERSION=$(VERSION) --build-arg REVISION=$(COMMIT) \
-		--tag $(IMAGE) "$$context"
+		--tag $(IMAGE) "$$context"; \
+	status=$$?; rm -rf "$$context"; exit $$status
 
 # Docker work names its context: never whichever one happens to be current.
 require-docker-context:
@@ -85,7 +87,13 @@ verify-go-mod:
 	cd tools/chart && $(GO) mod tidy -diff
 
 # What the Verify job runs.
-check: fmt-check verify-go-mod vet build-go test
+check: fmt-check verify-go-mod vet build-go test release-check
+
+# support/compatibility.json against the chart, go.mod and the operator's
+# Kubernetes window. A release runs it once more and requires a released
+# operator.
+release-check:
+	$(GO) run ./hack/releasecheck
 
 # Modeled on stokaro/ptah: golangci-lint with its configuration, quicktest
 # style, justified nolint directives, and declarative tests.
