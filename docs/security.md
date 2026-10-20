@@ -85,6 +85,9 @@ contain a malicious binary holding the token.
 - Sign-in attempts are limited per login and per client address. Behind a
   proxy, name the proxies in `trustedProxies` so the client address comes
   from `X-Forwarded-For`; see [Behind a proxy](hosted/serve.md#behind-a-proxy).
+  The chart then requires its NetworkPolicy, with `ingressFrom` naming the
+  proxies, so nothing else in a trusted network can reach the console and
+  name a client.
 - The console opens connections to the Kubernetes API server and nowhere else.
-  The chart's example NetworkPolicy admits the proxies you name and lets the
-  console reach only the API server's addresses.
+  The chart's NetworkPolicy admits the peers you name and lets the console
+  reach only the API server's addresses.
