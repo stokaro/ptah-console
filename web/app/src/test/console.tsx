@@ -1,6 +1,6 @@
 import { create, type MessageInitShape } from "@bufbuild/protobuf"
 import { timestampFromDate } from "@bufbuild/protobuf/wkt"
-import { createRouterTransport } from "@connectrpc/connect"
+import { Code, ConnectError, createRouterTransport } from "@connectrpc/connect"
 import { createMemoryHistory } from "@tanstack/react-router"
 import { QueryClient } from "@tanstack/react-query"
 import { render } from "@testing-library/react"
@@ -175,7 +175,10 @@ export interface Fixture {
   schemas?: Schema[]
   migrations?: Migration[]
   decisions?: Decision[]
-  plan?: SchemaPlan
+  /** The current plan, read again on every request. */
+  plan?: SchemaPlan | (() => SchemaPlan)
+  /** Listing schemas is refused; reading one by name is not. */
+  listForbidden?: boolean
   approve?: (request: ApproveSchemaPlanRequest) => DecisionResult | Promise<DecisionResult>
   acknowledge?: (request: AcknowledgeMigrationRunRequest) => DecisionResult
   getDecision?: (request: GetDecisionRequest) => Decision
@@ -230,17 +233,31 @@ export function consoleTransport(fixture: Fixture) {
       }),
     })
     service(SchemaService, {
-      listSchemas: () => ({
-        schemas: fixture.schemas ?? [],
-        namespaces: [
-          {
-            namespace: "application",
-            access: Access.OK,
-            truncated: (fixture.truncated ?? []).includes("application"),
-          },
-        ],
+      listSchemas: () => {
+        if (fixture.listForbidden) {
+          throw new ConnectError("may not list ptahschemas", Code.PermissionDenied)
+        }
+        return {
+          schemas: fixture.schemas ?? [],
+          namespaces: [
+            {
+              namespace: "application",
+              access: Access.OK,
+              truncated: (fixture.truncated ?? []).includes("application"),
+            },
+          ],
+        }
+      },
+      getSchemaPlan: () => ({
+        plan: typeof fixture.plan === "function" ? fixture.plan() : (fixture.plan ?? storedPlan()),
       }),
-      getSchemaPlan: () => ({ plan: fixture.plan ?? storedPlan() }),
+      getSchema: (request) => {
+        const found = (fixture.schemas ?? []).find((schema) => schema.ref?.name === request.name)
+        if (!found) {
+          throw new ConnectError("schema not found", Code.NotFound)
+        }
+        return { schema: found }
+      },
     })
     service(MigrationService, {
       listMigrations: () => ({ migrations: fixture.migrations ?? [] }),
@@ -269,4 +286,34 @@ export function renderConsole(path: string, fixture: Fixture = {}) {
     </AppProviders>
   )
   return { ...view, history }
+}
+
+type WatchEvent = MessageInitShape<typeof SubscribeResponseSchema>
+
+/** A watch the test drives: each push is the next event; an Error ends it. */
+export function scriptedWatch() {
+  const queue: (WatchEvent | Error)[] = []
+  let wake: () => void = () => {}
+  return {
+    push(item: WatchEvent | Error) {
+      queue.push(item)
+      wake()
+    },
+    async *stream(signal: AbortSignal) {
+      while (!signal.aborted) {
+        const next = queue.shift()
+        if (next instanceof Error) {
+          throw next
+        }
+        if (next) {
+          yield next
+          continue
+        }
+        await new Promise<void>((resolve) => {
+          wake = resolve
+          signal.addEventListener("abort", () => resolve())
+        })
+      }
+    },
+  }
 }

@@ -1,3 +1,4 @@
+import { Code, ConnectError } from "@connectrpc/connect"
 import { skipToken, useQuery } from "@connectrpc/connect-query"
 
 import { DecisionService } from "../gen/ptah/console/v1/decisions_pb"
@@ -12,7 +13,7 @@ import {
   type NamespaceScope,
 } from "../gen/ptah/console/v1/resources_pb"
 import { SessionService } from "../gen/ptah/console/v1/session_pb"
-import { fromMigration, fromSchema, type ResourceView } from "../model/resource"
+import { fromMigration, fromSchema, type ResourceKind, type ResourceView } from "../model/resource"
 
 export function useSession() {
   return useQuery(SessionService.method.getSession, {})
@@ -109,5 +110,40 @@ export function useDecisions() {
       DecisionService.method.listDecisions,
       scope.readable.length > 0 ? { namespaces: scope.readable } : skipToken
     ),
+  }
+}
+
+/**
+ * One schema or migration: from the namespace's list when the identity may
+ * list it, otherwise read by name, which is what a reviewer granted only
+ * get, opening a link someone sent, may do.
+ */
+export function useResource(kind: ResourceKind | undefined, namespace: string, name: string) {
+  const list = useResources()
+  const listed = list.resources.find(
+    (resource) =>
+      resource.kind === kind && resource.namespace === namespace && resource.name === name
+  )
+  const direct = !listed && !list.loading
+  const schema = useQuery(
+    SchemaService.method.getSchema,
+    direct && kind === "schema" ? { namespace, name } : skipToken
+  )
+  const migration = useQuery(
+    MigrationService.method.getMigration,
+    direct && kind === "migration" ? { namespace, name } : skipToken
+  )
+  const read = schema.data?.schema
+    ? fromSchema(schema.data.schema)
+    : migration.data?.migration
+      ? fromMigration(migration.data.migration)
+      : undefined
+  const failure = schema.error ?? migration.error
+  const notFound = failure && ConnectError.from(failure).code === Code.NotFound
+  return {
+    scope: list.scope,
+    resource: listed ?? read,
+    loading: list.loading || (direct && (schema.isLoading || migration.isLoading)),
+    error: listed ? undefined : notFound ? undefined : failure,
   }
 }
