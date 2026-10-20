@@ -12,6 +12,10 @@ service SessionService {
   // the URL fragment for a session cookie.
   rpc ExchangeLaunchToken(ExchangeLaunchTokenRequest) returns (ExchangeLaunchTokenResponse) {}
 
+  // Login signs a browser in to a hosted console with an account's login and
+  // password. An unknown login and a wrong password get the same answer.
+  rpc Login(LoginRequest) returns (LoginResponse) {}
+
   // GetSession says whom the session's requests act for, as the API server
   // sees it.
   rpc GetSession(GetSessionRequest) returns (GetSessionResponse) {
@@ -27,6 +31,13 @@ message ExchangeLaunchTokenRequest {
 }
 
 message ExchangeLaunchTokenResponse {}
+
+message LoginRequest {
+  string login = 1;
+  string password = 2;
+}
+
+message LoginResponse {}
 
 message GetSessionRequest {}
 

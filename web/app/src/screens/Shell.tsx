@@ -1,11 +1,14 @@
 import { Code, ConnectError } from "@connectrpc/connect"
-import { Freshness, Pill, Wordmark } from "@ptah/console-ui"
+import { useMutation } from "@connectrpc/connect-query"
+import { Button, Freshness, Pill, Wordmark } from "@ptah/console-ui"
+import { useQueryClient } from "@tanstack/react-query"
 import { Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router"
 
 import { LiveUpdates, useLive } from "../api/live"
-import { useScope, useSession } from "../api/resources"
+import { useHosted, useScope, useSession } from "../api/resources"
 import { BuildFooter } from "../BuildFooter"
 import { Mode } from "../gen/ptah/console/v1/info_pb"
+import { SessionService } from "../gen/ptah/console/v1/session_pb"
 import { useTheme, type ThemeChoice } from "../theme"
 import { useNow } from "./common"
 
@@ -30,13 +33,14 @@ export interface ShellProps {
 export function Shell({ launchError }: ShellProps) {
   const session = useSession()
   const scope = useScope()
+  const hosted = useHosted()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const onAuthPage = pathname === "/launch" || pathname === "/login"
   const onList = pathname.split("/").filter(Boolean).length <= 1
   const signedOut = session.error && ConnectError.from(session.error).code === Code.Unauthenticated
 
-  if (signedOut && !onAuthPage) {
-    return <Navigate to="/launch" replace />
+  if (signedOut && !onAuthPage && hosted !== undefined) {
+    return <Navigate to={hosted ? "/login" : "/launch"} replace />
   }
   return (
     <LiveUpdates namespaces={signedOut ? [] : scope.readable}>
@@ -99,6 +103,7 @@ function Header() {
       </Link>
       {identity ? (
         <span className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-card px-2.5 text-xs">
+          {identity.displayName ? <span>{identity.displayName}</span> : null}
           <span className="text-mute">as</span>
           <b className="font-mono font-semibold">{identity.kubernetesUsername}</b>
           <span className="text-mute">
@@ -117,6 +122,7 @@ function Header() {
         <span className="text-xs text-red">the API server&apos;s certificate is not verified</span>
       ) : null}
       <span className="flex-auto" />
+      {identity?.mode === Mode.HOSTED ? <SignOut /> : null}
       <div
         role="radiogroup"
         aria-label="Theme"
@@ -136,6 +142,23 @@ function Header() {
         ))}
       </div>
     </header>
+  )
+}
+
+/** Ends the session; the shell then shows the sign-in again. */
+function SignOut() {
+  const queryClient = useQueryClient()
+  const signOut = useMutation(SessionService.method.logout, {
+    onSettled: () => queryClient.resetQueries(),
+  })
+  return (
+    <Button
+      className="min-h-8! px-3! text-xs"
+      disabled={signOut.isPending}
+      onClick={() => signOut.mutate({})}
+    >
+      Sign out
+    </Button>
   )
 }
 
@@ -175,13 +198,16 @@ function HeaderFreshness() {
 
 function LiveBanner() {
   const live = useLive()
+  const hosted = useHosted()
   if (live.status === "ended") {
     return (
       <p
         role="alert"
         className="m-0 rounded-xl border border-line bg-amberbg px-4 py-3 text-sm text-fg"
       >
-        The session ended. Open a new link from ptah-console in your terminal.
+        {hosted
+          ? "The session ended. Sign in again."
+          : "The session ended. Open a new link from ptah-console in your terminal."}
       </p>
     )
   }

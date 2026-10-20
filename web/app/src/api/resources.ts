@@ -2,6 +2,7 @@ import { Code, ConnectError } from "@connectrpc/connect"
 import { skipToken, useQuery } from "@connectrpc/connect-query"
 
 import { DecisionService } from "../gen/ptah/console/v1/decisions_pb"
+import { InfoService, Mode } from "../gen/ptah/console/v1/info_pb"
 import { useLive } from "./live"
 import {
   Access,
@@ -17,6 +18,17 @@ import { fromMigration, fromSchema, type ResourceKind, type ResourceView } from 
 
 export function useSession() {
   return useQuery(SessionService.method.getSession, {})
+}
+
+/** What the console is: its version, and whether it runs local or hosted. */
+export function useInfo() {
+  return useQuery(InfoService.method.getInfo, {})
+}
+
+/** Whether people sign in to this console with an account; undefined until known. */
+export function useHosted(): boolean | undefined {
+  const info = useInfo()
+  return info.data ? info.data.mode === Mode.HOSTED : undefined
 }
 
 /** The namespaces the console may show, and what the session may do in each. */

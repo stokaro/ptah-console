@@ -1,5 +1,5 @@
-// Package hosted_test holds the hosted console's clients to the API server's
-// verdict. The console acts as a user the API server authenticates by
+// Package hosted_test holds the hosted console's clients, and a signed-in
+// session, to the API server's verdict. The console acts as a user the API server authenticates by
 // certificate, standing in for its ServiceAccount, with the one grant the
 // chart gives that ServiceAccount: impersonate on users, limited by
 // resourceNames to the accounts' usernames.
@@ -7,9 +7,15 @@ package hosted_test
 
 import (
 	"context"
+	"encoding/json"
+	"net"
+	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
+	"testing/fstest"
 
 	qt "github.com/frankban/quicktest"
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +25,8 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/stokaro/ptah-console/internal/auth/accounts"
+	"github.com/stokaro/ptah-console/internal/hosted"
 	"github.com/stokaro/ptah-console/internal/kube"
 	"github.com/stokaro/ptah-console/test/envtest/envtestenv"
 )
@@ -86,11 +94,11 @@ func hostedClient(t *testing.T, account string) *kube.Client {
 		"sam":  samUsername,
 	}, 1)
 	c.Assert(err, qt.IsNil)
-	hosted, err := factory.For(kube.Principal{
+	accountClient, err := factory.For(kube.Principal{
 		Mode: kube.ModeHosted, AccountID: account, Context: kube.HostedConnection, Generation: 1,
 	})
 	c.Assert(err, qt.IsNil)
-	return hosted
+	return accountClient
 }
 
 // Two accounts used at the same time each act as their own username, with
@@ -179,4 +187,93 @@ func TestTheGrantImpersonatesExactlyTheAccounts(t *testing.T) {
 			c.Assert(apierrors.IsForbidden(err), qt.Equals, test.forbidden, qt.Commentf("error: %v", err))
 		})
 	}
+}
+
+// signedIn runs a hosted console behind a declared TLS proxy, as the
+// console's identity, signs alex in, and returns the console's address and
+// the session cookie.
+func signedIn(t *testing.T) (address string, cookie *http.Cookie) {
+	t.Helper()
+	c := qt.New(t)
+	dir := t.TempDir()
+	hash, err := accounts.Hash([]byte("alex-secret"), accounts.MinCost)
+	c.Assert(err, qt.IsNil)
+	configPath, passwordsPath := filepath.Join(dir, "configuration.yaml"), filepath.Join(dir, "passwords")
+	c.Assert(os.WriteFile(configPath, []byte(`apiVersion: console.ptah.run/v1alpha1
+kind: HostedConfiguration
+installationID: envtest
+publicURL: https://console.envtest
+namespaces: [storefront]
+accounts:
+  - id: alex
+    login: alex@example.com
+    displayName: Alex Morgan
+`), 0o600), qt.IsNil)
+	c.Assert(os.WriteFile(passwordsPath, []byte("alex:"+string(hash)+"\n"), 0o600), qt.IsNil)
+
+	listening := make(chan net.Addr, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- hosted.Run(ctx, hosted.Options{
+			ConfigPath: configPath, PasswordsPath: passwordsPath, Listen: "127.0.0.1:0",
+			TLSTerminatedUpstream: true, Kube: consoleConfig(t),
+			Assets:    fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}},
+			Listening: func(addr net.Addr) { listening <- addr },
+		})
+	}()
+	t.Cleanup(func() {
+		cancel()
+		c.Assert(<-done, qt.IsNil)
+	})
+	address = (<-listening).String()
+	response := callConsole(t, address, "SessionService/Login", `{"login":"alex@example.com","password":"alex-secret"}`)
+	c.Assert(response.StatusCode, qt.Equals, http.StatusOK)
+	c.Assert(response.Cookies(), qt.HasLen, 1)
+	return address, response.Cookies()[0]
+}
+
+func callConsole(t *testing.T, address, procedure, body string, cookies ...*http.Cookie) *http.Response {
+	t.Helper()
+	c := qt.New(t)
+	request, err := http.NewRequestWithContext(t.Context(), http.MethodPost,
+		"http://"+address+"/api/ptah.console.v1."+procedure, strings.NewReader(body))
+	c.Assert(err, qt.IsNil)
+	request.Host = "console.envtest"
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Connect-Protocol-Version", "1")
+	for _, cookie := range cookies {
+		request.AddCookie(cookie)
+	}
+	response, err := http.DefaultClient.Do(request)
+	c.Assert(err, qt.IsNil)
+	t.Cleanup(func() { _ = response.Body.Close() })
+	return response
+}
+
+// A person who signs in acts as the account's username, which is what the
+// API server says when the console asks who the session is.
+func TestASignedInAccountActsAsItsUsername(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	address, cookie := signedIn(t)
+
+	response := callConsole(t, address, "SessionService/GetSession", "{}", cookie)
+
+	c.Assert(response.StatusCode, qt.Equals, http.StatusOK)
+	var session struct {
+		Mode               string   `json:"mode"`
+		Context            string   `json:"context"`
+		KubernetesUsername string   `json:"kubernetesUsername"`
+		KubernetesGroups   []string `json:"kubernetesGroups"`
+		AccountID          string   `json:"accountId"`
+		DisplayName        string   `json:"displayName"`
+	}
+	c.Assert(json.NewDecoder(response.Body).Decode(&session), qt.IsNil)
+	c.Assert(session.Mode, qt.Equals, "MODE_HOSTED")
+	c.Assert(session.Context, qt.Equals, kube.HostedConnection)
+	c.Assert(session.KubernetesUsername, qt.Equals, alexUsername)
+	c.Assert(session.KubernetesGroups, qt.DeepEquals, []string{"system:authenticated"})
+	c.Assert(session.AccountID, qt.Equals, "alex")
+	c.Assert(session.DisplayName, qt.Equals, "Alex Morgan")
 }

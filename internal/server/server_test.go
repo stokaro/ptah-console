@@ -272,6 +272,39 @@ func TestARequestThatNamesAnIdentityIsRefused(t *testing.T) {
 	}
 }
 
+// A kubelet probes the health check by the Pod's address. It answers there,
+// and nothing else does.
+func TestOnlyTheHealthCheckAnswersAnyHost(t *testing.T) {
+	t.Parallel()
+	srv := newServer(t)
+	tests := []struct {
+		name, method, path string
+		status             int
+	}{
+		{name: "the health check", method: http.MethodGet, path: "/healthz", status: http.StatusOK},
+		{name: "another method on its path", method: http.MethodPost, path: "/healthz", status: http.StatusMisdirectedRequest},
+		{name: "the app", method: http.MethodGet, path: "/", status: http.StatusMisdirectedRequest},
+		{name: "the API", method: http.MethodPost, path: getInfoPath, status: http.StatusMisdirectedRequest},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			request, err := http.NewRequestWithContext(t.Context(), test.method, srv.URL+test.path, strings.NewReader("{}"))
+			c.Assert(err, qt.IsNil)
+			request.Host = "10.244.1.7:8443"
+			request.Header.Set("Content-Type", "application/json")
+			request.Header.Set("Connect-Protocol-Version", "1")
+
+			response, err := srv.Client().Do(request)
+			c.Assert(err, qt.IsNil)
+			defer response.Body.Close()
+
+			c.Assert(response.StatusCode, qt.Equals, test.status)
+		})
+	}
+}
+
 func TestACallFromAnotherOriginIsRefused(t *testing.T) {
 	t.Parallel()
 	srv := newServer(t)

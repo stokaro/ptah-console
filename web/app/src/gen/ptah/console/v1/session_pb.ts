@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ptah/console/v1/session.proto.
  */
 export const file_ptah_console_v1_session: GenFile = /*@__PURE__*/
-  fileDesc("Ch1wdGFoL2NvbnNvbGUvdjEvc2Vzc2lvbi5wcm90bxIPcHRhaC5jb25zb2xlLnYxIisKGkV4Y2hhbmdlTGF1bmNoVG9rZW5SZXF1ZXN0Eg0KBXRva2VuGAEgASgJIh0KG0V4Y2hhbmdlTGF1bmNoVG9rZW5SZXNwb25zZSITChFHZXRTZXNzaW9uUmVxdWVzdCL2AQoSR2V0U2Vzc2lvblJlc3BvbnNlEiMKBG1vZGUYASABKA4yFS5wdGFoLmNvbnNvbGUudjEuTW9kZRIPCgdjb250ZXh0GAIgASgJEhsKE2t1YmVybmV0ZXNfdXNlcm5hbWUYAyABKAkSGQoRa3ViZXJuZXRlc19ncm91cHMYBCADKAkSEgoKYWNjb3VudF9pZBgFIAEoCRIUCgxkaXNwbGF5X25hbWUYBiABKAkSEQoJcmVhZF9vbmx5GAcgASgIEh8KF2t1YmVjb25maWdfaW1wZXJzb25hdGVzGAggASgJEhQKDGluc2VjdXJlX3RscxgJIAEoCCIPCg1Mb2dvdXRSZXF1ZXN0IhAKDkxvZ291dFJlc3BvbnNlMq0CCg5TZXNzaW9uU2VydmljZRJyChNFeGNoYW5nZUxhdW5jaFRva2VuEisucHRhaC5jb25zb2xlLnYxLkV4Y2hhbmdlTGF1bmNoVG9rZW5SZXF1ZXN0GiwucHRhaC5jb25zb2xlLnYxLkV4Y2hhbmdlTGF1bmNoVG9rZW5SZXNwb25zZSIAEloKCkdldFNlc3Npb24SIi5wdGFoLmNvbnNvbGUudjEuR2V0U2Vzc2lvblJlcXVlc3QaIy5wdGFoLmNvbnNvbGUudjEuR2V0U2Vzc2lvblJlc3BvbnNlIgOQAgESSwoGTG9nb3V0Eh4ucHRhaC5jb25zb2xlLnYxLkxvZ291dFJlcXVlc3QaHy5wdGFoLmNvbnNvbGUudjEuTG9nb3V0UmVzcG9uc2UiAEJIWkZnaXRodWIuY29tL3N0b2thcm8vcHRhaC1jb25zb2xlL2ludGVybmFsL2dlbi9wdGFoL2NvbnNvbGUvdjE7Y29uc29sZXYxYgZwcm90bzM", [file_ptah_console_v1_info]);
+  fileDesc("Ch1wdGFoL2NvbnNvbGUvdjEvc2Vzc2lvbi5wcm90bxIPcHRhaC5jb25zb2xlLnYxIisKGkV4Y2hhbmdlTGF1bmNoVG9rZW5SZXF1ZXN0Eg0KBXRva2VuGAEgASgJIh0KG0V4Y2hhbmdlTGF1bmNoVG9rZW5SZXNwb25zZSIvCgxMb2dpblJlcXVlc3QSDQoFbG9naW4YASABKAkSEAoIcGFzc3dvcmQYAiABKAkiDwoNTG9naW5SZXNwb25zZSITChFHZXRTZXNzaW9uUmVxdWVzdCL2AQoSR2V0U2Vzc2lvblJlc3BvbnNlEiMKBG1vZGUYASABKA4yFS5wdGFoLmNvbnNvbGUudjEuTW9kZRIPCgdjb250ZXh0GAIgASgJEhsKE2t1YmVybmV0ZXNfdXNlcm5hbWUYAyABKAkSGQoRa3ViZXJuZXRlc19ncm91cHMYBCADKAkSEgoKYWNjb3VudF9pZBgFIAEoCRIUCgxkaXNwbGF5X25hbWUYBiABKAkSEQoJcmVhZF9vbmx5GAcgASgIEh8KF2t1YmVjb25maWdfaW1wZXJzb25hdGVzGAggASgJEhQKDGluc2VjdXJlX3RscxgJIAEoCCIPCg1Mb2dvdXRSZXF1ZXN0IhAKDkxvZ291dFJlc3BvbnNlMvcCCg5TZXNzaW9uU2VydmljZRJyChNFeGNoYW5nZUxhdW5jaFRva2VuEisucHRhaC5jb25zb2xlLnYxLkV4Y2hhbmdlTGF1bmNoVG9rZW5SZXF1ZXN0GiwucHRhaC5jb25zb2xlLnYxLkV4Y2hhbmdlTGF1bmNoVG9rZW5SZXNwb25zZSIAEkgKBUxvZ2luEh0ucHRhaC5jb25zb2xlLnYxLkxvZ2luUmVxdWVzdBoeLnB0YWguY29uc29sZS52MS5Mb2dpblJlc3BvbnNlIgASWgoKR2V0U2Vzc2lvbhIiLnB0YWguY29uc29sZS52MS5HZXRTZXNzaW9uUmVxdWVzdBojLnB0YWguY29uc29sZS52MS5HZXRTZXNzaW9uUmVzcG9uc2UiA5ACARJLCgZMb2dvdXQSHi5wdGFoLmNvbnNvbGUudjEuTG9nb3V0UmVxdWVzdBofLnB0YWguY29uc29sZS52MS5Mb2dvdXRSZXNwb25zZSIAQkhaRmdpdGh1Yi5jb20vc3Rva2Fyby9wdGFoLWNvbnNvbGUvaW50ZXJuYWwvZ2VuL3B0YWgvY29uc29sZS92MTtjb25zb2xldjFiBnByb3RvMw", [file_ptah_console_v1_info]);
 
 /**
  * @generated from message ptah.console.v1.ExchangeLaunchTokenRequest
@@ -45,6 +45,41 @@ export const ExchangeLaunchTokenResponseSchema: GenMessage<ExchangeLaunchTokenRe
   messageDesc(file_ptah_console_v1_session, 1);
 
 /**
+ * @generated from message ptah.console.v1.LoginRequest
+ */
+export type LoginRequest = Message<"ptah.console.v1.LoginRequest"> & {
+  /**
+   * @generated from field: string login = 1;
+   */
+  login: string;
+
+  /**
+   * @generated from field: string password = 2;
+   */
+  password: string;
+};
+
+/**
+ * Describes the message ptah.console.v1.LoginRequest.
+ * Use `create(LoginRequestSchema)` to create a new message.
+ */
+export const LoginRequestSchema: GenMessage<LoginRequest> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_session, 2);
+
+/**
+ * @generated from message ptah.console.v1.LoginResponse
+ */
+export type LoginResponse = Message<"ptah.console.v1.LoginResponse"> & {
+};
+
+/**
+ * Describes the message ptah.console.v1.LoginResponse.
+ * Use `create(LoginResponseSchema)` to create a new message.
+ */
+export const LoginResponseSchema: GenMessage<LoginResponse> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_session, 3);
+
+/**
  * @generated from message ptah.console.v1.GetSessionRequest
  */
 export type GetSessionRequest = Message<"ptah.console.v1.GetSessionRequest"> & {
@@ -55,7 +90,7 @@ export type GetSessionRequest = Message<"ptah.console.v1.GetSessionRequest"> & {
  * Use `create(GetSessionRequestSchema)` to create a new message.
  */
 export const GetSessionRequestSchema: GenMessage<GetSessionRequest> = /*@__PURE__*/
-  messageDesc(file_ptah_console_v1_session, 2);
+  messageDesc(file_ptah_console_v1_session, 4);
 
 /**
  * @generated from message ptah.console.v1.GetSessionResponse
@@ -124,7 +159,7 @@ export type GetSessionResponse = Message<"ptah.console.v1.GetSessionResponse"> &
  * Use `create(GetSessionResponseSchema)` to create a new message.
  */
 export const GetSessionResponseSchema: GenMessage<GetSessionResponse> = /*@__PURE__*/
-  messageDesc(file_ptah_console_v1_session, 3);
+  messageDesc(file_ptah_console_v1_session, 5);
 
 /**
  * @generated from message ptah.console.v1.LogoutRequest
@@ -137,7 +172,7 @@ export type LogoutRequest = Message<"ptah.console.v1.LogoutRequest"> & {
  * Use `create(LogoutRequestSchema)` to create a new message.
  */
 export const LogoutRequestSchema: GenMessage<LogoutRequest> = /*@__PURE__*/
-  messageDesc(file_ptah_console_v1_session, 4);
+  messageDesc(file_ptah_console_v1_session, 6);
 
 /**
  * @generated from message ptah.console.v1.LogoutResponse
@@ -150,7 +185,7 @@ export type LogoutResponse = Message<"ptah.console.v1.LogoutResponse"> & {
  * Use `create(LogoutResponseSchema)` to create a new message.
  */
 export const LogoutResponseSchema: GenMessage<LogoutResponse> = /*@__PURE__*/
-  messageDesc(file_ptah_console_v1_session, 5);
+  messageDesc(file_ptah_console_v1_session, 7);
 
 /**
  * SessionService signs a browser in and says whom its requests act for.
@@ -168,6 +203,17 @@ export const SessionService: GenService<{
     methodKind: "unary";
     input: typeof ExchangeLaunchTokenRequestSchema;
     output: typeof ExchangeLaunchTokenResponseSchema;
+  },
+  /**
+   * Login signs a browser in to a hosted console with an account's login and
+   * password. An unknown login and a wrong password get the same answer.
+   *
+   * @generated from rpc ptah.console.v1.SessionService.Login
+   */
+  login: {
+    methodKind: "unary";
+    input: typeof LoginRequestSchema;
+    output: typeof LoginResponseSchema;
   },
   /**
    * GetSession says whom the session's requests act for, as the API server
