@@ -231,6 +231,47 @@ func TestAHostTheConsoleDoesNotServeIsRefused(t *testing.T) {
 	}
 }
 
+// The identity comes from the session and the configuration. A header that
+// names one is refused on every path, the app's as well as the API's.
+func TestARequestThatNamesAnIdentityIsRefused(t *testing.T) {
+	t.Parallel()
+	srv := newServer(t)
+	tests := []struct {
+		name   string
+		path   string
+		header string
+		status int
+	}{
+		{name: "anything else under X-Remote-", path: getInfoPath, header: "X-Remote-Address-Hint", status: http.StatusBadRequest},
+		{name: "an ordinary header", path: getInfoPath, header: "X-Request-Id", status: http.StatusOK},
+		{name: "a user to impersonate", path: getInfoPath, header: "Impersonate-User", status: http.StatusBadRequest},
+		{name: "a group to impersonate", path: getInfoPath, header: "Impersonate-Group", status: http.StatusBadRequest},
+		{name: "a UID to impersonate", path: getInfoPath, header: "Impersonate-Uid", status: http.StatusBadRequest},
+		{name: "an extra to impersonate", path: getInfoPath, header: "Impersonate-Extra-Scopes", status: http.StatusBadRequest},
+		{name: "a front proxy's user", path: getInfoPath, header: "X-Remote-User", status: http.StatusBadRequest},
+		{name: "a front proxy's group", path: getInfoPath, header: "X-Remote-Group", status: http.StatusBadRequest},
+		{name: "a front proxy's extra", path: getInfoPath, header: "X-Remote-Extra-Scopes", status: http.StatusBadRequest},
+		{name: "on the app's path", path: "/approve", header: "Impersonate-User", status: http.StatusBadRequest},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			request, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+test.path, strings.NewReader("{}"))
+			c.Assert(err, qt.IsNil)
+			request.Header.Set("Content-Type", "application/json")
+			request.Header.Set("Connect-Protocol-Version", "1")
+			request.Header[test.header] = []string{"system:admin"}
+
+			response, err := srv.Client().Do(request)
+			c.Assert(err, qt.IsNil)
+			defer response.Body.Close()
+
+			c.Assert(response.StatusCode, qt.Equals, test.status)
+		})
+	}
+}
+
 func TestACallFromAnotherOriginIsRefused(t *testing.T) {
 	t.Parallel()
 	srv := newServer(t)

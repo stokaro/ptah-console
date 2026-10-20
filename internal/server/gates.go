@@ -47,6 +47,25 @@ func requireHost(next http.Handler, hosts map[string]bool) http.Handler {
 	})
 }
 
+// refuseIdentityHeaders refuses a request that names an identity in its
+// headers. The console takes whom it acts for from the session and its own
+// configuration, never from the browser, and client-go builds every request to
+// the API server afresh, so these headers would reach nothing. Refusing them
+// keeps a proxy in front of the console, or one between it and the API server,
+// from ever being handed one.
+func refuseIdentityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for name := range r.Header {
+			lower := strings.ToLower(name)
+			if strings.HasPrefix(lower, "impersonate-") || strings.HasPrefix(lower, "x-remote-") {
+				http.Error(w, "identity headers are not accepted", http.StatusBadRequest)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // noStore keeps API responses out of every cache, the browser's included.
 func noStore(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
