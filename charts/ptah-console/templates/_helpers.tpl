@@ -76,4 +76,18 @@ console from the same two values, and from nothing else. */}}
 {{- if and .Values.networkPolicy.enabled (not .Values.networkPolicy.apiServer.cidrs) -}}
 {{- fail "networkPolicy: apiServer.cidrs names the API server the console has to reach" -}}
 {{- end -}}
+{{- /*
+X-Forwarded-For from a trusted address is believed, so only the proxies may
+reach the console: anything else inside a trusted network could connect
+directly and name any client. The policy is what keeps them out, and an
+ingress rule without peers would admit everyone.
+*/ -}}
+{{- if .Values.trustedProxies -}}
+{{- if not .Values.networkPolicy.enabled -}}
+{{- fail "trustedProxies: needs networkPolicy.enabled, so only the proxies can reach the console and write X-Forwarded-For" -}}
+{{- end -}}
+{{- if not .Values.networkPolicy.ingressFrom -}}
+{{- fail "trustedProxies: needs networkPolicy.ingressFrom to name the proxies; without peers the policy admits every source" -}}
+{{- end -}}
+{{- end -}}
 {{- end -}}
