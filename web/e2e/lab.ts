@@ -84,32 +84,38 @@ async function start(
  * Shows a caption near the top of the page for the recording. It is built
  * with the DOM and CSSOM, which the page's Content Security Policy allows.
  */
-async function showCaption(page: Page, text: string) {
-  await page.evaluate((line) => {
-    let box = document.getElementById("e2e-caption")
-    if (!box) {
-      box = document.createElement("div")
-      box.id = "e2e-caption"
-      Object.assign(box.style, {
-        position: "fixed",
-        left: "50%",
-        top: "74px",
-        transform: "translateX(-50%)",
-        zIndex: "100",
-        maxWidth: "860px",
-        padding: "12px 18px",
-        borderRadius: "14px",
-        background: "rgba(12, 15, 34, 0.88)",
-        color: "#fff",
-        font: "500 16px/1.45 system-ui, sans-serif",
-        textAlign: "center",
-        pointerEvents: "none",
-      })
-      document.body.append(box)
-    }
-    box.textContent = line
-    box.style.display = line ? "block" : "none"
-  }, text)
+async function showCaption(page: Page, text: string, at: "top" | "bottom" = "top") {
+  await page.evaluate(
+    ([line, edge]) => {
+      let box = document.getElementById("e2e-caption")
+      if (!box) {
+        box = document.createElement("div")
+        box.id = "e2e-caption"
+        Object.assign(box.style, {
+          position: "fixed",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: "100",
+          maxWidth: "860px",
+          padding: "12px 18px",
+          borderRadius: "14px",
+          background: "rgba(12, 15, 34, 0.88)",
+          color: "#fff",
+          font: "500 16px/1.45 system-ui, sans-serif",
+          textAlign: "center",
+          pointerEvents: "none",
+        })
+        document.body.append(box)
+      }
+      // Near the top by default; at the bottom when what the scene is about
+      // sits at the top of the page.
+      box.style.top = edge === "top" ? "74px" : ""
+      box.style.bottom = edge === "bottom" ? "24px" : ""
+      box.textContent = line
+      box.style.display = line ? "block" : "none"
+    },
+    [text, at] as const
+  )
 }
 
 export interface Lab {
@@ -121,7 +127,7 @@ export interface Lab {
   /** The origin of the console the page is signed in to. */
   origin(): string
   /** Shows a caption and holds it long enough to read. */
-  caption(text: string, holdMs?: number): Promise<void>
+  caption(text: string, holdMs?: number, at?: "top" | "bottom"): Promise<void>
   /**
    * Checks the page as it stands against WCAG 2.1 A and AA with axe. A
    * finding fails the row at its end, so the rest of the row still runs.
@@ -173,8 +179,8 @@ export const test = base.extend<{ lab: Lab }>({
         cuts.push({ from, to: seconds(), keep: 0 })
       },
       origin: () => origin,
-      async caption(text, holdMs = 3500) {
-        await showCaption(page, text)
+      async caption(text, holdMs = 3500, at = "top") {
+        await showCaption(page, text, at)
         await page.waitForTimeout(holdMs)
       },
       async audit(screen) {

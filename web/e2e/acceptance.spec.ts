@@ -527,7 +527,7 @@ test("a run whose Job was taken away is unknown until acknowledged, and an API o
     5500
   )
 
-  await lab.caption("Now the API server stops answering.")
+  await lab.caption("Now the API server stops answering.", 3500, "bottom")
   await act("outage", "start")
   try {
     const banner = page.getByText(/^Live updates stopped at /)
@@ -539,7 +539,8 @@ test("a run whose Job was taken away is unknown until acknowledged, and an API o
     await lab.audit("a page that lost touch with the cluster")
     await lab.caption(
       "The page says since when it may be behind, and offers no decision until the console is in touch again.",
-      6000
+      6000,
+      "bottom"
     )
   } finally {
     await act("outage", "stop")
@@ -548,7 +549,11 @@ test("a run whose Job was taken away is unknown until acknowledged, and an API o
     expect(page.getByText(/^Live updates stopped at /)).toHaveCount(0, { timeout: 3 * 60_000 })
   )
   await expect(acknowledge).toBeVisible()
-  await lab.caption("The API server answers again, and the page catches up on its own.")
+  await lab.caption(
+    "The API server answers again, and the page catches up on its own.",
+    3500,
+    "bottom"
+  )
 
   await act("repair", "reports")
   await lab.caption(
