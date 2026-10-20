@@ -86,8 +86,11 @@ kubectl -n ptah-console rollout status deployment/console-ptah-console
 
 If ghcr.io asks you to sign in, run `helm registry login ghcr.io` with your
 GitHub account first. The cluster pulls the image itself, so if ghcr.io asks
-it for credentials too, give it a pull Secret made from a GitHub token with
-`read:packages`, and name the Secret in the values as
+it for credentials too, either pull the image from its Docker Hub mirror,
+which serves the same digest to anyone, with
+`image.repository: docker.io/stokaro/ptah-console` (Docker Hub limits
+anonymous pulls), or give the cluster a pull Secret made from a GitHub token
+with `read:packages`, and name the Secret in the values as
 `imagePullSecrets: [{name: ghcr-pull}]`:
 
 ```sh
