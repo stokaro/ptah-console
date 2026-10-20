@@ -5,7 +5,8 @@ ptah-console serve --config configuration.yaml --passwords passwords \
   --tls-cert-file tls.crt --tls-key-file tls.key
 ```
 
-`serve` runs the console beside the operator. People sign in with the
+`serve` runs the console beside the operator; [the chart](../../charts/ptah-console/README.md)
+installs it that way. People sign in with the
 accounts in the configuration (see [Hosted accounts](accounts.md)), and each
 account acts in Kubernetes as `ptah-console:<installationID>:<id>`. The console
 reaches that identity through its own ServiceAccount, which may impersonate
