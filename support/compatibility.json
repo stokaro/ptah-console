@@ -3,7 +3,7 @@
   "releases": [
     {
       "console": "0.1.0",
-      "operator": "v0.2.5-0.20261020091010-925109edfbd6",
+      "operator": "v0.2.5",
       "kubernetes": ["1.35", "1.36", "1.37"]
     }
   ]
