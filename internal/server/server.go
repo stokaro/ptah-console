@@ -3,7 +3,8 @@
 //
 // Every request passes the same gates in the same order. The Host has to be
 // one the console was configured to answer to, which is what stops a page
-// that rebinds its DNS name to the loopback listener. A request to the API
+// that rebinds its DNS name to the loopback listener. A request that names an
+// identity in Impersonate-* or X-Remote-* headers is refused. A request to the API
 // that changes anything has to come from the console's own origin. Responses
 // carry a Content Security Policy that allows nothing from another origin and
 // no inline script, and API responses are never cached.
@@ -134,6 +135,7 @@ func New(options Options) (http.Handler, error) {
 	var handler http.Handler = mux
 	handler = securityHeaders(handler)
 	handler = recoverHTTP(handler, logger)
+	handler = refuseIdentityHeaders(handler)
 	handler = requireHost(handler, hosts)
 	handler = accessLog(handler, logger)
 	return handler, nil
