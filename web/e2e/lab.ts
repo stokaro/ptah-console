@@ -137,7 +137,11 @@ export interface Lab {
 export interface Film {
   title: string
   startedAt: number
-  cuts: { from: number; to: number }[]
+  /**
+   * Stretches to leave out, in seconds from the start of the recording, and
+   * how much of each edge to keep so a cut reads as a cut.
+   */
+  cuts: { from: number; to: number; keep: number }[]
 }
 
 export const test = base.extend<{ lab: Lab }>({
@@ -150,6 +154,9 @@ export const test = base.extend<{ lab: Lab }>({
     let origin = ""
     await provide({
       async signIn(who, namespaces = [fact("NAMESPACE")]) {
+        // Starting a console shows a blank page until it is signed in; the
+        // film leaves that out whole.
+        const from = seconds()
         // The session cookie is per host, so one browser holds one person.
         for (const child of children.splice(0)) {
           child.kill()
@@ -160,6 +167,7 @@ export const test = base.extend<{ lab: Lab }>({
         await page.goto(started.link)
         // Signed in once the page names the identity the session acts as.
         await expect(page.getByText(`e2e-${who}`).first()).toBeVisible({ timeout: 60_000 })
+        cuts.push({ from, to: seconds(), keep: 0 })
       },
       origin: () => origin,
       async caption(text, holdMs = 3500) {
@@ -193,7 +201,7 @@ export const test = base.extend<{ lab: Lab }>({
         try {
           return await wait()
         } finally {
-          cuts.push({ from, to: seconds() })
+          cuts.push({ from, to: seconds(), keep: 1.5 })
         }
       },
     })

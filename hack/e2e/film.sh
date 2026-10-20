@@ -12,15 +12,17 @@ FILM=${FILM:-$ROOT_DIR/.e2e/film/ptah-console-demo.mp4}
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$(dirname "$FILM")"
+: >"$WORK/list"
 
 find "$RESULTS" -name film.json | while read -r film; do
 	printf '%s %s\n' "$(jq -r .startedAt "$film")" "$(dirname "$film")"
 done | sort -n | while read -r _ dir; do
 	[ -f "$dir/video.webm" ] || continue
-	count=$(($(wc -l <"$WORK/list" 2>/dev/null || echo 0) + 1))
-	# A second and a half stays on either side of a wait, so a cut reads as
-	# a cut rather than as a page that jumped.
-	waits=$(jq -r '[.cuts[] | select(.to - .from > 4) | "between(t,\(.from + 1.5),\(.to - 1.5))"] | join("+")' \
+	count=$(($(wc -l <"$WORK/list") + 1))
+	# Each cut says how much of its edges to keep: a second and a half of a
+	# wait, so the cut reads as a cut rather than as a page that jumped, and
+	# none of a sign-in, which shows a blank page.
+	waits=$(jq -r '[.cuts[] | select(.to - .from > 2 * .keep + 0.5) | "between(t,\(.from + .keep),\(.to - .keep))"] | join("+")' \
 		"$dir/film.json")
 	filter="fps=25"
 	if [ -n "$waits" ]; then
