@@ -400,8 +400,8 @@ test("on call, a failed run shows its evidence and the next supported step", asy
   // The excerpt is the failed run's: the Apply Job the status names as the
   // last run, and the container that ran the migrations, not the history
   // read the operator started since or an init container. The runner logs
-  // only how Ptah exited; the database's own words are kept nowhere a
-  // reader may look (stokaro/ptah-operator#678).
+  // only how Ptah exited. The status names the migration that failed; the
+  // database's error code waits on stokaro/ptah#4747.
   await expect(
     page.getByRole("region", {
       name: /^Log excerpt · ptah-m-apply-journal-\S+ \/ ptah · plain text$/,
@@ -410,7 +410,12 @@ test("on call, a failed run shows its evidence and the next supported step", asy
   const log = page.getByLabel("Log excerpt", { exact: true })
   await expect(log).toContainText("ptah exited with code")
   await expect(
-    page.getByText("A migration failed and committed nothing", { exact: false }).first()
+    page
+      .getByText(
+        "Migration 2 (Backfill Entries) failed and committed nothing; 1 migrations before it are recorded applied",
+        { exact: false }
+      )
+      .first()
   ).toBeVisible()
   await lab.audit("an incident with its evidence")
   await lab.caption(
@@ -419,7 +424,7 @@ test("on call, a failed run shows its evidence and the next supported step", asy
   )
   await log.scrollIntoViewIfNeeded()
   await lab.caption(
-    "The run's own log says how Ptah exited. Which statement failed is not kept where a reader may look: stokaro/ptah-operator#678.",
+    "The status names the migration that failed. The log says how Ptah exited; the database's error code is not published yet.",
     5500
   )
 })
