@@ -35,6 +35,10 @@ const MigrationDetail = lazyRouteComponent(
   () => import("./screens/console/MigrationDetail"),
   "MigrationDetail"
 )
+const ExecutionHistory = lazyRouteComponent(
+  () => import("./screens/console/ExecutionHistory"),
+  "ExecutionHistory"
+)
 const SchemaDetail = lazyRouteComponent(
   () => import("./screens/console/SchemaDetail"),
   "SchemaDetail"
@@ -150,6 +154,28 @@ function MigrationRoute() {
   return <MigrationDetail namespace={namespace} name={name} />
 }
 
+const schemaHistory = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "schemas/$namespace/$name/history",
+  component: SchemaHistoryRoute,
+})
+
+function SchemaHistoryRoute() {
+  const { namespace, name } = schemaHistory.useParams()
+  return <ExecutionHistory kind="schema" namespace={namespace} name={name} />
+}
+
+const migrationHistory = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "migrations/$namespace/$name/history",
+  component: MigrationHistoryRoute,
+})
+
+function MigrationHistoryRoute() {
+  const { namespace, name } = migrationHistory.useParams()
+  return <ExecutionHistory kind="migration" namespace={namespace} name={name} />
+}
+
 export const routeTree = rootRoute.addChildren([
   focus.addChildren([
     indexRoute,
@@ -164,7 +190,14 @@ export const routeTree = rootRoute.addChildren([
     decisions,
     decision,
   ]),
-  consoleRoute.addChildren([consoleIndex, consoleResources, consoleSchema, consoleMigration]),
+  consoleRoute.addChildren([
+    consoleIndex,
+    consoleResources,
+    consoleSchema,
+    schemaHistory,
+    consoleMigration,
+    migrationHistory,
+  ]),
 ])
 
 export function createAppRouter(

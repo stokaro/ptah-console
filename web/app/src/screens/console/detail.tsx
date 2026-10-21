@@ -127,6 +127,17 @@ export function DetailHeader({ resource, kind, chips, actions }: DetailHeaderPro
       </ul>
       <div className="flex flex-wrap items-center gap-2">
         {actions}
+        <Link
+          to={
+            resource.kind === "schema"
+              ? "/console/schemas/$namespace/$name/history"
+              : "/console/migrations/$namespace/$name/history"
+          }
+          params={{ namespace: resource.namespace, name: resource.name }}
+          className="inline-flex min-h-10 items-center rounded-[11px] border border-line bg-card px-3.5 text-[13.5px] font-medium text-fg"
+        >
+          Execution and history
+        </Link>
         {maySuspend ? (
           <Button onClick={() => setSuspending(true)}>
             {resource.suspended ? "Resume…" : "Suspend…"}

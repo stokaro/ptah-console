@@ -147,6 +147,22 @@ the refused versions, and says that the earlier versions are a count. The
 next history read is `status.nextReconciliationTime`; there is no "read now",
 because the operator has no such action, and no retry, rollback or force.
 
+## Full console: execution and history
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| The controller's conditions and Events, the claimed operation and the next reconciliation | the resource's status, `events` for its UID | get; list with a field selector |
+| The Jobs status names, their Pods, containers and log excerpts | `jobs`, `pods`, `events`, `pods/log`, as on call | get, list, get |
+| What status records about the database: the applied plan, the last read, a fresh read due, the history and the last run | the resource's status | get |
+
+The three lanes are the evidence the on-call page reads, laid out by who
+left it. Entries with a time come oldest first; a container's end keeps no
+time of its own and follows them; evidence that is gone stays as an entry
+that says why: not retained, not granted or unreadable. The original error is
+pinned above the lanes: a failed run's own message for a migration, the
+failure condition otherwise, and failing those the first container that
+exited with an error.
+
 ## Suspend and resume
 
 | Does | Writes | Verbs |
