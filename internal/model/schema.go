@@ -36,6 +36,7 @@ func Schema(schema *operatorv1alpha1.PtahSchema) *consolev1.Schema {
 		LastSuccessfulReconciliation: timestamp(status.LastSuccessfulReconciliation),
 		NextReconciliation:           timestamp(status.NextReconciliationTime),
 		Gitops:                       gitOps(schema.ObjectMeta),
+		SpecYaml:                     specYAML(schema.Spec),
 	}
 	if plan := status.Plan; plan != nil {
 		out.CurrentPlan = &consolev1.SchemaPlanSummary{

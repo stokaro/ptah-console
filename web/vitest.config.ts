@@ -11,6 +11,9 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // Above the five seconds a findBy* waits (test/setup.ts), so a missing
+    // element fails with its own error rather than as a timed-out test.
+    testTimeout: 15_000,
     setupFiles: ["./test/setup.ts"],
     include: ["app/src/**/*.test.{ts,tsx}", "packages/*/src/**/*.test.{ts,tsx}"],
     coverage: {

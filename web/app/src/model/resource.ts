@@ -48,6 +48,9 @@ export interface ResourceView {
   appliedPlanUid?: string
   /** The run a migration waits on a person to settle. */
   unresolvedRun?: { operationId: string; outcome: string; jobName: string }
+  /** The message as read, for a page that shows more than every screen needs. */
+  schema?: Schema
+  migration?: Migration
 }
 
 export function fromSchema(schema: Schema): ResourceView {
@@ -79,6 +82,7 @@ export function fromSchema(schema: Schema): ResourceView {
       : undefined,
     gitops: schema.gitops,
     appliedPlanUid: schema.applied?.planUid,
+    schema,
   }
 }
 
@@ -115,6 +119,7 @@ export function fromMigration(migration: Migration): ResourceView {
           jobName: migration.unresolvedRun.jobName,
         }
       : undefined,
+    migration,
   }
 }
 

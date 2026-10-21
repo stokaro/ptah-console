@@ -159,7 +159,7 @@ interface SuspendDialogProps {
 }
 
 /** Suspends or resumes the resource at the version the page shows. */
-function SuspendDialog({ resource, context, onClose }: SuspendDialogProps) {
+export function SuspendDialog({ resource, context, onClose }: SuspendDialogProps) {
   const session = useSession()
   const queryClient = useQueryClient()
   const setSuspended = useMutation(DecisionService.method.setSuspended)
