@@ -113,9 +113,16 @@ test("a viewer follows releases, sees a plan without its SQL, and nothing of ano
     5000
   )
 
-  // The full console lists the same resources in one table, and still names
-  // the namespace this identity may not read.
+  // The full console opens on its overview, which lists only what needs
+  // attention. Resources lists the same resources in one table, and still
+  // names the namespace this identity may not read.
   await page.getByRole("link", { name: "Full console" }).click()
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible()
+  await page
+    .getByRole("navigation", { name: "Console" })
+    .getByRole("link", { name: /^Resources/ })
+    .click()
+  await expect(page.getByRole("heading", { name: /^Resources/, level: 1 })).toBeVisible()
   const table = page.getByRole("table")
   const row = (name: string) =>
     table.getByRole("row").filter({ has: page.getByText(name, { exact: true }) })
