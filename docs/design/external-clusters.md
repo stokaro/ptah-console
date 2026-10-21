@@ -1,0 +1,128 @@
+# External clusters
+
+Phase 2 lets one hosted console reach Ptah resources in clusters other than
+the one it runs in. stokaro/ptah-operator#588 sections 11 to 14 are the
+contract; this document settles what they leave to the implementation, and
+each phase 2 issue (#95 to #103) implements a section of it. It is a proposal
+until the owner has reviewed it, and nothing in phase 2 is built before then.
+
+## What stays the same
+
+The browser talks only to the hosted console, with the session it has today.
+A person's request still runs as one exact Kubernetes username, and the API
+server and the operator's admission still decide. "This cluster" keeps the
+co-located path of phase 1; an agent is added only for a cluster the console
+does not run in.
+
+```text
+browser ── session, Connect ──> ptah-console ──(This cluster)── impersonating client ──> kube-apiserver
+                                     │
+                                     │  agent channel: TLS, opened by the agent
+                                     v
+                            ptah-console-agent (target cluster) ── impersonating client ──> kube-apiserver
+```
+
+## The channel
+
+The agent dials the console; the target cluster accepts no inbound connection
+for it. The console serves agents on a listener of their own, separate from the
+browser's, so a browser session can never reach an agent endpoint and an agent
+credential can never reach a browser endpoint.
+
+- **Transport.** HTTP/2 over TLS 1.3, with one long-lived Connect
+  bidirectional stream per connection: the console sends typed requests down
+  it and the agent sends the results back. Connect is what the browser API
+  already uses, so the contract is one more service in `proto/`, generated and
+  checked like the others, and no custom framing or cryptography is written.
+- **The agent authenticates the console** by TLS: the CA and server name it was
+  enrolled with, not the system roots by default. A certificate from another
+  CA, or for another name, ends the attempt before any credential is sent.
+- **The console authenticates the agent** by the connection's credential, sent
+  as a bearer token on the stream's request. The console stores a verifier only:
+  the SHA-256 of the 256-bit credential, compared in constant time. A
+  high-entropy random secret needs no slow hash, and a verifier cannot be
+  presented in place of the credential.
+- **Binding.** The stream is bound at open to one connection UID and its
+  generation. Every frame repeats both; a frame naming another connection, or
+  an older generation, closes the stream.
+
+## Typed requests
+
+The console sends only the operations phase 1 already performs, and the agent
+serves no other:
+
+| Request | What the agent does |
+| --- | --- |
+| Capabilities | `SelfSubjectAccessReview` and `SelfSubjectReview` as the mapped user |
+| List and get schemas, migrations, plans and decisions | reads through the same typed client and `pkg/planread` as phase 1 |
+| Diagnostics | the Jobs, Pods, Events and log excerpts phase 1 reads, by the references status names |
+| Watch window | one watch of at most 30 seconds, as the mapped user |
+| Approve, acknowledge, suspend | the same writes as phase 1, as the mapped user |
+
+Each request carries an envelope: request ID, console instance, connection UID
+and generation, the console session's generation, the immutable account ID,
+the namespace, the action and a deadline. The agent maps the account ID through
+its own allowlist to one Kubernetes username and impersonates exactly that
+name, with no groups, UID or extras. An account the allowlist does not name, a
+namespace outside its ceiling, or an action outside the table is refused before
+any call. A username, group or header the console might send is never read.
+
+The agent never reads Secrets or `PtahResultRecord` objects, never writes RBAC,
+and calls nothing but its own cluster's kube-apiserver. It is not a proxy: no
+URL, path or verb the console chose reaches the API server.
+
+## Bounds and failures
+
+- A frame is at most the plan size `pkg/planread` accepts plus its envelope;
+  anything larger closes the stream.
+- At most 64 requests are in flight per connection and 8 per account; past
+  that, the console answers "busy" without sending.
+- A request carries a deadline of at most 30 seconds, and the agent enforces
+  it on its own clock.
+- A decision whose stream drops before its answer arrives is reported as
+  unknown, exactly like a lost answer in phase 1: the console reads the decision
+  back by its name once the channel returns, and never sends it again.
+
+## Credentials over time
+
+The credential expires; 90 days by default. The console warns from 14 days
+before. Rotation is a second credential that both sides accept for at most one
+hour: the target administrator writes it into the agent's Secret, the agent
+reloads it and reconnects, and the console retires the old one only after a
+stream authenticated with the new one. The agent has no permission to write its
+own Secret.
+
+## Registry
+
+`ConsoleCluster` holds what decides trust: the connection UID, the target's API
+server identity as enrolled, the console's CA and name the agent expects, the
+namespace ceiling, and the configuration owner. CEL keeps those fields
+immutable; changing one is a new connection, enrolled again, and the old one is
+revoked. `ConsoleClusterPreferences` holds what does not: a display name,
+labels and the enabled flag, against an immutable connection UID. Quarantine is
+recorded apart from both, by UID and generation, so reapplying an old record
+from Git does not lift it.
+
+"This cluster" becomes a `ConsoleCluster` of the co-located profile when the
+registry is installed. It keeps the installation ID and every account ID, so no
+account loses a grant and no plan or approval the operator holds changes.
+
+## Trust disclosure
+
+These words appear in the enrollment screen and in the installation guide:
+
+> The agent acts in this cluster as each Console account the target
+> administrator allows, with the Kubernetes rights those usernames have here.
+> A compromised console can make requests as those accounts. A compromised
+> agent can use those accounts' rights in this cluster. Keep the allowlist
+> short and the bound roles to Ptah's resources, and remove the agent's
+> impersonation binding to cut it off at once, whatever the console says.
+
+## Open questions for review
+
+- Whether the agent listener needs its own Service and Ingress in the chart, or
+  shares the console's with a separate path and TLS name.
+- Whether the first release supports only the console's own CA for agents, or
+  also a public CA with a pinned name.
+- Whether an account allowlist in the agent's Helm values is enough, or it also
+  needs a ConfigMap an administrator edits without a Helm upgrade.
