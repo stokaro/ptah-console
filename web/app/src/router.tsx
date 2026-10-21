@@ -3,7 +3,6 @@ import {
   createRoute,
   createRouter,
   lazyRouteComponent,
-  redirect,
   type RouterHistory,
 } from "@tanstack/react-router"
 
@@ -31,6 +30,7 @@ const DecisionDetail = lazyRouteComponent(
 )
 const ConsoleLayout = lazyRouteComponent(() => import("./screens/console/Layout"), "ConsoleLayout")
 const Resources = lazyRouteComponent(() => import("./screens/console/Resources"), "Resources")
+const Overview = lazyRouteComponent(() => import("./screens/console/Overview"), "Overview")
 
 export interface RouterContext {
   launchError?: string
@@ -100,9 +100,7 @@ const consoleRoute = createRoute({
 const consoleIndex = createRoute({
   getParentRoute: () => consoleRoute,
   path: "/",
-  beforeLoad: () => {
-    throw redirect({ to: "/console/resources", replace: true })
-  },
+  component: Overview,
 })
 const consoleResources = createRoute({
   getParentRoute: () => consoleRoute,

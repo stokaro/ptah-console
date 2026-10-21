@@ -120,19 +120,12 @@ describe("Resources", () => {
     const { history } = renderConsole("/releases", { schemas: [waitingSchema()] })
 
     await user.click(await screen.findByRole("link", { name: "Full console" }))
-    expect(await screen.findByRole("table")).toBeInTheDocument()
-    expect(history.location.pathname).toBe("/console/resources")
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument()
+    expect(history.location.pathname).toBe("/console")
 
     await user.click(screen.getByRole("link", { name: /Focused view/ }))
     // The focused view's home sends an approver to the queue.
     expect(await screen.findByRole("navigation", { name: "Role" })).toBeInTheDocument()
     expect(history.location.pathname).toBe("/approve")
-  })
-
-  it("opens the console's front page on the resources", async () => {
-    const { history } = renderConsole("/console", { schemas: [waitingSchema()] })
-
-    expect(await screen.findByRole("table")).toBeInTheDocument()
-    expect(history.location.pathname).toBe("/console/resources")
   })
 })

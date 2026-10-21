@@ -86,6 +86,22 @@ Who decided is what admission stamped (`spec.approver`, `spec.acknowledgedBy`),
 never what the console sent. CSV export happens in the browser and neutralizes
 cells that start with `=`, `+`, `-` or `@`.
 
+## Full console: overview
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| How many resources are in each state, what needs a person, namespace health, recent condition changes | `ptahschemas`, `ptahmigrations` | list, watch |
+
+The overview reads nothing the resource list does not. "Needs attention" takes
+each resource's leading attention, the one the server lists first: an unknown
+outcome before a failure or a block, those before a plan waiting for approval,
+then drift and stale status, and within a kind the longest wait first. A
+suspended resource is counted as suspended, not as needing attention. "Recent
+activity" is the newest `lastTransitionTime` of the conditions each resource
+keeps; a condition keeps only its last change, so this is not a history, and
+the page says so. Kubernetes Events stay on each resource's page, where they
+are read for that resource alone.
+
 ## Full console: resources
 
 | Shows | Reads | Verbs |

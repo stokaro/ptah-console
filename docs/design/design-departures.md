@@ -15,6 +15,7 @@ the console does the following instead.
 | Edit YAML, seven checks, server dry-run | No generic edit: #588 forbids forwarding an arbitrary patch. A read-only YAML view and "Copy as patch", done in the browser and sent nowhere. |
 | Create a PtahSchema from a template | Authoring is a later step. |
 | "Plans & executions, 7 days", "Failure causes, 30 days" | Not shown. Kubernetes keeps Events for about an hour, and #588 rules out synthetic history. |
+| Overview tiles with 7-day deltas and sparklines, a "Last 7 days" range, a "Kubernetes resources" panel | The tiles count the states the resources are in now and link to the list filtered to each. Nothing records how those counts moved, so no delta or trend is drawn. |
 | "Re-read history (interval)" as an action | The operator has no such API. The console shows when the next read is due, from `status.nextReconciliationTime`. |
 | Fonts from Google Fonts | Bundled from npm packages, so the page loads nothing from another origin. |
 | SQL lines tagged "drops data", "changes access" | Tags come from the plan's own statement severity and reason, recorded by Ptah, and the plan-level findings. The console does not parse SQL to invent them. |

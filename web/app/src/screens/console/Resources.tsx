@@ -22,6 +22,7 @@ import {
 } from "../../model/catalog"
 import { say, steps, type ResourceView } from "../../model/resource"
 import { Loading, ReadError, TruncatedNotice, UnreadableNamespaces, useNow } from "../common"
+import { resourceLink } from "./links"
 import type { ResourcesSearch } from "./search"
 
 export interface ResourcesProps {
@@ -183,11 +184,7 @@ function Row({ resource, now }: { resource: ResourceView; now: Date }) {
   return (
     <tr className="border-b border-line last:border-b-0 hover:bg-[color-mix(in_oklab,var(--pri)_5%,transparent)]">
       <td className="px-4 py-3">
-        <Link
-          to="/releases/$namespace/$kind/$name"
-          params={{ namespace: resource.namespace, kind: resource.kind, name: resource.name }}
-          className="flex flex-col gap-0.5 text-fg"
-        >
+        <Link {...resourceLink(resource)} className="flex flex-col gap-0.5 text-fg">
           <span className="font-mono font-semibold">{resource.name}</span>
           <span className="text-xs text-mute">
             {resource.namespace} · {resource.kind === "schema" ? "Schema" : "Migration"}

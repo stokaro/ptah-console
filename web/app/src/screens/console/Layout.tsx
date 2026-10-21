@@ -7,7 +7,10 @@ import { Mode } from "../../gen/ptah/console/v1/info_pb"
 import { LiveBanner, OperatorApiBanner, SessionChips, SignOut, ThemeSwitch } from "../Shell"
 
 /** The full console's pages, in the order the navigation lists them. */
-const pages = [{ to: "/console/resources", label: "Resources" }] as const
+const pages = [
+  { to: "/console", label: "Overview", counted: false },
+  { to: "/console/resources", label: "Resources", counted: true },
+] as const
 
 /**
  * The full console: every resource the session may read, with a sidebar to
@@ -60,6 +63,7 @@ function ConsoleNav() {
         <Link
           key={page.to}
           to={page.to}
+          activeOptions={{ exact: true, includeSearch: false }}
           className="flex min-h-10 items-center gap-2 rounded-[10px] border border-transparent px-3 text-[13.5px] font-medium text-fg2"
           activeProps={{
             className: "border-line! bg-card text-fg! shadow-card",
@@ -67,7 +71,7 @@ function ConsoleNav() {
           }}
         >
           <span className="flex-auto">{page.label}</span>
-          {loading ? null : (
+          {loading || !page.counted ? null : (
             <span className="font-mono text-[11px] text-mute">{resources.length}</span>
           )}
         </Link>
