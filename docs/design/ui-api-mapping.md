@@ -177,6 +177,13 @@ API server. An answer the server could not establish reads as unknown and
 counts as not allowed. The page also says what the console never reads,
 whatever RBAC allows.
 
+## Full console: command palette
+
+The palette reads nothing. It searches the console's own pages and the
+schemas and migrations the pages already listed, by name, namespace and
+state, and moves the browser to the one chosen. ⌘K or Ctrl+K opens it
+anywhere, and `/` outside a field.
+
 ## Suspend and resume
 
 | Does | Writes | Verbs |

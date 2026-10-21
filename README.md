@@ -63,6 +63,14 @@ The page has four views of the same resources:
 - **Auditor**: who decided what and when, as admission recorded it, with a CSV
   export.
 
+The **full console**, one link away, shows every resource at once: an
+overview of what needs a person and how each namespace stands; a list that
+filters, sorts and pages, with the filters in the address; a page for each
+schema and migration with its conditions, plans, artifact, target, history
+and spec; the execution and history of each, on controller, Job and database
+lanes; and a pre-flight of what your identity may do in each namespace.
+⌘K, Ctrl+K or `/` opens a palette that jumps to any page or resource.
+
 The page follows changes live. What a button offers depends on what RBAC says
 you may do; the server decides.
 

@@ -1,10 +1,12 @@
 import { Wordmark } from "@ptah/console-ui"
 import { Link, Outlet } from "@tanstack/react-router"
+import { useCallback, useState } from "react"
 
 import { useResources, useScope, useSession } from "../../api/resources"
 import { BuildFooter } from "../../BuildFooter"
 import { Mode } from "../../gen/ptah/console/v1/info_pb"
 import { LiveBanner, OperatorApiBanner, SessionChips, SignOut, ThemeSwitch } from "../Shell"
+import { Palette, usePaletteKeys } from "./Palette"
 
 /** The full console's pages, in the order the navigation lists them. */
 const pages = [
@@ -20,6 +22,8 @@ const pages = [
 export function ConsoleLayout() {
   const session = useSession()
   const hosted = session.isSuccess && session.data.mode === Mode.HOSTED
+  const [palette, setPalette] = useState(false)
+  usePaletteKeys(useCallback(() => setPalette(true), []))
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       {/* One navigation: a strip across the top on a phone, a sidebar on a wider screen. */}
@@ -42,6 +46,14 @@ export function ConsoleLayout() {
           <SessionChips />
           <NamespacesChip />
           <span className="flex-auto" />
+          <button
+            type="button"
+            onClick={() => setPalette(true)}
+            className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-full border border-line bg-card px-3 text-xs text-fg2"
+          >
+            Search or jump to
+            <kbd className="font-mono text-[11px] text-mute">⌘K</kbd>
+          </button>
           {hosted ? <SignOut /> : null}
           <ThemeSwitch />
         </header>
@@ -52,6 +64,7 @@ export function ConsoleLayout() {
         </main>
         <BuildFooter />
       </div>
+      <Palette open={palette} onOpenChange={setPalette} />
     </div>
   )
 }
