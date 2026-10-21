@@ -31,6 +31,10 @@ const DecisionDetail = lazyRouteComponent(
 const ConsoleLayout = lazyRouteComponent(() => import("./screens/console/Layout"), "ConsoleLayout")
 const Resources = lazyRouteComponent(() => import("./screens/console/Resources"), "Resources")
 const Overview = lazyRouteComponent(() => import("./screens/console/Overview"), "Overview")
+const SchemaDetail = lazyRouteComponent(
+  () => import("./screens/console/SchemaDetail"),
+  "SchemaDetail"
+)
 
 export interface RouterContext {
   launchError?: string
@@ -120,6 +124,17 @@ function ResourcesRoute() {
   )
 }
 
+const consoleSchema = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "schemas/$namespace/$name",
+  component: SchemaRoute,
+})
+
+function SchemaRoute() {
+  const { namespace, name } = consoleSchema.useParams()
+  return <SchemaDetail namespace={namespace} name={name} />
+}
+
 export const routeTree = rootRoute.addChildren([
   focus.addChildren([
     indexRoute,
@@ -134,7 +149,7 @@ export const routeTree = rootRoute.addChildren([
     decisions,
     decision,
   ]),
-  consoleRoute.addChildren([consoleIndex, consoleResources]),
+  consoleRoute.addChildren([consoleIndex, consoleResources, consoleSchema]),
 ])
 
 export function createAppRouter(

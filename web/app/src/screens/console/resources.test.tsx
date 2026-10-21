@@ -40,7 +40,7 @@ describe("Resources", () => {
     expect(within(storefront).getByText("Waiting for approval")).toBeInTheDocument()
     expect(within(storefront).getByRole("link", { name: /storefront/ })).toHaveAttribute(
       "href",
-      "/releases/application/schema/storefront"
+      "/console/schemas/application/storefront"
     )
     expect(
       screen.getByText(/Not shown, because this identity may not read them/)

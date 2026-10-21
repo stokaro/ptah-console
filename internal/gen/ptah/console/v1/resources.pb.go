@@ -1834,8 +1834,12 @@ type Schema struct {
 	Stages                       []*Stage               `protobuf:"bytes,17,rep,name=stages,proto3" json:"stages,omitempty"`
 	Attention                    []*Attention           `protobuf:"bytes,18,rep,name=attention,proto3" json:"attention,omitempty"`
 	Gitops                       *GitOps                `protobuf:"bytes,19,opt,name=gitops,proto3" json:"gitops,omitempty"`
-	unknownFields                protoimpl.UnknownFields
-	sizeCache                    protoimpl.SizeCache
+	// The spec as the API server stores it, as YAML, for reading. A target
+	// names its Secret and key; no Secret content is in it. The console never
+	// writes from it.
+	SpecYaml      string `protobuf:"bytes,20,opt,name=spec_yaml,json=specYaml,proto3" json:"spec_yaml,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Schema) Reset() {
@@ -1999,6 +2003,13 @@ func (x *Schema) GetGitops() *GitOps {
 		return x.Gitops
 	}
 	return nil
+}
+
+func (x *Schema) GetSpecYaml() string {
+	if x != nil {
+		return x.SpecYaml
+	}
+	return ""
 }
 
 type ListSchemasRequest struct {
@@ -3050,8 +3061,10 @@ type Migration struct {
 	Stages             []*Stage               `protobuf:"bytes,17,rep,name=stages,proto3" json:"stages,omitempty"`
 	Attention          []*Attention           `protobuf:"bytes,18,rep,name=attention,proto3" json:"attention,omitempty"`
 	Gitops             *GitOps                `protobuf:"bytes,19,opt,name=gitops,proto3" json:"gitops,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// The spec as YAML, for reading, as on Schema.
+	SpecYaml      string `protobuf:"bytes,20,opt,name=spec_yaml,json=specYaml,proto3" json:"spec_yaml,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Migration) Reset() {
@@ -3215,6 +3228,13 @@ func (x *Migration) GetGitops() *GitOps {
 		return x.Gitops
 	}
 	return nil
+}
+
+func (x *Migration) GetSpecYaml() string {
+	if x != nil {
+		return x.SpecYaml
+	}
+	return ""
 }
 
 type ListMigrationsRequest struct {
@@ -3861,7 +3881,7 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\aoutcome\x18\x01 \x01(\tR\aoutcome\x12$\n" +
 	"\x0eapply_job_name\x18\x02 \x01(\tR\fapplyJobName\x12\"\n" +
 	"\rapply_job_uid\x18\x03 \x01(\tR\vapplyJobUid\x12?\n" +
-	"\robserve_after\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\fobserveAfter\"\xa6\b\n" +
+	"\robserve_after\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\fobserveAfter\"\xc3\b\n" +
 	"\x06Schema\x12,\n" +
 	"\x03ref\x18\x01 \x01(\v2\x1a.ptah.console.v1.ObjectRefR\x03ref\x12\x14\n" +
 	"\x05phase\x18\x02 \x01(\tR\x05phase\x12%\n" +
@@ -3884,7 +3904,8 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\x13next_reconciliation\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\x12nextReconciliation\x12.\n" +
 	"\x06stages\x18\x11 \x03(\v2\x16.ptah.console.v1.StageR\x06stages\x128\n" +
 	"\tattention\x18\x12 \x03(\v2\x1a.ptah.console.v1.AttentionR\tattention\x12/\n" +
-	"\x06gitops\x18\x13 \x01(\v2\x17.ptah.console.v1.GitOpsR\x06gitops\"4\n" +
+	"\x06gitops\x18\x13 \x01(\v2\x17.ptah.console.v1.GitOpsR\x06gitops\x12\x1b\n" +
+	"\tspec_yaml\x18\x14 \x01(\tR\bspecYaml\"4\n" +
 	"\x12ListSchemasRequest\x12\x1e\n" +
 	"\n" +
 	"namespaces\x18\x01 \x03(\tR\n" +
@@ -3986,7 +4007,7 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"resolution\x12'\n" +
 	"\x0facknowledged_by\x18\x04 \x01(\tR\x0eacknowledgedBy\x12;\n" +
 	"\vresolved_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"resolvedAt\"\xbb\a\n" +
+	"resolvedAt\"\xd8\a\n" +
 	"\tMigration\x12,\n" +
 	"\x03ref\x18\x01 \x01(\v2\x1a.ptah.console.v1.ObjectRefR\x03ref\x12\x14\n" +
 	"\x05phase\x18\x02 \x01(\tR\x05phase\x12%\n" +
@@ -4009,7 +4030,8 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\x13next_reconciliation\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\x12nextReconciliation\x12.\n" +
 	"\x06stages\x18\x11 \x03(\v2\x16.ptah.console.v1.StageR\x06stages\x128\n" +
 	"\tattention\x18\x12 \x03(\v2\x1a.ptah.console.v1.AttentionR\tattention\x12/\n" +
-	"\x06gitops\x18\x13 \x01(\v2\x17.ptah.console.v1.GitOpsR\x06gitops\"7\n" +
+	"\x06gitops\x18\x13 \x01(\v2\x17.ptah.console.v1.GitOpsR\x06gitops\x12\x1b\n" +
+	"\tspec_yaml\x18\x14 \x01(\tR\bspecYaml\"7\n" +
 	"\x15ListMigrationsRequest\x12\x1e\n" +
 	"\n" +
 	"namespaces\x18\x01 \x03(\tR\n" +

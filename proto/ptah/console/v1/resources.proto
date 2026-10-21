@@ -275,6 +275,10 @@ message Schema {
   repeated Stage stages = 17;
   repeated Attention attention = 18;
   GitOps gitops = 19;
+  // The spec as the API server stores it, as YAML, for reading. A target
+  // names its Secret and key; no Secret content is in it. The console never
+  // writes from it.
+  string spec_yaml = 20;
 }
 
 message ListSchemasRequest {
@@ -426,6 +430,8 @@ message Migration {
   repeated Stage stages = 17;
   repeated Attention attention = 18;
   GitOps gitops = 19;
+  // The spec as YAML, for reading, as on Schema.
+  string spec_yaml = 20;
 }
 
 message ListMigrationsRequest {

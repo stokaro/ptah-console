@@ -13,6 +13,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
 )
@@ -129,4 +130,15 @@ func stage(name string, state consolev1.StageState, detail string) *consolev1.St
 // subdomains in them, so they need no quoting.
 func ptahCommand(verb, name, namespace string) string {
 	return "kubectl ptah " + verb + " " + name + " -n " + namespace
+}
+
+// specYAML renders a spec for a person to read. A spec holds references, not
+// Secret content: a target names its Secret and key. A spec that cannot be
+// rendered is left empty, and the page says nothing is shown.
+func specYAML(spec any) string {
+	data, err := yaml.Marshal(spec)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }

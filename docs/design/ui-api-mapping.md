@@ -115,6 +115,22 @@ filed under one state: suspended whatever else it waits on, then needing a
 person, then in progress, then in sync when every stage is done. A namespace
 the identity may not read is named above the list rather than left out.
 
+## Full console: schema
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| Where the schema stands and why; its current and applied plans; every condition; the artifact and its verification; the target by reference and the drift its last read found; the operation under way; the spec as YAML | `ptahschemas` | list, watch; get when opened from a link |
+| Review the plan | the approver's plan review | as above |
+| Suspend or resume | `ptahschemas` | patch, as below |
+
+The spec is shown read-only, as the API server stores it; a target in it
+names its Secret and key, never their content. "Copy as patch" copies a
+`kubectl patch --type merge` command that sets the spec to what the page
+shows, for the person to run where they choose: the console sends no patch.
+The drift shown is the operator's own record of its last read, by category
+and severity; the operator publishes no per-object counts, so the page draws
+none.
+
 ## Suspend and resume
 
 | Does | Writes | Verbs |

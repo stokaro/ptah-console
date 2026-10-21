@@ -409,6 +409,23 @@ func TestTheTargetCarriesTheSecretReferenceOnly(t *testing.T) {
 	c.Assert(target.GetEngine(), qt.Equals, "PostgreSQL")
 }
 
+func TestTheSpecIsShownAsYAMLWithoutTheStatus(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	schema := schemaWith()
+	schema.Spec.Target.URLFrom.Name = "storefront-database"
+	schema.Spec.Target.URLFrom.Key = "url"
+	schema.Status.Phase = "AwaitingApproval"
+
+	spec := model.Schema(schema).GetSpecYaml()
+
+	c.Assert(spec, qt.Contains, "name: storefront-database")
+	c.Assert(spec, qt.Contains, "key: url")
+	// The control: the status the same object carries is not in it.
+	c.Assert(spec, qt.Not(qt.Contains), "AwaitingApproval")
+	c.Assert(spec, qt.Not(qt.Contains), "status")
+}
+
 func TestGitOpsControllersAreRecognized(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

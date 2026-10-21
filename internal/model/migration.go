@@ -41,6 +41,7 @@ func Migration(migration *operatorv1alpha1.PtahMigration) *consolev1.Migration {
 		Target:             &consolev1.Target{Engine: string(migration.Spec.Target.Engine), SecretName: migration.Spec.Target.URLFrom.Name, SecretKey: migration.Spec.Target.URLFrom.Key},
 		NextReconciliation: timestamp(status.NextReconciliationTime),
 		Gitops:             gitOps(migration.ObjectMeta),
+		SpecYaml:           specYAML(migration.Spec),
 	}
 	if realm := migration.Spec.Target.RealmRef; realm != nil {
 		out.Target.Realm = realm.Name

@@ -12,6 +12,7 @@ the console does the following instead.
 | "prod-ap-2 disconnected · outbound connector" | Phase 2. Phase 1 shows only a lost watch on the one API server. |
 | "Sign in to prod-eu-1" | A per-cluster sign-in belongs to the native-credentials profile, phase 3. |
 | A "Prototype outcome" switcher | Prototype only. |
+| Desired and observed object counts, a schema comparison chart, a schema profile radar | The drift the operator records from its last read, by category and severity. The operator publishes no per-object counts, and the console does not read the database to make them. |
 | Edit YAML, seven checks, server dry-run | No generic edit: #588 forbids forwarding an arbitrary patch. A read-only YAML view and "Copy as patch", done in the browser and sent nowhere. |
 | Create a PtahSchema from a template | Authoring is a later step. |
 | "Plans & executions, 7 days", "Failure causes, 30 days" | Not shown. Kubernetes keeps Events for about an hour, and #588 rules out synthetic history. |
