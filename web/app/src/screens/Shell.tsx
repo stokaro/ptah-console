@@ -121,7 +121,7 @@ function Header() {
       <span className="flex-auto" />
       {identity ? (
         <Link
-          to="/console/resources"
+          to="/console"
           className="inline-flex h-8 items-center rounded-full border border-line bg-card px-3 text-xs font-medium text-fg"
         >
           Full console
