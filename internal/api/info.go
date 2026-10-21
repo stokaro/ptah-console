@@ -30,9 +30,10 @@ func NewInfo(mode consolev1.Mode, readOnly bool) *Info {
 func (i *Info) GetInfo(context.Context, *consolev1.GetInfoRequest) (*consolev1.GetInfoResponse, error) {
 	build := buildinfo.Read()
 	return &consolev1.GetInfoResponse{
-		Version:  build.Version,
-		Commit:   build.Commit,
-		Mode:     i.mode,
-		ReadOnly: i.readOnly,
+		Version:         build.Version,
+		Commit:          build.Commit,
+		Mode:            i.mode,
+		ReadOnly:        i.readOnly,
+		OperatorVersion: build.Operator,
 	}, nil
 }

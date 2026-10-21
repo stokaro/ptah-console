@@ -31,7 +31,15 @@ type Info struct {
 	// WebApp is true when the binary carries the web app, which a build with
 	// the with_frontend tag does.
 	WebApp bool `json:"webApp"`
+	// Operator is the Ptah Operator module version the console was built
+	// against, as Go recorded it, and empty when the binary links no part of
+	// the operator.
+	Operator string `json:"operator,omitempty"`
 }
+
+// operatorModule is the module whose API types and plan reader the console
+// links.
+const operatorModule = "github.com/stokaro/ptah-operator"
 
 // Read returns the running build's identity.
 func Read() Info {
@@ -46,6 +54,14 @@ func Read() Info {
 				}
 			case "vcs.modified":
 				info.Modified = setting.Value == "true"
+			}
+		}
+		for _, dep := range build.Deps {
+			if dep.Path == operatorModule {
+				info.Operator = dep.Version
+				if dep.Replace != nil {
+					info.Operator = dep.Replace.Version
+				}
 			}
 		}
 		if info.Version == "" && build.Main.Version != "" && build.Main.Version != "(devel)" {
