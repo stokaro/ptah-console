@@ -39,6 +39,7 @@ const ExecutionHistory = lazyRouteComponent(
   () => import("./screens/console/ExecutionHistory"),
   "ExecutionHistory"
 )
+const Preflight = lazyRouteComponent(() => import("./screens/console/Preflight"), "Preflight")
 const SchemaDetail = lazyRouteComponent(
   () => import("./screens/console/SchemaDetail"),
   "SchemaDetail"
@@ -176,6 +177,12 @@ function MigrationHistoryRoute() {
   return <ExecutionHistory kind="migration" namespace={namespace} name={name} />
 }
 
+const consolePreflight = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "preflight",
+  component: Preflight,
+})
+
 export const routeTree = rootRoute.addChildren([
   focus.addChildren([
     indexRoute,
@@ -197,6 +204,7 @@ export const routeTree = rootRoute.addChildren([
     schemaHistory,
     consoleMigration,
     migrationHistory,
+    consolePreflight,
   ]),
 ])
 

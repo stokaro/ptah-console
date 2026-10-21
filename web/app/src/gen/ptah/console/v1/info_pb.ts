@@ -10,7 +10,7 @@ import type { Message, UnknownEnum } from "@bufbuild/protobuf";
  * Describes the file ptah/console/v1/info.proto.
  */
 export const file_ptah_console_v1_info: GenFile = /*@__PURE__*/
-  fileDesc("ChpwdGFoL2NvbnNvbGUvdjEvaW5mby5wcm90bxIPcHRhaC5jb25zb2xlLnYxIhAKDkdldEluZm9SZXF1ZXN0ImoKD0dldEluZm9SZXNwb25zZRIPCgd2ZXJzaW9uGAEgASgJEg4KBmNvbW1pdBgCIAEoCRIjCgRtb2RlGAMgASgOMhUucHRhaC5jb25zb2xlLnYxLk1vZGUSEQoJcmVhZF9vbmx5GAQgASgIKj0KBE1vZGUSFAoQTU9ERV9VTlNQRUNJRklFRBAAEg4KCk1PREVfTE9DQUwQARIPCgtNT0RFX0hPU1RFRBACMmAKC0luZm9TZXJ2aWNlElEKB0dldEluZm8SHy5wdGFoLmNvbnNvbGUudjEuR2V0SW5mb1JlcXVlc3QaIC5wdGFoLmNvbnNvbGUudjEuR2V0SW5mb1Jlc3BvbnNlIgOQAgFCSFpGZ2l0aHViLmNvbS9zdG9rYXJvL3B0YWgtY29uc29sZS9pbnRlcm5hbC9nZW4vcHRhaC9jb25zb2xlL3YxO2NvbnNvbGV2MWIGcHJvdG8z");
+  fileDesc("ChpwdGFoL2NvbnNvbGUvdjEvaW5mby5wcm90bxIPcHRhaC5jb25zb2xlLnYxIhAKDkdldEluZm9SZXF1ZXN0IoQBCg9HZXRJbmZvUmVzcG9uc2USDwoHdmVyc2lvbhgBIAEoCRIOCgZjb21taXQYAiABKAkSIwoEbW9kZRgDIAEoDjIVLnB0YWguY29uc29sZS52MS5Nb2RlEhEKCXJlYWRfb25seRgEIAEoCBIYChBvcGVyYXRvcl92ZXJzaW9uGAUgASgJKj0KBE1vZGUSFAoQTU9ERV9VTlNQRUNJRklFRBAAEg4KCk1PREVfTE9DQUwQARIPCgtNT0RFX0hPU1RFRBACMmAKC0luZm9TZXJ2aWNlElEKB0dldEluZm8SHy5wdGFoLmNvbnNvbGUudjEuR2V0SW5mb1JlcXVlc3QaIC5wdGFoLmNvbnNvbGUudjEuR2V0SW5mb1Jlc3BvbnNlIgOQAgFCSFpGZ2l0aHViLmNvbS9zdG9rYXJvL3B0YWgtY29uc29sZS9pbnRlcm5hbC9nZW4vcHRhaC9jb25zb2xlL3YxO2NvbnNvbGV2MWIGcHJvdG8z");
 
 /**
  * @generated from message ptah.console.v1.GetInfoRequest
@@ -53,6 +53,15 @@ export type GetInfoResponse = Message<"ptah.console.v1.GetInfoResponse"> & {
    * @generated from field: bool read_only = 4;
    */
   readOnly: boolean;
+
+  /**
+   * The Ptah Operator module version the console was built against, as Go
+   * recorded it. The console reads the operator's types and plan reader at
+   * this version; the cluster's operator is not asked.
+   *
+   * @generated from field: string operator_version = 5;
+   */
+  operatorVersion: string;
 };
 
 /**

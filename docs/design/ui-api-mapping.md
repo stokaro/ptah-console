@@ -163,6 +163,20 @@ pinned above the lanes: a failed run's own message for a migration, the
 failure condition otherwise, and failing those the first container that
 exited with an error.
 
+## Full console: pre-flight
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| What the identity may do in each namespace | `selfsubjectaccessreviews` | create, one per question |
+| Whether the cluster serves the operator's group version and the kinds the console uses | discovery | get |
+| The operator module the console was built against | nothing; the build records it | none |
+
+The thirteen questions are the ones every page already asks, grouped as read,
+decide, change and diagnose, each with the verb and resource it puts to the
+API server. An answer the server could not establish reads as unknown and
+counts as not allowed. The page also says what the console never reads,
+whatever RBAC allows.
+
 ## Suspend and resume
 
 | Does | Writes | Verbs |

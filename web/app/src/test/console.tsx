@@ -276,7 +276,11 @@ export function consoleTransport(fixture: Fixture) {
   }
   return createRouterTransport(({ service }) => {
     service(InfoService, {
-      getInfo: () => ({ version: "v0.1.0", mode: hosted ? Mode.HOSTED : Mode.LOCAL }),
+      getInfo: () => ({
+        version: "v0.1.0",
+        mode: hosted ? Mode.HOSTED : Mode.LOCAL,
+        operatorVersion: "v0.2.5",
+      }),
     })
     service(SessionService, {
       getSession: () => {

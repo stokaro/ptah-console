@@ -117,9 +117,13 @@ type GetInfoResponse struct {
 	Commit  string `protobuf:"bytes,2,opt,name=commit,proto3" json:"commit,omitempty"`
 	Mode    Mode   `protobuf:"varint,3,opt,name=mode,proto3,enum=ptah.console.v1.Mode" json:"mode,omitempty"`
 	// True when the server refuses every mutation, whatever the identity may do.
-	ReadOnly      bool `protobuf:"varint,4,opt,name=read_only,json=readOnly,proto3" json:"read_only,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ReadOnly bool `protobuf:"varint,4,opt,name=read_only,json=readOnly,proto3" json:"read_only,omitempty"`
+	// The Ptah Operator module version the console was built against, as Go
+	// recorded it. The console reads the operator's types and plan reader at
+	// this version; the cluster's operator is not asked.
+	OperatorVersion string `protobuf:"bytes,5,opt,name=operator_version,json=operatorVersion,proto3" json:"operator_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetInfoResponse) Reset() {
@@ -180,17 +184,25 @@ func (x *GetInfoResponse) GetReadOnly() bool {
 	return false
 }
 
+func (x *GetInfoResponse) GetOperatorVersion() string {
+	if x != nil {
+		return x.OperatorVersion
+	}
+	return ""
+}
+
 var File_ptah_console_v1_info_proto protoreflect.FileDescriptor
 
 const file_ptah_console_v1_info_proto_rawDesc = "" +
 	"\n" +
 	"\x1aptah/console/v1/info.proto\x12\x0fptah.console.v1\"\x10\n" +
-	"\x0eGetInfoRequest\"\x8b\x01\n" +
+	"\x0eGetInfoRequest\"\xb6\x01\n" +
 	"\x0fGetInfoResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
 	"\x06commit\x18\x02 \x01(\tR\x06commit\x12)\n" +
 	"\x04mode\x18\x03 \x01(\x0e2\x15.ptah.console.v1.ModeR\x04mode\x12\x1b\n" +
-	"\tread_only\x18\x04 \x01(\bR\breadOnly*=\n" +
+	"\tread_only\x18\x04 \x01(\bR\breadOnly\x12)\n" +
+	"\x10operator_version\x18\x05 \x01(\tR\x0foperatorVersion*=\n" +
 	"\x04Mode\x12\x14\n" +
 	"\x10MODE_UNSPECIFIED\x10\x00\x12\x0e\n" +
 	"\n" +

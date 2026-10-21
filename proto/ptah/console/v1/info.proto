@@ -22,6 +22,10 @@ message GetInfoResponse {
   Mode mode = 3;
   // True when the server refuses every mutation, whatever the identity may do.
   bool read_only = 4;
+  // The Ptah Operator module version the console was built against, as Go
+  // recorded it. The console reads the operator's types and plan reader at
+  // this version; the cluster's operator is not asked.
+  string operator_version = 5;
 }
 
 // Mode is how the console reaches Kubernetes and whom it acts for.

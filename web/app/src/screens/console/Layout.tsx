@@ -10,6 +10,7 @@ import { LiveBanner, OperatorApiBanner, SessionChips, SignOut, ThemeSwitch } fro
 const pages = [
   { to: "/console", label: "Overview", counted: false },
   { to: "/console/resources", label: "Resources", counted: true },
+  { to: "/console/preflight", label: "Pre-flight", counted: false },
 ] as const
 
 /**
