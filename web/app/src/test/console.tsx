@@ -38,6 +38,7 @@ import {
   type CapabilitiesSchema,
   type OperatorApiSchema,
   type Migration,
+  type MigrationPlan,
   type Schema,
   type SchemaPlan,
 } from "../gen/ptah/console/v1/resources_pb"
@@ -218,6 +219,8 @@ export interface Fixture {
   decisions?: Decision[]
   /** The current plan, read again on every request. */
   plan?: SchemaPlan | (() => SchemaPlan)
+  /** A migration's current plan, or the error reading it gives. */
+  migrationPlan?: MigrationPlan | ConnectError
   /** Listing schemas is refused; reading one by name is not. */
   listForbidden?: boolean
   approve?: (request: ApproveSchemaPlanRequest) => DecisionResult | Promise<DecisionResult>
@@ -350,13 +353,23 @@ export function consoleTransport(fixture: Fixture) {
         return { schema: found }
       },
     })
+    const migrations = () =>
+      typeof fixture.migrations === "function" ? fixture.migrations() : (fixture.migrations ?? [])
     service(MigrationService, {
-      listMigrations: () => ({
-        migrations:
-          typeof fixture.migrations === "function"
-            ? fixture.migrations()
-            : (fixture.migrations ?? []),
-      }),
+      listMigrations: () => ({ migrations: migrations() }),
+      getMigration: (request) => {
+        const found = migrations().find((migration) => migration.ref?.name === request.name)
+        if (!found) {
+          throw new ConnectError("migration not found", Code.NotFound)
+        }
+        return { migration: found }
+      },
+      getMigrationPlan: () => {
+        if (fixture.migrationPlan instanceof ConnectError) {
+          throw fixture.migrationPlan
+        }
+        return { plan: fixture.migrationPlan }
+      },
     })
     service(DecisionService, {
       listDecisions: () => ({ decisions: fixture.decisions ?? [] }),

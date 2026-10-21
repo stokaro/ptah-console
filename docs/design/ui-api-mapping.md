@@ -131,6 +131,22 @@ The drift shown is the operator's own record of its last read, by category
 and severity; the operator publishes no per-object counts, so the page draws
 none.
 
+## Full console: migration
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| How far the history is, how the last run ended, what the current plan would apply, the run waiting for a person, every condition, the artifact, the target, the spec | `ptahmigrations` | list, watch; get when opened from a link |
+| The files the plan would apply | `ptahmigrationplans` | get |
+| Acknowledge an unresolved run | `ptahmigrationrunacknowledgments` | create, as on call |
+
+The operator publishes a summary of the revision table, not its rows: the
+current version and checkpoint, how many migrations are applied and pending,
+whether a row is dirty, and the versions that were modified or arrived out of
+order. The page lists the versions the last run applied, the plan's files and
+the refused versions, and says that the earlier versions are a count. The
+next history read is `status.nextReconciliationTime`; there is no "read now",
+because the operator has no such action, and no retry, rollback or force.
+
 ## Suspend and resume
 
 | Does | Writes | Verbs |
