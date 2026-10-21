@@ -120,14 +120,16 @@ test("a viewer follows releases, sees a plan without its SQL, and nothing of ano
   const row = (name: string) =>
     table.getByRole("row").filter({ has: page.getByText(name, { exact: true }) })
   await expect(row("storefront").getByText("Waiting for approval")).toBeVisible()
-  await expect(row("inventory").getByText("In sync")).toBeVisible()
+  // The operator reads inventory again every interval, and while that read
+  // runs the list shows it in progress; it is in sync again when it ends.
+  await expect(row("inventory").getByText("In sync")).toBeVisible({ timeout: planTimeout })
   await expect(page.getByText("Not shown, because this identity may not read them:")).toBeVisible()
   await lab.audit("the full console's resources")
   await page
     .getByRole("group", { name: "State" })
     .getByRole("button", { name: /^In sync/ })
     .click()
-  await expect(row("inventory")).toBeVisible()
+  await expect(row("inventory")).toBeVisible({ timeout: planTimeout })
   await expect(row("storefront")).toHaveCount(0)
   await expect(page).toHaveURL(/state=insync/)
   await lab.caption(
