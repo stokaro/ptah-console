@@ -3,8 +3,9 @@
 Phase 2 lets one hosted console reach Ptah resources in clusters other than
 the one it runs in. stokaro/ptah-operator#588 sections 11 to 14 are the
 contract; this document settles what they leave to the implementation, and
-each phase 2 issue (#95 to #103) implements a section of it. It is a proposal
-until the owner has reviewed it, and nothing in phase 2 is built before then.
+each phase 2 issue (#95 to #103) implements a section of it. Nothing in phase 2
+is built before the owner has reviewed it; the decisions at the end were taken
+in that review.
 
 ## What stays the same
 
@@ -25,18 +26,23 @@ browser ── session, Connect ──> ptah-console ──(This cluster)── 
 ## The channel
 
 The agent dials the console; the target cluster accepts no inbound connection
-for it. The console serves agents on a listener of their own, separate from the
-browser's, so a browser session can never reach an agent endpoint and an agent
-credential can never reach a browser endpoint.
+for it. The console serves agents on a listener of their own, on its own port
+and its own Service, separate from the browser's, so a browser session can
+never reach an agent endpoint and an agent credential can never reach a
+browser endpoint. The two never share a TLS name or a route. How the agent
+Service is exposed, through an Ingress or a LoadBalancer, is the installer's
+choice in the chart.
 
 - **Transport.** HTTP/2 over TLS 1.3, with one long-lived Connect
   bidirectional stream per connection: the console sends typed requests down
   it and the agent sends the results back. Connect is what the browser API
   already uses, so the contract is one more service in `proto/`, generated and
   checked like the others, and no custom framing or cryptography is written.
-- **The agent authenticates the console** by TLS: the CA and server name it was
-  enrolled with, not the system roots by default. A certificate from another
-  CA, or for another name, ends the attempt before any credential is sent.
+- **The agent authenticates the console** by TLS: the console's own CA and the
+  server name it was enrolled with. The system roots are never used, so a
+  certificate a public CA issued for the same name is refused. A certificate
+  from another CA, or for another name, ends the attempt before any credential
+  is sent.
 - **The console authenticates the agent** by the connection's credential, sent
   as a bearer token on the stream's request. The console stores a verifier only:
   the SHA-256 of the 256-bit credential, compared in constant time. A
@@ -63,7 +69,9 @@ Each request carries an envelope: request ID, console instance, connection UID
 and generation, the console session's generation, the immutable account ID,
 the namespace, the action and a deadline. The agent maps the account ID through
 its own allowlist to one Kubernetes username and impersonates exactly that
-name, with no groups, UID or extras. An account the allowlist does not name, a
+name, with no groups, UID or extras. The allowlist is in the agent chart's
+values and nowhere else, so a change to it is a Helm upgrade or a GitOps
+change someone reviews; the agent reloads it without a restart. An account the allowlist does not name, a
 namespace outside its ceiling, or an action outside the table is refused before
 any call. A username, group or header the console might send is never read.
 
@@ -118,11 +126,13 @@ These words appear in the enrollment screen and in the installation guide:
 > short and the bound roles to Ptah's resources, and remove the agent's
 > impersonation binding to cut it off at once, whatever the console says.
 
-## Open questions for review
+## Decisions
 
-- Whether the agent listener needs its own Service and Ingress in the chart, or
-  shares the console's with a separate path and TLS name.
-- Whether the first release supports only the console's own CA for agents, or
-  also a public CA with a pinned name.
-- Whether an account allowlist in the agent's Helm values is enough, or it also
-  needs a ConfigMap an administrator edits without a Helm upgrade.
+The owner took these on 2026-10-21, in the review of this proposal:
+
+| Question | Decision |
+| --- | --- |
+| Does the agent listener share the console's entry? | No. It has its own port and Service; an Ingress or LoadBalancer for it is the installer's choice. |
+| Which certificates does the agent trust for the console? | Only the console's own CA, with the name given at enrollment. A public CA is not accepted in the first release. |
+| Where is the account allowlist? | In the agent chart's values only, reloaded without a restart. No ConfigMap or custom resource edits it. |
+| The channel transport | One Connect bidirectional stream over HTTP/2 and TLS 1.3, opened by the agent; the console keeps a SHA-256 verifier of the credential. |
