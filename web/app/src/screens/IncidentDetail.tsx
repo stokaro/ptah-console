@@ -36,7 +36,7 @@ type UnresolvedRun = NonNullable<ResourceView["unresolvedRun"]>
 import { BackButton, DetailHeading, Loading, ReadError, where } from "./common"
 import { DecisionDialog } from "./DecisionDialog"
 
-const route = getRouteApi("/incidents/$namespace/$kind/$name")
+const route = getRouteApi("/_focus/incidents/$namespace/$kind/$name")
 
 const titleColors = {
   ok: "text-green",

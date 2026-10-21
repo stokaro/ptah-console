@@ -31,7 +31,7 @@ import { BackButton, copyText, DetailHeading, Loading, ReadError, useNow, where 
 import { DecisionDialog } from "./DecisionDialog"
 import { Sentence } from "./Releases"
 
-const route = getRouteApi("/releases/$namespace/$kind/$name")
+const route = getRouteApi("/_focus/releases/$namespace/$kind/$name")
 
 export function ReleaseDetail() {
   const params = route.useParams()

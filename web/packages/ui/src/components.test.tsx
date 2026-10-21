@@ -5,7 +5,9 @@ import { describe, expect, it, vi } from "vitest"
 import { CommandBlock } from "./CommandBlock"
 import { Fingerprint } from "./Fingerprint"
 import { Freshness } from "./Freshness"
+import { Segmented } from "./Segmented"
 import { SequenceTable } from "./SequenceTable"
+import { StepDots } from "./StepDots"
 import { Terminal } from "./Terminal"
 
 const fingerprint = "sha256:2069e386bdca701da7782dd0b2b29bd5c79151d90bcfc52f30a9678f97ac2aac"
@@ -85,5 +87,48 @@ describe("SequenceTable", () => {
 
     expect(screen.getByRole("table", { name: "Steps in order" })).toBeInTheDocument()
     expect(screen.getByRole("columnheader", { name: "Checksum" })).toBeInTheDocument()
+  })
+})
+
+describe("Segmented", () => {
+  it("presses the current choice and reports another", async () => {
+    const user = userEvent.setup()
+    const change = vi.fn()
+    render(
+      <Segmented
+        label="Kind"
+        value="all"
+        onChange={change}
+        options={[
+          { value: "all", label: "All", count: 3 },
+          { value: "schema", label: "Schemas", count: 2 },
+        ]}
+      />
+    )
+
+    const group = screen.getByRole("group", { name: "Kind" })
+    expect(group).toContainElement(screen.getByRole("button", { name: "All 3", pressed: true }))
+    expect(screen.getByRole("button", { name: "Schemas 2", pressed: false })).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Schemas 2" }))
+
+    expect(change).toHaveBeenCalledWith("schema")
+  })
+})
+
+describe("StepDots", () => {
+  it("reads the whole lifecycle as one sentence", () => {
+    render(
+      <StepDots
+        label="Lifecycle of billing"
+        steps={[
+          { label: "Plan", tone: "ok" },
+          { label: "Apply", tone: "bad" },
+        ]}
+      />
+    )
+
+    expect(
+      screen.getByRole("img", { name: "Lifecycle of billing. Plan: done, Apply: failed" })
+    ).toBeInTheDocument()
   })
 })

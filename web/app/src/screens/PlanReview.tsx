@@ -34,7 +34,7 @@ import { planSummary } from "./ApproverQueue"
 import { ApproveDialog, type ReviewedPlan } from "./ApproveDialog"
 import { BackButton, DetailHeading, Loading, ReadError, where } from "./common"
 
-const route = getRouteApi("/approve/$namespace/$kind/$name")
+const route = getRouteApi("/_focus/approve/$namespace/$kind/$name")
 
 export function PlanReview() {
   const params = route.useParams()

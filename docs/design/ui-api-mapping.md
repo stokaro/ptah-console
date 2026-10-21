@@ -86,6 +86,19 @@ Who decided is what admission stamped (`spec.approver`, `spec.acknowledgedBy`),
 never what the console sent. CSV export happens in the browser and neutralizes
 cells that start with `=`, `+`, `-` or `@`.
 
+## Full console: resources
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| Every schema and migration, its state, why it waits, its lifecycle and artifact | `ptahschemas`, `ptahmigrations` | list, watch |
+
+The list is the same read the focused view makes; filtering, sorting and
+paging happen in the browser, over what the identity may list, and the filters
+live in the address so a filtered list can be sent as a link. A resource is
+filed under one state: suspended whatever else it waits on, then needing a
+person, then in progress, then in sync when every stage is done. A namespace
+the identity may not read is named above the list rather than left out.
+
 ## Suspend and resume
 
 | Does | Writes | Verbs |

@@ -27,6 +27,7 @@ import {
   Access,
   Answer,
   AttentionKind,
+  MigrationSchema,
   MigrationService,
   SchemaPlanSchema,
   SchemaSchema,
@@ -124,6 +125,45 @@ export function waitingSchema(change: (schema: Schema) => void = () => {}): Sche
   return schema
 }
 
+/** A migration whose every stage is done: the history is current. */
+export function syncedMigration(change: (migration: Migration) => void = () => {}): Migration {
+  const migration = create(MigrationSchema, {
+    ref: {
+      namespace: "application",
+      name: "billing",
+      uid: "uid-migration",
+      generation: 2n,
+      resourceVersion: "17",
+    },
+    phase: "InSync",
+    statusCurrent: true,
+    applyPolicy: "Always",
+    source: {
+      requested: "oci://registry.example/migrations/billing@sha256:0a1b2c3d",
+      digest: "sha256:0a1b00000000c3d4",
+    },
+    stages: [
+      { name: "Resolve", state: StageState.DONE },
+      { name: "Read history", state: StageState.DONE },
+      { name: "Plan", state: StageState.DONE },
+      { name: "Approve", state: StageState.NOT_APPLICABLE },
+      { name: "Apply", state: StageState.DONE },
+      { name: "Verify history", state: StageState.DONE },
+    ],
+    conditions: [
+      {
+        type: "InSync",
+        status: "True",
+        reason: "Converged",
+        message: "4 migrations applied",
+        lastTransition: minutesAgo(40),
+      },
+    ],
+  })
+  change(migration)
+  return migration
+}
+
 export function storedPlan(change: (plan: SchemaPlan) => void = () => {}): SchemaPlan {
   const plan = create(SchemaPlanSchema, {
     namespace: "application",
@@ -191,6 +231,8 @@ export interface Fixture {
   operatorApi?: MessageInitShape<typeof OperatorApiSchema>
   /** Namespaces whose lists stopped short. */
   truncated?: string[]
+  /** Namespaces in scope beside application, such as one the session may not read. */
+  otherNamespaces?: { name: string; access: Access }[]
   /** The live stream; one heartbeat, then quiet, by default. */
   watch?: (signal: AbortSignal) => AsyncIterable<MessageInitShape<typeof SubscribeResponseSchema>>
   /**
@@ -275,6 +317,7 @@ export function consoleTransport(fixture: Fixture) {
               access: Access.OK,
               capabilities: fixture.capabilities ?? allowed,
             },
+            ...(fixture.otherNamespaces ?? []),
           ],
           operatorApi: fixture.operatorApi ?? { served: true },
         }
