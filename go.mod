@@ -2,7 +2,7 @@ module github.com/stokaro/ptah-console
 
 go 1.26.0
 
-toolchain go1.27.2
+toolchain go1.27.3
 
 require (
 	connectrpc.com/connect/v2 v2.0.1
