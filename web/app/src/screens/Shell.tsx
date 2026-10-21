@@ -25,52 +25,68 @@ const themes: { value: ThemeChoice; label: string }[] = [
   { value: "dark", label: "Dark" },
 ]
 
-export interface ShellProps {
-  /** Why the launch link could not sign this browser in, if it could not. */
-  launchError?: string
-}
-
-export function Shell({ launchError }: ShellProps) {
+/**
+ * What every page sits in: a signed-out browser goes to sign in, and the live
+ * stream follows the namespaces the session may read. The focused view and
+ * the full console are two layouts under it.
+ */
+export function Root() {
   const session = useSession()
   const scope = useScope()
   const hosted = useHosted()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const onAuthPage = pathname === "/launch" || pathname === "/login"
-  const onList = pathname.split("/").filter(Boolean).length <= 1
   const signedOut = session.error && ConnectError.from(session.error).code === Code.Unauthenticated
 
-  if (signedOut && !onAuthPage && hosted !== undefined) {
+  if (signedOut && !onAuthPage(pathname) && hosted !== undefined) {
     return <Navigate to={hosted ? "/login" : "/launch"} replace />
   }
   return (
     <LiveUpdates namespaces={signedOut ? [] : scope.readable}>
-      <div className="flex min-h-screen flex-col">
-        <Header />
-        {launchError ? (
-          <p role="alert" className="m-0 border-b border-line bg-redbg px-5 py-3 text-sm text-red">
-            {launchError}
-          </p>
-        ) : null}
-        <main className="mx-auto box-border flex w-full max-w-[820px] flex-1 flex-col gap-4 px-5 pt-[22px] pb-[72px]">
-          {onAuthPage ? (
-            <Outlet />
-          ) : (
-            <>
-              <OperatorApiBanner />
-              <LiveBanner />
-              {onList ? <RoleNav /> : null}
-              <Outlet />
-            </>
-          )}
-        </main>
-        <BuildFooter />
-      </div>
+      <Outlet />
     </LiveUpdates>
   )
 }
 
+function onAuthPage(pathname: string) {
+  return pathname === "/launch" || pathname === "/login"
+}
+
+export interface FocusLayoutProps {
+  /** Why the launch link could not sign this browser in, if it could not. */
+  launchError?: string
+}
+
+/** The focused view: one column, a page per role. */
+export function FocusLayout({ launchError }: FocusLayoutProps) {
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const onList = pathname.split("/").filter(Boolean).length <= 1
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      {launchError ? (
+        <p role="alert" className="m-0 border-b border-line bg-redbg px-5 py-3 text-sm text-red">
+          {launchError}
+        </p>
+      ) : null}
+      <main className="mx-auto box-border flex w-full max-w-[820px] flex-1 flex-col gap-4 px-5 pt-[22px] pb-[72px]">
+        {onAuthPage(pathname) ? (
+          <Outlet />
+        ) : (
+          <>
+            <OperatorApiBanner />
+            <LiveBanner />
+            {onList ? <RoleNav /> : null}
+            <Outlet />
+          </>
+        )}
+      </main>
+      <BuildFooter />
+    </div>
+  )
+}
+
 /** Says when the cluster does not serve the operator's API, or not all of it. */
-function OperatorApiBanner() {
+export function OperatorApiBanner() {
   const scope = useScope()
   const answer = scope.data?.operatorApi
   if (!answer || (answer.served && answer.missing.length === 0)) {
@@ -94,7 +110,6 @@ function OperatorApiBanner() {
 
 function Header() {
   const session = useSession()
-  const [theme, setTheme] = useTheme()
   // A failed refresh keeps the last session's data; it names nobody now.
   const identity = session.isSuccess ? session.data : undefined
   return (
@@ -102,6 +117,29 @@ function Header() {
       <Link to="/" aria-label="Ptah Console, home" className="text-fg">
         <Wordmark caption="focus" />
       </Link>
+      <SessionChips />
+      <span className="flex-auto" />
+      {identity ? (
+        <Link
+          to="/console/resources"
+          className="inline-flex h-8 items-center rounded-full border border-line bg-card px-3 text-xs font-medium text-fg"
+        >
+          Full console
+        </Link>
+      ) : null}
+      {identity?.mode === Mode.HOSTED ? <SignOut /> : null}
+      <ThemeSwitch />
+    </header>
+  )
+}
+
+/** Who the console acts as, and what limits that: the header's left side. */
+export function SessionChips() {
+  const session = useSession()
+  // A failed refresh keeps the last session's data; it names nobody now.
+  const identity = session.isSuccess ? session.data : undefined
+  return (
+    <>
       {identity ? (
         <span className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-card px-2.5 text-xs">
           {identity.displayName ? <span>{identity.displayName}</span> : null}
@@ -122,32 +160,36 @@ function Header() {
       {identity?.insecureTls ? (
         <span className="text-xs text-red">the API server&apos;s certificate is not verified</span>
       ) : null}
-      <span className="flex-auto" />
-      {identity?.mode === Mode.HOSTED ? <SignOut /> : null}
-      <div
-        role="radiogroup"
-        aria-label="Theme"
-        className="flex gap-0.5 rounded-[11px] border border-line p-[3px]"
-      >
-        {themes.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={theme === option.value}
-            onClick={() => setTheme(option.value)}
-            className={`h-[30px] cursor-pointer rounded-lg border-0 px-2.5 text-xs font-medium ${theme === option.value ? "bg-pribg text-pri" : "bg-transparent text-mute"}`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </header>
+    </>
+  )
+}
+
+export function ThemeSwitch() {
+  const [theme, setTheme] = useTheme()
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Theme"
+      className="flex gap-0.5 rounded-[11px] border border-line p-[3px]"
+    >
+      {themes.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="radio"
+          aria-checked={theme === option.value}
+          onClick={() => setTheme(option.value)}
+          className={`h-[30px] cursor-pointer rounded-lg border-0 px-2.5 text-xs font-medium ${theme === option.value ? "bg-pribg text-pri" : "bg-transparent text-mute"}`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
   )
 }
 
 /** Ends the session; the shell then shows the sign-in again. */
-function SignOut() {
+export function SignOut() {
   const queryClient = useQueryClient()
   const signOut = useMutation(SessionService.method.logout, {
     onSettled: () => queryClient.resetQueries(),
@@ -197,7 +239,7 @@ function HeaderFreshness() {
   return <Freshness state={live.status} at={live.lastHeartbeat} now={now} />
 }
 
-function LiveBanner() {
+export function LiveBanner() {
   const live = useLive()
   const hosted = useHosted()
   if (live.status === "ended") {

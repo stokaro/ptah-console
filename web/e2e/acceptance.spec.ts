@@ -112,6 +112,28 @@ test("a viewer follows releases, sees a plan without its SQL, and nothing of ano
     "The developer view: inventory reached its database and was verified; storefront waits for an approver.",
     5000
   )
+
+  // The full console lists the same resources in one table, and still names
+  // the namespace this identity may not read.
+  await page.getByRole("link", { name: "Full console" }).click()
+  const table = page.getByRole("table")
+  const row = (name: string) =>
+    table.getByRole("row").filter({ has: page.getByText(name, { exact: true }) })
+  await expect(row("storefront").getByText("Waiting for approval")).toBeVisible()
+  await expect(row("inventory").getByText("In sync")).toBeVisible()
+  await expect(page.getByText("Not shown, because this identity may not read them:")).toBeVisible()
+  await lab.audit("the full console's resources")
+  await page
+    .getByRole("group", { name: "State" })
+    .getByRole("button", { name: /^In sync/ })
+    .click()
+  await expect(row("inventory")).toBeVisible()
+  await expect(row("storefront")).toHaveCount(0)
+  await expect(page).toHaveURL(/state=insync/)
+  await lab.caption(
+    "The full console: every resource in one table, filtered here to what is in sync. The filter is in the address, so the list can be sent as a link.",
+    5000
+  )
 })
 
 test("a reviewer with get access reads the exact SQL from a shared link", async ({ page, lab }) => {

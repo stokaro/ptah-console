@@ -9,7 +9,7 @@ import { decisionKind, decisionState, decisionWhat, retentionText } from "../mod
 import { BackButton, DetailHeading, Loading, ReadError, where } from "./common"
 import { decidedAt } from "./IncidentDetail"
 
-const route = getRouteApi("/decisions/$namespace/$kind/$name")
+const route = getRouteApi("/_focus/decisions/$namespace/$kind/$name")
 
 export function DecisionDetail() {
   const params = route.useParams()
