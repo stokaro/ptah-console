@@ -19,6 +19,7 @@ the console does the following instead.
 | Overview tiles with 7-day deltas and sparklines, a "Last 7 days" range, a "Kubernetes resources" panel | The tiles count the states the resources are in now and link to the list filtered to each. Nothing records how those counts moved, so no delta or trend is drawn. |
 | A migration's history table with each version's checksum, time and duration, and an execution-times chart | The versions the last run applied, the plan's files and the versions the history refuses. The operator publishes a summary of the revision table, not its rows, and no per-version timing. |
 | The failed statement and the database's error text beside a failed migration | The run's message, which names the migration it stopped in. The operator keeps no engine message where a reader can see it (stokaro/ptah-operator#678). |
+| An execution stepper with a duration, "Failure causes (last 30 days)" | The evidence on three lanes, each entry at the time it records. Nothing measures a reconciliation's duration, and no failure history is kept beyond the last run and the Events Kubernetes still holds. |
 | A migration's object graph | Not shown. The page names the Job, plan and artifact it reads from status. |
 | "Re-read history (interval)" as an action | The operator has no such API. The console shows when the next read is due, from `status.nextReconciliationTime`. |
 | Fonts from Google Fonts | Bundled from npm packages, so the page loads nothing from another origin. |
