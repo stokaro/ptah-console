@@ -305,6 +305,17 @@ test("an approver approves a plan that drops a column and grants access, and fol
   await lab.caption("Applied, and verified by a fresh read of the database.", 4500)
   expect(plan).toMatch(/^ptah-plan-/)
   await lab.audit("a release that reached its database")
+
+  // The full console's page for the schema names the plan it applied.
+  await page.goto(`${lab.origin()}/console/schemas/${namespace}/storefront`)
+  await expect(page.getByRole("region", { name: "Applied" })).toContainText(plan)
+  await expect(page.getByRole("region", { name: "Target" })).toContainText("Secret")
+  await expect(page.getByLabel("Spec of storefront")).toContainText("urlFrom")
+  await lab.audit("a schema in the full console")
+  await lab.caption(
+    "The full console's page for storefront: the plan it applied, every condition, the artifact, the target by Secret reference, and the spec, read-only.",
+    5500
+  )
 })
 
 test("an approver whose plan is replaced while they decide is told nothing was approved", async ({
@@ -447,6 +458,41 @@ test("on call, a failed run shows its evidence and the next supported step", asy
   await log.scrollIntoViewIfNeeded()
   await lab.caption(
     "The status names the migration that failed. The log says how Ptah exited; the database's error code is not published yet.",
+    5500
+  )
+
+  // The full console reaches the same run from its palette.
+  await page.getByRole("link", { name: "Full console" }).click()
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible()
+  await page.keyboard.press("ControlOrMeta+k")
+  await page.getByRole("combobox", { name: "Search pages and resources" }).fill("journal")
+  await page.keyboard.press("Enter")
+  await expect(page.getByRole("heading", { name: /PtahMigration \/ journal/ })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Last run" })).toContainText(
+    "Migration 2 (Backfill Entries) failed"
+  )
+  await lab.audit("a migration in the full console")
+  await lab.caption(
+    "The full console's page for journal: how far its history is, how the last run ended, and what a person may do. Retry is not among it.",
+    5500
+  )
+  await page.getByRole("link", { name: "Execution and history" }).click()
+  await expect(page.getByRole("region", { name: "Original error" })).toBeVisible()
+  await expect(page.getByRole("table", { name: "Execution and history of journal" })).toContainText(
+    /Job ptah-m-apply-journal-/
+  )
+  await lab.audit("a migration's execution and history")
+  await lab.caption(
+    "Its execution and history: the controller, the Job and the database on their own lanes, with the original error pinned.",
+    5500
+  )
+  await page.getByRole("link", { name: "Pre-flight" }).click()
+  const matrix = page.getByRole("table", { name: "What this identity may do, by namespace" })
+  await expect(matrix.getByRole("row", { name: /^Read logs/ })).toContainText("Allowed")
+  await expect(matrix.getByRole("row", { name: /^Approve schema plans/ })).toContainText("Denied")
+  await lab.audit("pre-flight")
+  await lab.caption(
+    "Pre-flight: what this identity may do in each namespace, as the API server answers it. The diagnostic reader may read logs and may not approve.",
     5500
   )
 })
