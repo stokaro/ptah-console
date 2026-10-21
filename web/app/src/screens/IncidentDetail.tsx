@@ -292,7 +292,7 @@ function lastLog(response: GetDiagnosticsResponse) {
   return undefined
 }
 
-function AcknowledgeDialog({
+export function AcknowledgeDialog({
   resource,
   run,
   context,

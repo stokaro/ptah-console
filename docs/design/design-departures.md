@@ -17,6 +17,9 @@ the console does the following instead.
 | Create a PtahSchema from a template | Authoring is a later step. |
 | "Plans & executions, 7 days", "Failure causes, 30 days" | Not shown. Kubernetes keeps Events for about an hour, and #588 rules out synthetic history. |
 | Overview tiles with 7-day deltas and sparklines, a "Last 7 days" range, a "Kubernetes resources" panel | The tiles count the states the resources are in now and link to the list filtered to each. Nothing records how those counts moved, so no delta or trend is drawn. |
+| A migration's history table with each version's checksum, time and duration, and an execution-times chart | The versions the last run applied, the plan's files and the versions the history refuses. The operator publishes a summary of the revision table, not its rows, and no per-version timing. |
+| The failed statement and the database's error text beside a failed migration | The run's message, which names the migration it stopped in. The operator keeps no engine message where a reader can see it (stokaro/ptah-operator#678). |
+| A migration's object graph | Not shown. The page names the Job, plan and artifact it reads from status. |
 | "Re-read history (interval)" as an action | The operator has no such API. The console shows when the next read is due, from `status.nextReconciliationTime`. |
 | Fonts from Google Fonts | Bundled from npm packages, so the page loads nothing from another origin. |
 | SQL lines tagged "drops data", "changes access" | Tags come from the plan's own statement severity and reason, recorded by Ptah, and the plan-level findings. The console does not parse SQL to invent them. |

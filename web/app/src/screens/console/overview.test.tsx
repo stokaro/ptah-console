@@ -97,7 +97,7 @@ describe("Overview", () => {
     expect(journal).toHaveFocus()
     await user.keyboard("{Enter}")
 
-    expect(history.location.pathname).toBe("/releases/application/migration/journal")
+    expect(history.location.pathname).toBe("/console/migrations/application/journal")
   })
 
   it("leaves j and k to a field being typed in", async () => {
