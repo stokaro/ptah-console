@@ -30,6 +30,7 @@ import (
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/v1/consolev1connect"
 	"github.com/stokaro/ptah-console/internal/kube"
+	"github.com/stokaro/ptah-console/internal/registry"
 	"github.com/stokaro/ptah-console/internal/server"
 )
 
@@ -105,6 +106,9 @@ func Run(ctx context.Context, options Options) error {
 		if kubeConfig, err = rest.InClusterConfig(); err != nil {
 			return fmt.Errorf("read the console's own Kubernetes identity: %w", err)
 		}
+	}
+	if err := checkThisCluster(ctx, kubeConfig, config); err != nil {
+		return err
 	}
 	usernames := make(map[string]string, len(config.Accounts))
 	displayNames := make(map[string]string, len(config.Accounts))
@@ -204,4 +208,21 @@ func originOf(publicURL string) (string, error) {
 		return "", fmt.Errorf("publicURL: %w", err)
 	}
 	return address.Scheme + "://" + address.Host, nil
+}
+
+// checkThisCluster refuses to start when the registry is on and this
+// cluster's entry disagrees with the configuration the console was given.
+func checkThisCluster(ctx context.Context, kubeConfig *rest.Config, config *accounts.Config) error {
+	if config.Registry == nil {
+		return nil
+	}
+	housekeeping, err := kube.NewClient(kubeConfig)
+	if err != nil {
+		return err
+	}
+	return registry.CheckThisCluster(ctx, housekeeping, registry.ThisCluster{
+		Namespace: config.Registry.Namespace, Name: config.Registry.ThisCluster,
+		ConnectionUID: config.Registry.ConnectionUID, InstallationID: config.InstallationID,
+		Namespaces: config.Namespaces,
+	})
 }

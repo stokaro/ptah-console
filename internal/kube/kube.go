@@ -16,6 +16,8 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	consolev1alpha1 "github.com/stokaro/ptah-console/api/v1alpha1"
 )
 
 // Mode is how the console reaches Kubernetes.
@@ -80,7 +82,7 @@ type ClientFactory interface {
 }
 
 // Scheme knows the core kinds, the authentication and authorization reviews,
-// and the operator's kinds.
+// the operator's kinds and the console's registry kinds.
 func Scheme() (*runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
@@ -88,6 +90,9 @@ func Scheme() (*runtime.Scheme, error) {
 	}
 	if err := operatorv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("kube: register operator kinds: %w", err)
+	}
+	if err := consolev1alpha1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("kube: register registry kinds: %w", err)
 	}
 	return scheme, nil
 }

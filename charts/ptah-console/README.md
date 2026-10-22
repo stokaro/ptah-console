@@ -48,13 +48,28 @@ the server in [Serving a hosted console](../../docs/hosted/serve.md).
   stay in Secrets you create; the chart only names them.
 - A ClusterRole that grants `impersonate` on `users`, limited by
   `resourceNames` to the accounts' usernames, bound to the ServiceAccount. It
-  is the ServiceAccount's only grant.
+  is the ServiceAccount's only grant outside the registry.
 - In every namespace of `namespaces`, a Role for each role some account has
   and a RoleBinding to its accounts. `plan-reader`, `desired-state-author` and
   `diagnostic-reader` are the operator's example roles, copied from the
   operator module this console is built against by `make generate`. `viewer`
   reads every Ptah kind except the chunks that hold plan SQL. `approver`
   binds the operator chart's approver ClusterRole.
+- With `registry.enabled`, in the release namespace: this cluster's
+  `ConsoleCluster`, named `this-cluster-` and the first eight characters of
+  its connection UID, and three Roles. The ServiceAccount may list entries and
+  write their status. Every account may get this cluster's entry and its
+  preferences by name, and list none. `connection-admin` accounts may create,
+  change and delete entries; the role grants nothing in the namespaces of the
+  ceiling.
+
+The registry's CRDs are in `crds/`. Helm installs them with the release and
+never upgrades or removes them, so an installation upgraded from a chart
+without them applies them first:
+
+```sh
+kubectl apply --server-side -f charts/ptah-console/crds/
+```
 
 ## What it refuses
 

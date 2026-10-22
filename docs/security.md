@@ -74,6 +74,21 @@ usernames. It is not constrained impersonation, and the difference matters:
   operator's `approvals.requireDistinctApprover` on. The console never merges
   identities by email or display name.
 
+## The registry
+
+With the chart's `registry.enabled`, the ServiceAccount may also list the
+entries of `console.ptah.run` in the console's namespace, get them, and write
+their status. It uses that list for names only: the console shows a person an
+entry, a count or a status only after the person's own `get` of that entry
+succeeds, so an entry the person was not granted by name leaves no trace. An
+account may get this cluster's entry and list none; creating, changing and
+deleting entries takes the `connection-admin` role.
+
+At startup the console reads this cluster's entry and refuses to serve when
+its connection UID, profile, installation ID or namespace ceiling disagrees
+with the configuration it was given. CEL keeps those fields immutable, so
+changing one is a new entry rather than an edit.
+
 The console's own namespace and typed allowlist do not change any of this:
 they keep a working console from asking for more than it shows, and do not
 contain a malicious binary holding the token.

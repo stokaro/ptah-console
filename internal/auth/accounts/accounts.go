@@ -58,6 +58,20 @@ type Config struct {
 	// attempts per client rather than per proxy. Empty, the header is never
 	// read.
 	TrustedProxies []string `json:"trustedProxies,omitempty"`
+	// Registry is where the console's registry of connections is, when one is
+	// installed. Absent, the console reaches only the cluster it runs in.
+	Registry *Registry `json:"registry,omitempty"`
+}
+
+// Registry names the registry and the entry of the cluster the console runs
+// in, which the console holds to this configuration when it starts.
+type Registry struct {
+	// Namespace is where the registry's entries are: the console's own.
+	Namespace string `json:"namespace"`
+	// ThisCluster is the name of the entry of the cluster the console runs in.
+	ThisCluster string `json:"thisCluster"`
+	// ConnectionUID is that entry's connection UID.
+	ConnectionUID string `json:"connectionUID"`
 }
 
 // Proxies is TrustedProxies, parsed. A configuration ParseConfig accepted
@@ -188,7 +202,29 @@ func (c *Config) problems() []string {
 		add("accounts", "lists no account")
 	}
 	problems = append(problems, proxyProblems(c.TrustedProxies)...)
+	if c.Registry != nil {
+		problems = append(problems, c.Registry.problems()...)
+	}
 	return append(problems, accountProblems(c.Accounts)...)
+}
+
+var (
+	subdomain = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
+	uuid      = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+)
+
+func (r *Registry) problems() []string {
+	var problems []string
+	if !label.MatchString(r.Namespace) {
+		problems = append(problems, "registry.namespace: "+labelRule)
+	}
+	if len(r.ThisCluster) > 253 || !subdomain.MatchString(r.ThisCluster) {
+		problems = append(problems, "registry.thisCluster: is not the name of an object")
+	}
+	if !uuid.MatchString(r.ConnectionUID) {
+		problems = append(problems, "registry.connectionUID: is not a lowercase UUID")
+	}
+	return problems
 }
 
 // proxyProblems refuses a network that cannot be read one way only, and one

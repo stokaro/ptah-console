@@ -14,9 +14,11 @@ QTLINT_RULES := -require-qt-c-receiver -require-data-rows -require-testing-run
 # against that file instead of asking the checksum database each time. The
 # code generators it calls are pinned in go.mod and web/package-lock.json.
 BUF := $(GO) tool -modfile=tools/buf/go.mod buf
+CONTROLLER_GEN := $(GO) tool -modfile=tools/controller-gen/go.mod controller-gen
 # The contract a change is compared with.
 BUF_BASE ?= origin/main
-GENERATED := internal/gen web/app/src/gen charts/ptah-console/files/operator-roles.yaml
+GENERATED := internal/gen web/app/src/gen charts/ptah-console/files/operator-roles.yaml \
+	api/v1alpha1/zz_generated.deepcopy.go charts/ptah-console/crds
 
 # envtest, pinned as stokaro/ptah-operator pins it: setup-envtest by version,
 # its release index by commit, and the Kubernetes release inside the
@@ -147,6 +149,8 @@ embed-smoke: build
 generate:
 	$(BUF) generate
 	$(GO) run ./hack/chartroles
+	$(CONTROLLER_GEN) object paths=./api/...
+	$(CONTROLLER_GEN) crd paths=./api/... output:crd:artifacts:config=charts/ptah-console/crds
 
 # Generated code is committed, and has to be what the generators write today.
 verify-generated: generate
