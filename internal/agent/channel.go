@@ -37,6 +37,14 @@ const (
 	maxBackoff   = 30 * time.Second
 )
 
+// DefaultCredentialCheck is how often an open channel reads its credential
+// file for a rotation.
+const DefaultCredentialCheck = 10 * time.Second
+
+// ErrCredentialRotated ends a channel whose credential file changed, so the
+// next one opens with the new credential.
+var ErrCredentialRotated = errors.New("the channel credential changed")
+
 // ChannelOptions say where the console is and how the agent proves itself.
 type ChannelOptions struct {
 	Config *Configuration
@@ -48,6 +56,9 @@ type ChannelOptions struct {
 	Credential func() (string, error)
 	Version    string
 	Logger     *slog.Logger
+	// CredentialCheck is how often the credential is read again while a
+	// channel is open; zero means DefaultCredentialCheck.
+	CredentialCheck time.Duration
 }
 
 // Run holds a channel open until ctx ends, opening it again after it drops.
@@ -62,6 +73,11 @@ func Run(ctx context.Context, options ChannelOptions, dispatcher *Dispatcher) er
 		err := Open(ctx, options, dispatcher)
 		if ctx.Err() != nil {
 			return nil
+		}
+		if errors.Is(err, ErrCredentialRotated) {
+			logger.Info("the channel credential changed; opening the channel with the new one")
+			backoff = firstBackoff
+			continue
 		}
 		logger.Warn("the channel to the console ended", "error", err)
 		if time.Since(started) > maxBackoff {
@@ -88,7 +104,8 @@ func Open(ctx context.Context, options ChannelOptions, dispatcher *Dispatcher) e
 	if credential == "" || strings.ContainsAny(credential, " \t\r\n") {
 		return errors.New("the channel credential is empty or not one token")
 	}
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancelCause := context.WithCancelCause(ctx)
+	cancel := func() { cancelCause(nil) }
 	defer cancel()
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
@@ -140,9 +157,12 @@ func Open(ctx context.Context, options ChannelOptions, dispatcher *Dispatcher) e
 	inFlight := newInFlight()
 	defer inFlight.wait()
 	defer cancel()
+	go watchCredential(ctx, options, credential, cancelCause)
 	for {
 		frame, err := stream.Receive()
 		switch {
+		case errors.Is(context.Cause(ctx), ErrCredentialRotated):
+			return ErrCredentialRotated
 		case errors.Is(err, io.EOF):
 			return errors.New("the console closed the channel")
 		case err != nil:
@@ -163,6 +183,29 @@ func Open(ctx context.Context, options ChannelOptions, dispatcher *Dispatcher) e
 			inFlight.cancel(body.Cancel.GetRequestId())
 		default:
 			return errors.New("the console sent a frame with no body")
+		}
+	}
+}
+
+// watchCredential ends the channel when the credential file holds another
+// credential than the one it opened with.
+func watchCredential(ctx context.Context, options ChannelOptions, opened string, end context.CancelCauseFunc) {
+	interval := options.CredentialCheck
+	if interval <= 0 {
+		interval = DefaultCredentialCheck
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+		current, err := options.Credential()
+		if err == nil && current != "" && current != opened {
+			end(ErrCredentialRotated)
+			return
 		}
 	}
 }
