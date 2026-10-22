@@ -11,6 +11,9 @@ plugins:
     opt: paths=source_relative
   - local: web/node_modules/.bin/protoc-gen-es
     out: web/app/src/gen
+    # The agent channel is between two Go programs; the browser never
+    # speaks it.
+    exclude_types: [ptah.console.agent.v1]
     # Enums as `as const` objects: the strict tsconfig sets
     # erasableSyntaxOnly, and TypeScript enums are not erasable.
     opt:

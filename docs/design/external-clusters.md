@@ -65,9 +65,11 @@ serves no other:
 | Watch window | one watch of at most 30 seconds, as the mapped user |
 | Approve, acknowledge, suspend | the same writes as phase 1, as the mapped user |
 
-Each request carries an envelope: request ID, console instance, connection UID
-and generation, the console session's generation, the immutable account ID,
-the namespace, the action and a deadline. The agent maps the account ID through
+Each request carries an envelope: request ID, console instance, the console
+session's generation, the immutable account ID and a deadline. Every frame
+carries the connection UID and generation, and the action and the namespaces
+it names are the typed request itself, the message the console's own service
+takes. The agent maps the account ID through
 its own allowlist to one Kubernetes username and impersonates exactly that
 name, with no groups, UID or extras. The allowlist is in the agent chart's
 values and nowhere else, so a change to it is a Helm upgrade or a GitOps

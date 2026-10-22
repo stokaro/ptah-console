@@ -38,6 +38,7 @@ ENVTEST_BIN_DIR ?=
 # a binary written there gets committed.
 build: web-build
 	$(GO) build -trimpath -tags with_frontend -ldflags "$(LDFLAGS)" -o $(BIN)/ptah-console ./cmd/ptah-console
+	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN)/ptah-console-agent ./cmd/ptah-console-agent
 
 # The binary with the web app for Linux, for an image: ARCH is the image's
 # architecture, the build machine's by default.
@@ -64,6 +65,7 @@ require-docker-context:
 # The binary without the web app: no Node toolchain needed.
 build-go:
 	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN)/ptah-console ./cmd/ptah-console
+	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN)/ptah-console-agent ./cmd/ptah-console-agent
 
 test: test-web-go
 	$(GO) test -race -count=1 ./...
