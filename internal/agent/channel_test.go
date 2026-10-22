@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	agentv1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/agent/v1"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/agent/v1/agentv1connect"
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
+	"github.com/stokaro/ptah-console/test/freeze"
 )
 
 const (
@@ -305,5 +307,37 @@ func TestAnAgentToldToStopEndsItsChannel(t *testing.T) {
 	case <-ended:
 	case <-time.After(5 * time.Second):
 		c.Fatal("the agent was still waiting for the console five seconds after it was told to stop")
+	}
+}
+
+// An agent whose console stops answering, frozen or cut off without a word,
+// ends its channel once its ping goes unanswered, so it dials again instead
+// of waiting minutes for TCP to give up. A console that answers keeps it.
+func TestAnAgentNoticesAConsoleThatStoppedAnswering(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	ca := newAuthority(t)
+	hello := make(chan *agentv1.ChannelRequest, 1)
+	handler := &console{authorizations: make(chan string, 1), script: script(receive(hello), holdOpen)}
+	address := serveConsole(t, ca.issue(t, consoleName), tls.VersionTLS13, handler)
+	proxy := freeze.Start(t, strings.TrimPrefix(address, "https://"))
+	options := channelOptions(t, "https://"+proxy.Addr(), ca.pool())
+	options.Ping = 250 * time.Millisecond
+	dispatcher, _ := newDispatcher(t, &apiServer{})
+	ended := open(t, options, dispatcher)
+	<-hello
+	select {
+	case err := <-ended:
+		c.Fatalf("the agent ended a channel its console kept answering: %v", err)
+	case <-time.After(8 * options.Ping):
+	}
+
+	proxy.Freeze()
+
+	select {
+	case err := <-ended:
+		c.Assert(err, qt.IsNotNil)
+	case <-time.After(10 * time.Second):
+		c.Fatal("the agent still held its channel to a console that stopped answering ten seconds before")
 	}
 }
