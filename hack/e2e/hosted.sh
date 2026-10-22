@@ -16,6 +16,7 @@
 #                                    rows
 #   hosted.sh newcomer               add an account after the agents were
 #                                    enrolled, and roll the console out
+#   hosted.sh logs                   print the console's latest log lines
 #
 # The image is built on the lab's Docker context, never another one.
 set -eu
@@ -230,7 +231,7 @@ newcomer() {
 		--set accounts[3].displayName="Noor Newcomer" --set "accounts[3].roles={viewer}"
 }
 
-[ "$#" -ge 1 ] || fail 'usage: hosted.sh up|restart|password <account>|uninstall|agents|newcomer'
+[ "$#" -ge 1 ] || fail 'usage: hosted.sh up|restart|password <account>|uninstall|agents|newcomer|logs'
 action=$1
 shift
 case "$action" in
@@ -249,6 +250,7 @@ password)
 	;;
 agents) agents ;;
 newcomer) newcomer ;;
+logs) admin -n "$CONSOLE_NS" logs "$DEPLOYMENT" --tail=80 ;;
 uninstall)
 	stop_forward
 	helm_ uninstall "$RELEASE" --namespace "$CONSOLE_NS" --wait --timeout 3m >/dev/null

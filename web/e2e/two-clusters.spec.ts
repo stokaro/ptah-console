@@ -32,6 +32,20 @@ test.beforeAll(async () => {
   await act("external", "up")
 })
 
+// A row that failed keeps both ends of the channel's account of it: the
+// console's log and the agent's. Nothing else says whether an agent stopped
+// dialing or a console refused it.
+test.afterEach(async ({ page: _page }, testInfo) => {
+  if (testInfo.status === testInfo.expectedStatus) {
+    return
+  }
+  for (const side of ["hosted", "external"]) {
+    const logs = await act(side, "logs").catch((error: unknown) => String(error))
+    await testInfo.attach(`${side}-logs`, { body: logs, contentType: "text/plain" })
+    console.log(`--- ${side} logs after "${testInfo.title}"\n${logs}`)
+  }
+})
+
 /** Posts to one of the console's procedures, for a connection when one is named. */
 async function call(page: Page, origin: string, procedure: string, data: unknown, connection = "") {
   const response = await page.request.post(`${origin}/api/ptah.console.v1.${procedure}`, {
