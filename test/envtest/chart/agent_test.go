@@ -21,6 +21,10 @@ const (
 
 // installedAgent is the agent chart's full render on the API server.
 var installedAgent = sync.OnceValue(func() error {
+	// The console's release creates the namespaces of the ceiling.
+	if _, err := installed(); err != nil {
+		return err
+	}
 	ctx := context.Background()
 	rendered, err := helm("template", "agent", agentChart, "--namespace", agentNS, "--values", agentValues)
 	if err != nil {

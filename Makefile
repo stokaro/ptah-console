@@ -18,6 +18,7 @@ CONTROLLER_GEN := $(GO) tool -modfile=tools/controller-gen/go.mod controller-gen
 # The contract a change is compared with.
 BUF_BASE ?= origin/main
 GENERATED := internal/gen web/app/src/gen charts/ptah-console/files/operator-roles.yaml \
+	charts/ptah-console-agent/files/operator-roles.yaml \
 	api/v1alpha1/zz_generated.deepcopy.go charts/ptah-console/crds
 
 # envtest, pinned as stokaro/ptah-operator pins it: setup-envtest by version,

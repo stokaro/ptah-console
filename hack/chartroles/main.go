@@ -1,5 +1,6 @@
 // Command chartroles copies the rules of the operator's example roles into
-// the console's chart, from the operator module go.mod requires.
+// the console's chart and the agent's, from the operator module go.mod
+// requires.
 //
 // The chart grants accounts these roles; copying them by hand would let the
 // chart drift from the roles the operator documents and tests. make generate
@@ -29,7 +30,12 @@ var roles = []struct{ name, example string }{
 	{name: "diagnostic-reader", example: "examples/diagnostic-reader-role.yaml"},
 }
 
-const output = "charts/ptah-console/files/operator-roles.yaml"
+// outputs are the charts that grant these roles: the console's, in the
+// cluster it runs in, and the agent's, in the cluster it serves.
+var outputs = []string{
+	"charts/ptah-console/files/operator-roles.yaml",
+	"charts/ptah-console-agent/files/operator-roles.yaml",
+}
 
 func main() {
 	if err := run(); err != nil {
@@ -57,7 +63,12 @@ func run() error {
 		}
 		out.Write(entry)
 	}
-	return os.WriteFile(output, out.Bytes(), 0o600)
+	for _, output := range outputs {
+		if err := os.WriteFile(output, out.Bytes(), 0o600); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // operatorModule is where the operator module go.mod requires is, and its

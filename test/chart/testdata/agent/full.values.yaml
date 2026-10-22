@@ -21,7 +21,11 @@ console:
 credential:
   secretName: ptah-console-agent-credential
 namespaces: [storefront, billing]
-accounts: [alex, sam]
+accounts:
+  - id: alex
+    roles: [viewer, approver]
+  - id: sam
+    roles: [viewer]
 image:
   digest: sha256:f68968558f0634c1e388f2be3f8d9d0f7c5916631abe16c5bae55d21e8e909c0
 imagePullSecrets: [{name: ghcr-pull}]
