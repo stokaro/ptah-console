@@ -274,3 +274,36 @@ func TestTheConsoleCancelsARequest(t *testing.T) {
 	c.Assert(result.GetLast(), qt.IsTrue)
 	c.Assert(result.GetFailure().GetCode(), qt.Equals, "canceled")
 }
+
+// An agent told to stop ends its channel at once, with a request in flight
+// and the console still holding the channel open.
+func TestAnAgentToldToStopEndsItsChannel(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	ca := newAuthority(t)
+	api := &apiServer{hold: make(chan struct{})}
+	t.Cleanup(func() { close(api.hold) })
+	hello := make(chan *agentv1.ChannelRequest, 1)
+	request := whoAmI("r1", "alex")
+	request.Action = &agentv1.Request_GetSchema{GetSchema: &consolev1.GetSchemaRequest{Namespace: "storefront", Name: "shop"}}
+	handler := &console{authorizations: make(chan string, 1), script: script(
+		receive(hello),
+		sendFrame(&agentv1.ChannelResponse{Binding: binding(1), Body: &agentv1.ChannelResponse_Request{Request: request}}),
+		holdOpen,
+	)}
+	address := serveConsole(t, ca.issue(t, consoleName), tls.VersionTLS13, handler)
+	dispatcher, _ := newDispatcher(t, api)
+	ctx, cancel := context.WithCancel(t.Context())
+	ended := make(chan error, 1)
+	go func() { ended <- agent.Open(ctx, channelOptions(t, address, ca.pool()), dispatcher) }()
+	<-hello
+	api.waitForRequests(t, 1)
+
+	cancel()
+
+	select {
+	case <-ended:
+	case <-time.After(5 * time.Second):
+		c.Fatal("the agent was still waiting for the console five seconds after it was told to stop")
+	}
+}
