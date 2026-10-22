@@ -23,6 +23,7 @@ import (
 	"connectrpc.com/connect/v2"
 	"k8s.io/client-go/rest"
 
+	"github.com/stokaro/ptah-console/internal/agentlink"
 	"github.com/stokaro/ptah-console/internal/api"
 	"github.com/stokaro/ptah-console/internal/audit"
 	"github.com/stokaro/ptah-console/internal/auth/accounts"
@@ -250,6 +251,8 @@ func (o Options) browser(config *accounts.Config, passwords *accounts.Passwords,
 		router := route.New(agents.hub, housekeeping, factory, config.Registry.Namespace, config.Registry.ConnectionUID)
 		interceptors = append(interceptors, router.Interceptor())
 		connections = api.NewConnectionService(factory, housekeeping, enrollmentSelf(config), o.Now, o.Audit)
+		connections.Validity = agentlink.DefaultValidity
+		connections.Activated = agents.hub.EndPending
 	}
 	handler, err := server.New(server.Options{
 		Mode:         consolev1.Mode_MODE_HOSTED,

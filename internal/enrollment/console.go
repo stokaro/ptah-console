@@ -12,6 +12,7 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -274,4 +275,73 @@ func newUUID() (string, error) {
 	raw[6] = raw[6]&0x0f | 0x40
 	raw[8] = raw[8]&0x3f | 0x80
 	return fmt.Sprintf("%x-%x-%x-%x-%x", raw[0:4], raw[4:6], raw[6:8], raw[8:10], raw[10:16]), nil
+}
+
+// Errors of activation.
+var (
+	// ErrNotCompleted is an enrollment the target's helper has not completed.
+	ErrNotCompleted = errors.New("enrollment: the target's helper has not completed the enrollment yet")
+	// ErrAgentNotConnected is an enrollment whose agent has not opened its
+	// channel: nothing shows the agent runs with the credential.
+	ErrAgentNotConnected = errors.New("enrollment: the agent has not connected; install it and wait until the console shows it connected")
+	// ErrExpired is an enrollment past its time.
+	ErrExpired = errors.New("enrollment: the enrollment expired; start a new one")
+)
+
+// Activate makes a completed enrollment whose agent has connected a
+// connection. The administrator's own client creates the registry entry, so
+// RBAC decides who may; the console's identity records the channel
+// credential's verifier, valid for validity from the completion, and removes
+// the enrollment.
+func Activate(ctx context.Context, user, housekeeping client.Client, namespace, name string, now time.Time, validity time.Duration) (*consolev1alpha1.ConsoleCluster, error) {
+	pending := &consolev1alpha1.ConsoleClusterEnrollment{}
+	if err := user.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, pending); err != nil {
+		return nil, err
+	}
+	completion := pending.Status.Completion
+	switch {
+	case expired(pending, now):
+		return nil, ErrExpired
+	case completion == nil:
+		return nil, ErrNotCompleted
+	case !meta.IsStatusConditionTrue(pending.Status.Conditions, consolev1alpha1.ConditionAgentConnected):
+		return nil, ErrAgentNotConnected
+	}
+	entry := &consolev1alpha1.ConsoleCluster{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pending.Spec.ClusterName},
+		Spec: consolev1alpha1.ConsoleClusterSpec{
+			ConnectionUID: pending.Spec.ConnectionUID, Profile: consolev1alpha1.ProfileAgent,
+			InstallationID: pending.Spec.InstallationID, Namespaces: slices.Clone(pending.Spec.Namespaces),
+			ConfigurationOwner: consolev1alpha1.OwnerConsole,
+			Agent: &consolev1alpha1.AgentTrust{
+				TargetServer: completion.TargetServer, TargetCASHA256: completion.TargetCASHA256,
+				ConsoleServerName: pending.Spec.ConsoleServerName, ConsoleCASHA256: pending.Spec.ConsoleCASHA256,
+			},
+		},
+	}
+	if err := user.Create(ctx, entry); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			return nil, ErrNameTaken
+		}
+		return nil, err
+	}
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		current := &consolev1alpha1.ConsoleCluster{}
+		if err := housekeeping.Get(ctx, client.ObjectKeyFromObject(entry), current); err != nil {
+			return err
+		}
+		current.Status.Channel = &consolev1alpha1.ChannelStatus{Generation: 1, Credentials: []consolev1alpha1.ChannelCredential{{
+			Verifier: completion.CredentialVerifier, IssuedAt: completion.CompletedAt,
+			NotAfter: metav1.NewTime(completion.CompletedAt.Add(validity)),
+		}}}
+		return housekeeping.Status().Update(ctx, current)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("record the connection's channel credential: %w", err)
+	}
+	err = housekeeping.Delete(ctx, pending, client.Preconditions{UID: &pending.UID})
+	if client.IgnoreNotFound(err) != nil {
+		return nil, fmt.Errorf("remove the activated enrollment: %w", err)
+	}
+	return entry, nil
 }

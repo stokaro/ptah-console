@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ptah/console/v1/connections.proto.
  */
 export const file_ptah_console_v1_connections: GenFile = /*@__PURE__*/
-  fileDesc("CiFwdGFoL2NvbnNvbGUvdjEvY29ubmVjdGlvbnMucHJvdG8SD3B0YWguY29uc29sZS52MSKYAQoXQ3JlYXRlRW5yb2xsbWVudFJlcXVlc3QSFAoMY2x1c3Rlcl9uYW1lGAEgASgJEhIKCm5hbWVzcGFjZXMYAiADKAkSNAoIYWNjb3VudHMYAyADKAsyIi5wdGFoLmNvbnNvbGUudjEuRW5yb2xsbWVudEFjY291bnQSHQoVYXBwcm92ZXJfY2x1c3Rlcl9yb2xlGAQgASgJIi4KEUVucm9sbG1lbnRBY2NvdW50EgoKAmlkGAEgASgJEg0KBXJvbGVzGAIgAygJIpABChhDcmVhdGVFbnJvbGxtZW50UmVzcG9uc2USFwoPZW5yb2xsbWVudF9maWxlGAEgASgMEhMKC2ZpbmdlcnByaW50GAIgASgJEi4KCmV4cGlyZXNfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDmNvbm5lY3Rpb25fdWlkGAQgASgJMnwKEUNvbm5lY3Rpb25TZXJ2aWNlEmcKEENyZWF0ZUVucm9sbG1lbnQSKC5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlRW5yb2xsbWVudFJlcXVlc3QaKS5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlRW5yb2xsbWVudFJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vc3Rva2Fyby9wdGFoLWNvbnNvbGUvaW50ZXJuYWwvZ2VuL3B0YWgvY29uc29sZS92MTtjb25zb2xldjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("CiFwdGFoL2NvbnNvbGUvdjEvY29ubmVjdGlvbnMucHJvdG8SD3B0YWguY29uc29sZS52MSKYAQoXQ3JlYXRlRW5yb2xsbWVudFJlcXVlc3QSFAoMY2x1c3Rlcl9uYW1lGAEgASgJEhIKCm5hbWVzcGFjZXMYAiADKAkSNAoIYWNjb3VudHMYAyADKAsyIi5wdGFoLmNvbnNvbGUudjEuRW5yb2xsbWVudEFjY291bnQSHQoVYXBwcm92ZXJfY2x1c3Rlcl9yb2xlGAQgASgJIi4KEUVucm9sbG1lbnRBY2NvdW50EgoKAmlkGAEgASgJEg0KBXJvbGVzGAIgAygJIpABChhDcmVhdGVFbnJvbGxtZW50UmVzcG9uc2USFwoPZW5yb2xsbWVudF9maWxlGAEgASgMEhMKC2ZpbmdlcnByaW50GAIgASgJEi4KCmV4cGlyZXNfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDmNvbm5lY3Rpb25fdWlkGAQgASgJIhgKFkxpc3RFbnJvbGxtZW50c1JlcXVlc3QiSwoXTGlzdEVucm9sbG1lbnRzUmVzcG9uc2USMAoLZW5yb2xsbWVudHMYASADKAsyGy5wdGFoLmNvbnNvbGUudjEuRW5yb2xsbWVudCK8AgoKRW5yb2xsbWVudBIUCgxjbHVzdGVyX25hbWUYASABKAkSFgoOY29ubmVjdGlvbl91aWQYAiABKAkSEgoKbmFtZXNwYWNlcxgDIAMoCRI0CghhY2NvdW50cxgEIAMoCzIiLnB0YWguY29uc29sZS52MS5FbnJvbGxtZW50QWNjb3VudBIdChVhcHByb3Zlcl9jbHVzdGVyX3JvbGUYBSABKAkSEwoLZmluZ2VycHJpbnQYBiABKAkSLgoKZXhwaXJlc19hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASOQoKY29tcGxldGlvbhgIIAEoCzIlLnB0YWguY29uc29sZS52MS5FbnJvbGxtZW50Q29tcGxldGlvbhIXCg9hZ2VudF9jb25uZWN0ZWQYCSABKAgieQoURW5yb2xsbWVudENvbXBsZXRpb24SFQoNdGFyZ2V0X3NlcnZlchgBIAEoCRIYChB0YXJnZXRfY2Ffc2hhMjU2GAIgASgJEjAKDGNvbXBsZXRlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiMQoZQWN0aXZhdGVFbnJvbGxtZW50UmVxdWVzdBIUCgxjbHVzdGVyX25hbWUYASABKAkiNAoaQWN0aXZhdGVFbnJvbGxtZW50UmVzcG9uc2USFgoOY29ubmVjdGlvbl91aWQYASABKAky1gIKEUNvbm5lY3Rpb25TZXJ2aWNlEmcKEENyZWF0ZUVucm9sbG1lbnQSKC5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlRW5yb2xsbWVudFJlcXVlc3QaKS5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlRW5yb2xsbWVudFJlc3BvbnNlEmkKD0xpc3RFbnJvbGxtZW50cxInLnB0YWguY29uc29sZS52MS5MaXN0RW5yb2xsbWVudHNSZXF1ZXN0GigucHRhaC5jb25zb2xlLnYxLkxpc3RFbnJvbGxtZW50c1Jlc3BvbnNlIgOQAgESbQoSQWN0aXZhdGVFbnJvbGxtZW50EioucHRhaC5jb25zb2xlLnYxLkFjdGl2YXRlRW5yb2xsbWVudFJlcXVlc3QaKy5wdGFoLmNvbnNvbGUudjEuQWN0aXZhdGVFbnJvbGxtZW50UmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9zdG9rYXJvL3B0YWgtY29uc29sZS9pbnRlcm5hbC9nZW4vcHRhaC9jb25zb2xlL3YxO2NvbnNvbGV2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message ptah.console.v1.CreateEnrollmentRequest
@@ -116,6 +116,164 @@ export const CreateEnrollmentResponseSchema: GenMessage<CreateEnrollmentResponse
   messageDesc(file_ptah_console_v1_connections, 2);
 
 /**
+ * @generated from message ptah.console.v1.ListEnrollmentsRequest
+ */
+export type ListEnrollmentsRequest = Message<"ptah.console.v1.ListEnrollmentsRequest"> & {
+};
+
+/**
+ * Describes the message ptah.console.v1.ListEnrollmentsRequest.
+ * Use `create(ListEnrollmentsRequestSchema)` to create a new message.
+ */
+export const ListEnrollmentsRequestSchema: GenMessage<ListEnrollmentsRequest> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 3);
+
+/**
+ * @generated from message ptah.console.v1.ListEnrollmentsResponse
+ */
+export type ListEnrollmentsResponse = Message<"ptah.console.v1.ListEnrollmentsResponse"> & {
+  /**
+   * @generated from field: repeated ptah.console.v1.Enrollment enrollments = 1;
+   */
+  enrollments: Enrollment[];
+};
+
+/**
+ * Describes the message ptah.console.v1.ListEnrollmentsResponse.
+ * Use `create(ListEnrollmentsResponseSchema)` to create a new message.
+ */
+export const ListEnrollmentsResponseSchema: GenMessage<ListEnrollmentsResponse> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 4);
+
+/**
+ * Enrollment is a connection being enrolled, as the console recorded it.
+ *
+ * @generated from message ptah.console.v1.Enrollment
+ */
+export type Enrollment = Message<"ptah.console.v1.Enrollment"> & {
+  /**
+   * @generated from field: string cluster_name = 1;
+   */
+  clusterName: string;
+
+  /**
+   * @generated from field: string connection_uid = 2;
+   */
+  connectionUid: string;
+
+  /**
+   * @generated from field: repeated string namespaces = 3;
+   */
+  namespaces: string[];
+
+  /**
+   * @generated from field: repeated ptah.console.v1.EnrollmentAccount accounts = 4;
+   */
+  accounts: EnrollmentAccount[];
+
+  /**
+   * @generated from field: string approver_cluster_role = 5;
+   */
+  approverClusterRole: string;
+
+  /**
+   * @generated from field: string fingerprint = 6;
+   */
+  fingerprint: string;
+
+  /**
+   * ExpiresAt is when the bootstrap stops being accepted.
+   *
+   * @generated from field: google.protobuf.Timestamp expires_at = 7;
+   */
+  expiresAt?: Timestamp | undefined;
+
+  /**
+   * Completion is what the target's helper reported, once it has.
+   *
+   * @generated from field: ptah.console.v1.EnrollmentCompletion completion = 8;
+   */
+  completion?: EnrollmentCompletion | undefined;
+
+  /**
+   * AgentConnected is whether the agent has its channel open.
+   *
+   * @generated from field: bool agent_connected = 9;
+   */
+  agentConnected: boolean;
+};
+
+/**
+ * Describes the message ptah.console.v1.Enrollment.
+ * Use `create(EnrollmentSchema)` to create a new message.
+ */
+export const EnrollmentSchema: GenMessage<Enrollment> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 5);
+
+/**
+ * EnrollmentCompletion is what the target's helper reported.
+ *
+ * @generated from message ptah.console.v1.EnrollmentCompletion
+ */
+export type EnrollmentCompletion = Message<"ptah.console.v1.EnrollmentCompletion"> & {
+  /**
+   * @generated from field: string target_server = 1;
+   */
+  targetServer: string;
+
+  /**
+   * @generated from field: string target_ca_sha256 = 2;
+   */
+  targetCaSha256: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp completed_at = 3;
+   */
+  completedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message ptah.console.v1.EnrollmentCompletion.
+ * Use `create(EnrollmentCompletionSchema)` to create a new message.
+ */
+export const EnrollmentCompletionSchema: GenMessage<EnrollmentCompletion> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 6);
+
+/**
+ * @generated from message ptah.console.v1.ActivateEnrollmentRequest
+ */
+export type ActivateEnrollmentRequest = Message<"ptah.console.v1.ActivateEnrollmentRequest"> & {
+  /**
+   * @generated from field: string cluster_name = 1;
+   */
+  clusterName: string;
+};
+
+/**
+ * Describes the message ptah.console.v1.ActivateEnrollmentRequest.
+ * Use `create(ActivateEnrollmentRequestSchema)` to create a new message.
+ */
+export const ActivateEnrollmentRequestSchema: GenMessage<ActivateEnrollmentRequest> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 7);
+
+/**
+ * @generated from message ptah.console.v1.ActivateEnrollmentResponse
+ */
+export type ActivateEnrollmentResponse = Message<"ptah.console.v1.ActivateEnrollmentResponse"> & {
+  /**
+   * @generated from field: string connection_uid = 1;
+   */
+  connectionUid: string;
+};
+
+/**
+ * Describes the message ptah.console.v1.ActivateEnrollmentResponse.
+ * Use `create(ActivateEnrollmentResponseSchema)` to create a new message.
+ */
+export const ActivateEnrollmentResponseSchema: GenMessage<ActivateEnrollmentResponse> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 8);
+
+/**
  * ConnectionService changes the registry of the clusters the console
  * reaches. The API server decides who may: a request runs as the person, and
  * only installation administrators are granted the registry's kinds.
@@ -133,6 +291,27 @@ export const ConnectionService: GenService<{
     methodKind: "unary";
     input: typeof CreateEnrollmentRequestSchema;
     output: typeof CreateEnrollmentResponseSchema;
+  },
+  /**
+   * ListEnrollments lists the enrollments the person may read.
+   *
+   * @generated from rpc ptah.console.v1.ConnectionService.ListEnrollments
+   */
+  listEnrollments: {
+    methodKind: "unary";
+    input: typeof ListEnrollmentsRequestSchema;
+    output: typeof ListEnrollmentsResponseSchema;
+  },
+  /**
+   * ActivateEnrollment makes a completed enrollment whose agent has
+   * connected a connection.
+   *
+   * @generated from rpc ptah.console.v1.ConnectionService.ActivateEnrollment
+   */
+  activateEnrollment: {
+    methodKind: "unary";
+    input: typeof ActivateEnrollmentRequestSchema;
+    output: typeof ActivateEnrollmentResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_ptah_console_v1_connections, 0);

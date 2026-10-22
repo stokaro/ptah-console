@@ -49,6 +49,9 @@ type Hub struct {
 
 	mu       sync.Mutex
 	channels map[string]*channel
+	// pending are the channels of enrollments waiting for activation, which
+	// nothing is sent down.
+	pending map[string]context.CancelFunc
 }
 
 // NewHub returns a hub for the registry in namespace, which it reads and
@@ -60,7 +63,10 @@ func NewHub(housekeeping client.Client, namespace string, now func() time.Time, 
 	if logger == nil {
 		logger = slog.New(slog.DiscardHandler)
 	}
-	return &Hub{housekeeping: housekeeping, namespace: namespace, now: now, logger: logger, channels: make(map[string]*channel)}
+	return &Hub{
+		housekeeping: housekeeping, namespace: namespace, now: now, logger: logger,
+		channels: make(map[string]*channel), pending: make(map[string]context.CancelFunc),
+	}
 }
 
 // channel is one open channel.
@@ -112,6 +118,18 @@ func (h *Hub) Channel(ctx context.Context, stream agentv1connect.AgentServiceCha
 	}
 	now := h.now()
 	entry, credential, err := h.authenticate(ctx, presented, now)
+	if errors.Is(err, errNotAccepted) {
+		// No connection takes the credential; an enrollment waiting for
+		// activation may.
+		pending, found, pendingErr := h.pendingEnrollment(ctx, presented, now)
+		switch {
+		case pendingErr != nil:
+			return connect.NewError(connect.CodeUnavailable, "the console could not read its enrollments").WithCause(pendingErr)
+		case found:
+			return h.servePending(ctx, stream, pending)
+		}
+		return connect.NewError(connect.CodeUnauthenticated, "the credential is not one this console accepts")
+	}
 	if err != nil {
 		return err
 	}
@@ -173,10 +191,13 @@ func (h *Hub) authenticate(ctx context.Context, presented string, now time.Time)
 		}
 	}
 	if matches != 1 {
-		return nil, nil, connect.NewError(connect.CodeUnauthenticated, "the credential is not one this console accepts")
+		return nil, nil, errNotAccepted
 	}
 	return found, credential, nil
 }
+
+// errNotAccepted is a credential no connection takes.
+var errNotAccepted = errors.New("agentlink: no connection accepts the credential")
 
 // markUsed records that the credential authenticated a channel, and retires
 // an older credential of the connection: it stays accepted for at most
