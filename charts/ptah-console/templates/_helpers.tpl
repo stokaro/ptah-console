@@ -112,5 +112,8 @@ ingress rule without peers would admit everyone.
 {{- if not .Values.agents.tls.secretName -}}
 {{- fail "agents: tls.secretName names the agent listener's certificate from the console's own CA" -}}
 {{- end -}}
+{{- if not (and .Values.agents.address .Values.agents.serverName (contains "-----BEGIN CERTIFICATE-----" .Values.agents.caBundle)) -}}
+{{- fail "agents: address, serverName and caBundle are what an enrollment file tells agents; give all three" -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}

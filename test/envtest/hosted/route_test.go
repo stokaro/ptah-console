@@ -204,7 +204,7 @@ registry:
   namespace: `+r.namespace+`
   thisCluster: this-cluster
   connectionUID: `+routeThis+`
-`), 0o600), qt.IsNil)
+`+registryAgents(certificates)), 0o600), qt.IsNil)
 	c.Assert(os.WriteFile(passwordsPath, []byte("alex:"+string(alexHash)+"\nsam:"+string(samHash)+"\n"), 0o600), qt.IsNil)
 	browser, agents := make(chan net.Addr, 1), make(chan net.Addr, 1)
 	ctx, cancel := context.WithCancel(t.Context())

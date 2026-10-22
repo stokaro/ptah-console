@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	"k8s.io/client-go/rest"
@@ -44,11 +45,16 @@ type Plane struct {
 	// Admin acts as the control plane's administrator, for arranging a test.
 	// The code under test never gets it.
 	Admin client.Client
+
+	users sync.Mutex
 }
 
 // User adds an identity the API server authenticates, with its own client
 // certificate, and returns its REST configuration.
 func (p *Plane) User(name string, groups ...string) (*rest.Config, error) {
+	// envtest adds users to shared state, which parallel tests would race on.
+	p.users.Lock()
+	defer p.users.Unlock()
 	user, err := p.Env.AddUser(envtest.User{Name: name, Groups: groups}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("add user %s: %w", name, err)

@@ -37,6 +37,14 @@ rules:
   - apiGroups: ["console.ptah.run"]
     resources: ["consoleclusters/status"]
     verbs: ["update", "patch"]
+  # Enrollments: their status, which records the bootstrap verifier and the
+  # helper's report, and their removal once they expire.
+  - apiGroups: ["console.ptah.run"]
+    resources: ["consoleclusterenrollments"]
+    verbs: ["get", "list", "watch", "delete"]
+  - apiGroups: ["console.ptah.run"]
+    resources: ["consoleclusterenrollments/status"]
+    verbs: ["update", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -101,7 +109,7 @@ metadata:
     {{- include "ptah-console.labels" . | nindent 4 }}
 rules:
   - apiGroups: ["console.ptah.run"]
-    resources: ["consoleclusters", "consoleclusterpreferences"]
+    resources: ["consoleclusters", "consoleclusterpreferences", "consoleclusterenrollments"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

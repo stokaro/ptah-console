@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package ptah.console.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1";
+
+// ConnectionService changes the registry of the clusters the console
+// reaches. The API server decides who may: a request runs as the person, and
+// only installation administrators are granted the registry's kinds.
+service ConnectionService {
+  // CreateEnrollment starts enrolling an external cluster. The answer holds
+  // the enrollment file, with its single-use bootstrap secret, this once.
+  rpc CreateEnrollment(CreateEnrollmentRequest) returns (CreateEnrollmentResponse) {}
+}
+
+message CreateEnrollmentRequest {
+  // ClusterName is the name the connection will have.
+  string cluster_name = 1;
+  // Namespaces is the ceiling on the target.
+  repeated string namespaces = 2;
+  repeated EnrollmentAccount accounts = 3;
+  // ApproverClusterRole is the operator chart's approver ClusterRole on the
+  // target.
+  string approver_cluster_role = 4;
+}
+
+// EnrollmentAccount is an account the agent will act for, with the roles it
+// gets in every namespace of the ceiling.
+message EnrollmentAccount {
+  string id = 1;
+  repeated string roles = 2;
+}
+
+message CreateEnrollmentResponse {
+  // EnrollmentFile is the file the target administrator's helper reads. It
+  // holds the bootstrap secret; the console keeps only its verifier.
+  bytes enrollment_file = 1;
+  // Fingerprint is what the helper shows too.
+  string fingerprint = 2;
+  google.protobuf.Timestamp expires_at = 3;
+  string connection_uid = 4;
+}

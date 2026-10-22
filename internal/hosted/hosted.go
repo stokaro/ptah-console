@@ -17,6 +17,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect/v2"
@@ -28,6 +29,8 @@ import (
 	"github.com/stokaro/ptah-console/internal/auth/clientaddr"
 	"github.com/stokaro/ptah-console/internal/auth/session"
 	"github.com/stokaro/ptah-console/internal/auth/signin"
+	"github.com/stokaro/ptah-console/internal/buildinfo"
+	"github.com/stokaro/ptah-console/internal/enrollment"
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/v1/consolev1connect"
 	"github.com/stokaro/ptah-console/internal/kube"
@@ -235,6 +238,7 @@ func (o Options) browser(config *accounts.Config, passwords *accounts.Passwords,
 			consolev1connect.SessionServiceLoginProcedure,
 			consolev1connect.SessionServiceLogoutProcedure))
 	}
+	var connections *api.ConnectionService
 	if agents != nil {
 		// After the session and read-only checks: a routed request is a
 		// signed-in person's, and a read-only console sends no change to any
@@ -245,6 +249,7 @@ func (o Options) browser(config *accounts.Config, passwords *accounts.Passwords,
 		}
 		router := route.New(agents.hub, housekeeping, factory, config.Registry.Namespace, config.Registry.ConnectionUID)
 		interceptors = append(interceptors, router.Interceptor())
+		connections = api.NewConnectionService(factory, housekeeping, enrollmentSelf(config), o.Now, o.Audit)
 	}
 	handler, err := server.New(server.Options{
 		Mode:         consolev1.Mode_MODE_HOSTED,
@@ -255,6 +260,9 @@ func (o Options) browser(config *accounts.Config, passwords *accounts.Passwords,
 		Interceptors: interceptors,
 		Services: []func(*connect.Server){func(rpc *connect.Server) {
 			api.Register(rpc, sessions, factory, scope, o.Audit)
+			if connections != nil {
+				consolev1connect.RegisterConnectionServiceHandler(rpc, connections)
+			}
 		}},
 	})
 	if err != nil {
@@ -301,3 +309,22 @@ func checkThisCluster(ctx context.Context, kubeConfig *rest.Config, config *acco
 		Namespaces: config.Namespaces,
 	})
 }
+
+// enrollmentSelf is what an enrollment file says about this console.
+func enrollmentSelf(config *accounts.Config) enrollment.Self {
+	ids := make([]string, 0, len(config.Accounts))
+	for _, account := range config.Accounts {
+		ids = append(ids, account.ID)
+	}
+	return enrollment.Self{
+		Namespace: config.Registry.Namespace, InstallationID: config.InstallationID, Accounts: ids,
+		Agents: enrollment.Console{
+			Address: config.Registry.Agents.Address, ServerName: config.Registry.Agents.ServerName,
+			CABundle: config.Registry.Agents.CABundle,
+		},
+		Chart: enrollment.Chart{Reference: AgentChart, Version: strings.TrimPrefix(buildinfo.Read().Version, "v")},
+	}
+}
+
+// AgentChart is where the agent chart is released.
+const AgentChart = "oci://ghcr.io/stokaro/charts/ptah-console-agent"

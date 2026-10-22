@@ -44,6 +44,7 @@ const (
 // pki is a CA and the agent listener's certificate from it, as files.
 type pki struct {
 	roots             *x509.CertPool
+	caPEM             string
 	certFile, keyFile string
 }
 
@@ -73,7 +74,10 @@ func newPKI(t *testing.T) *pki {
 	keyDER, err := x509.MarshalECPrivateKey(key)
 	c.Assert(err, qt.IsNil)
 	dir := t.TempDir()
-	out := &pki{roots: x509.NewCertPool(), certFile: filepath.Join(dir, "tls.crt"), keyFile: filepath.Join(dir, "tls.key")}
+	out := &pki{
+		roots: x509.NewCertPool(), caPEM: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caDER})),
+		certFile: filepath.Join(dir, "tls.crt"), keyFile: filepath.Join(dir, "tls.key"),
+	}
 	out.roots.AddCert(ca)
 	c.Assert(os.WriteFile(out.certFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0o600), qt.IsNil)
 	c.Assert(os.WriteFile(out.keyFile, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}), 0o600), qt.IsNil)
@@ -156,7 +160,7 @@ registry:
   namespace: `+agentsNS+`
   thisCluster: this-cluster
   connectionUID: `+agentsThis+`
-`), 0o600), qt.IsNil)
+`+registryAgents(certificates)), 0o600), qt.IsNil)
 	c.Assert(os.WriteFile(passwordsPath, []byte("alex:"+string(hash)+"\n"), 0o600), qt.IsNil)
 	browser, agents := make(chan net.Addr, 1), make(chan net.Addr, 1)
 	ctx, cancel := context.WithCancel(t.Context())
@@ -250,4 +254,11 @@ namespaces: [storefront]
 		cancel()
 		<-ended
 	}
+}
+
+// registryAgents is the configuration's registry.agents block for a console
+// whose agent listener has the certificates.
+func registryAgents(certificates *pki) string {
+	return "  agents:\n    address: https://" + agentsName + "\n    serverName: " + agentsName +
+		"\n    caBundle: |\n      " + strings.ReplaceAll(strings.TrimSpace(certificates.caPEM), "\n", "\n      ") + "\n"
 }

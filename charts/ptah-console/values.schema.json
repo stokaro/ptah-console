@@ -81,6 +81,13 @@
       "additionalProperties": false,
       "properties": {
         "enabled": { "type": "boolean" },
+        "address": { "type": "string", "pattern": "^(https://[^/?#@\\s]+/?)?$" },
+        "serverName": {
+          "type": "string",
+          "maxLength": 253,
+          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)?$"
+        },
+        "caBundle": { "type": "string" },
         "tls": {
           "type": "object",
           "additionalProperties": false,

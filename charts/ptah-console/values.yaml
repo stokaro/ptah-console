@@ -63,6 +63,13 @@ registry:
 # a LoadBalancer or an Ingress that passes TLS through, is yours to choose.
 agents:
   enabled: false
+  # Required when enabled: what an enrollment file tells agents. The https
+  # root they dial, as the Service is exposed to them; the name the
+  # listener's certificate carries; and the console's own CA that issued it,
+  # in PEM.
+  address: ""
+  serverName: ""
+  caBundle: ""
   # Required when enabled. A kubernetes.io/tls Secret with the listener's
   # certificate from the console's own CA, for the name agents are enrolled
   # with. Agents trust that CA and that name and nothing else.

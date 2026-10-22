@@ -104,6 +104,14 @@ rules:
   - apiGroups: ["console.ptah.run"]
     resources: ["consoleclusters/status"]
     verbs: ["update", "patch"]
+  # Enrollments: their status, which records the bootstrap verifier and the
+  # helper's report, and their removal once they expire.
+  - apiGroups: ["console.ptah.run"]
+    resources: ["consoleclusterenrollments"]
+    verbs: ["get", "list", "watch", "delete"]
+  - apiGroups: ["console.ptah.run"]
+    resources: ["consoleclusterenrollments/status"]
+    verbs: ["update", "patch"]
 
 ---
 # Source: ptah-console/templates/registry.yaml
@@ -139,7 +147,7 @@ metadata:
     helm.sh/chart: ptah-console-0.1.0
 rules:
   - apiGroups: ["console.ptah.run"]
-    resources: ["consoleclusters", "consoleclusterpreferences"]
+    resources: ["consoleclusters", "consoleclusterpreferences", "consoleclusterenrollments"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
 ---

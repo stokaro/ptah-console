@@ -17,6 +17,7 @@ import (
 	"github.com/stokaro/ptah-console/internal/agent"
 	"github.com/stokaro/ptah-console/internal/agentlink"
 	"github.com/stokaro/ptah-console/internal/auth/accounts"
+	"github.com/stokaro/ptah-console/internal/enrollment"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/agent/v1/agentv1connect"
 	"github.com/stokaro/ptah-console/internal/kube"
 	"github.com/stokaro/ptah-console/internal/server"
@@ -35,6 +36,8 @@ func (o Options) agentsProblem(config *accounts.Config) error {
 		return nil
 	case config.Registry == nil:
 		return errors.New("--agent-listen serves the agents of the registry's connections; the configuration names no registry")
+	case config.Registry.Agents == nil:
+		return errors.New("--agent-listen needs registry.agents in the configuration: the address, name and CA an enrollment gives agents")
 	case o.AgentTLSCertFile == "" || o.AgentTLSKeyFile == "":
 		return errors.New("--agent-listen needs --agent-tls-cert-file and --agent-tls-key-file: the console's certificate from its own CA")
 	}
@@ -68,6 +71,7 @@ func (o Options) listenForAgents(kubeConfig *rest.Config, config *accounts.Confi
 	hub := agentlink.NewHub(housekeeping, config.Registry.Namespace, o.Now, o.Logger)
 	rpc := connect.NewServer()
 	agentv1connect.RegisterAgentServiceHandler(rpc, hub)
+	agentv1connect.RegisterEnrollmentServiceHandler(rpc, enrollment.NewService(housekeeping, config.Registry.Namespace, o.Now, o.Audit))
 	mux := http.NewServeMux()
 	connecthttp.Mount(mux, rpc, connecthttp.WithReadMaxBytes(agent.MaxFrameBytes), connecthttp.WithSendMaxBytes(agent.MaxFrameBytes))
 	httpServer := server.NewHTTPServer(mux, &tls.Config{MinVersion: tls.VersionTLS13, GetCertificate: certificate.get}, o.Logger)
@@ -88,5 +92,6 @@ func (a *agents) serve(ctx context.Context, housekeeping *rest.Config, namespace
 		return nil, err
 	}
 	go agentlink.TendAll(ctx, client, namespace, tendInterval, now, logger)
+	go enrollment.TendAll(ctx, client, namespace, tendInterval, now, logger)
 	return server.Serve(ctx, a.server, []net.Listener{a.listener}), nil
 }
