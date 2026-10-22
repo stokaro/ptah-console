@@ -63,10 +63,17 @@
             "minItems": 1,
             "uniqueItems": true,
             "items": {
-              "enum": ["viewer", "plan-reader", "desired-state-author", "diagnostic-reader", "approver"]
+              "enum": ["viewer", "plan-reader", "desired-state-author", "diagnostic-reader", "approver", "connection-admin"]
             }
           }
         }
+      }
+    },
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" }
       }
     },
     "approverClusterRole": {

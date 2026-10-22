@@ -122,6 +122,15 @@ func TestEachConfigurationRefusal(t *testing.T) {
 			want: "trustedProxies[0]: is not a network address; write 10.244.0.0/16"},
 		{name: "a network twice", change: func(c *accounts.Config) { c.TrustedProxies = []string{"10.244.0.0/16", "10.244.0.0/16"} },
 			want: "trustedProxies[1]: repeats trustedProxies[0]"},
+		{name: "a registry in a namespace that cannot exist", change: func(c *accounts.Config) {
+			c.Registry = &accounts.Registry{Namespace: "Ptah", ThisCluster: "this-cluster-3f2c4b1e", ConnectionUID: registryConnection}
+		}, want: "registry.namespace: " + label},
+		{name: "a registry entry that cannot be an object name", change: func(c *accounts.Config) {
+			c.Registry = &accounts.Registry{Namespace: "ptah-console", ThisCluster: "This Cluster", ConnectionUID: registryConnection}
+		}, want: "registry.thisCluster: is not the name of an object"},
+		{name: "a connection UID that is not a UUID", change: func(c *accounts.Config) {
+			c.Registry = &accounts.Registry{Namespace: "ptah-console", ThisCluster: "this-cluster-3f2c4b1e", ConnectionUID: "3F2C4B1E-8D0A-4C2E-9B7F-1A2B3C4D5E6F"}
+		}, want: "registry.connectionUID: is not a lowercase UUID"},
 		{name: "too many networks", change: func(c *accounts.Config) {
 			c.TrustedProxies = make([]string, 65)
 			for i := range c.TrustedProxies {
@@ -143,6 +152,26 @@ func TestEachConfigurationRefusal(t *testing.T) {
 			c.Assert(invalid.Problems, qt.DeepEquals, []string{test.want}, qt.Commentf("%s", document))
 		})
 	}
+}
+
+const registryConnection = "3f2c4b1e-8d0a-4c2e-9b7f-1a2b3c4d5e6f"
+
+// A configuration that names a registry is read with it, and one that names
+// none has none: the console then reaches only the cluster it runs in.
+func TestARegistryIsReadWhenTheConfigurationNamesOne(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	document := changed(t, func(config *accounts.Config) {
+		config.Registry = &accounts.Registry{Namespace: "ptah-console", ThisCluster: "this-cluster-3f2c4b1e", ConnectionUID: registryConnection}
+	})
+	config, err := accounts.ParseConfig([]byte(document))
+	c.Assert(err, qt.IsNil)
+	c.Assert(config.Registry, qt.DeepEquals, &accounts.Registry{
+		Namespace: "ptah-console", ThisCluster: "this-cluster-3f2c4b1e", ConnectionUID: registryConnection,
+	})
+	config, err = accounts.ParseConfig([]byte(changed(t, func(*accounts.Config) {})))
+	c.Assert(err, qt.IsNil)
+	c.Assert(config.Registry, qt.IsNil)
 }
 
 func TestAFileThatIsNotAConfiguration(t *testing.T) {

@@ -194,6 +194,9 @@ linters:
           disabled: false
         - name: struct-tag
           disabled: false
+          # Kubernetes API types embed TypeMeta with `json:",inline"`, an
+          # option encoding/json ignores and the API machinery reads.
+          arguments: ["json,inline"]
         - name: superfluous-else
           disabled: false
         - name: time-equal

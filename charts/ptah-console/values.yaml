@@ -37,10 +37,24 @@ accounts: []
 #    displayName: Alex Morgan
 #    roles: [viewer, approver]
 
+# Accounts may also have connection-admin, which creates, replaces and
+# removes entries of the registry below; it grants nothing in any namespace of
+# the ceiling.
+
 # The operator chart's approver ClusterRole, which the approver role binds.
 # The operator chart names it <its fullname>-approver; for the release name its
 # documentation uses, ptah-operator, that is ptah-operator-ptah-operator-approver.
 approverClusterRole: ptah-operator-ptah-operator-approver
+
+# The registry of the clusters the console reaches, console.ptah.run. Off, the
+# console reaches only the cluster it runs in, as it always has. On, the chart
+# records this cluster as a co-located entry the console checks itself against
+# when it starts. Its connection UID follows from installationID and
+# namespaces, so a changed ceiling is a new connection rather than an edited
+# one. The registry's CRDs are in the chart's crds directory, which Helm
+# installs once and never upgrades or removes.
+registry:
+  enabled: false
 
 # Required. An existing Secret with the passwords file under key: one line of
 # <account id>:<bcrypt hash> per account. ptah-console accounts hash makes a

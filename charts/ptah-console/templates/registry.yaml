@@ -1,0 +1,125 @@
+{{- /*
+The registry, when it is on: this cluster's entry, and three grants in the
+console's namespace. The console's own identity lists the entries and writes
+their status, and nothing else. Accounts with connection-admin create, replace
+and remove entries. Every account may read this cluster's entry, by name; an
+entry of another cluster is granted to an account by name, by whoever enrolls
+it, and the console shows an account only what it may get.
+*/ -}}
+{{- if .Values.registry.enabled }}
+{{- $fullname := include "ptah-console.fullname" . -}}
+{{- $thisCluster := include "ptah-console.thisClusterName" . -}}
+apiVersion: console.ptah.run/v1alpha1
+kind: ConsoleCluster
+metadata:
+  name: {{ $thisCluster }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+spec:
+  connectionUID: {{ include "ptah-console.thisClusterUID" . | quote }}
+  profile: CoLocated
+  installationID: {{ .Values.installationID | quote }}
+  namespaces: {{ toJson .Values.namespaces }}
+  configurationOwner: GitOps
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $fullname }}-registry-housekeeping
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["console.ptah.run"]
+    resources: ["consoleclusters", "consoleclusterpreferences"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["console.ptah.run"]
+    resources: ["consoleclusters/status"]
+    verbs: ["update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $fullname }}-registry-housekeeping
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $fullname }}-registry-housekeeping
+subjects:
+  - kind: ServiceAccount
+    name: {{ $fullname }}
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $fullname }}-registry-this-cluster
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["console.ptah.run"]
+    resources: ["consoleclusters", "consoleclusterpreferences"]
+    resourceNames: [{{ $thisCluster | quote }}]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $fullname }}-registry-this-cluster
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $fullname }}-registry-this-cluster
+subjects:
+  {{- range .Values.accounts }}
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: {{ include "ptah-console.username" (dict "installationID" $.Values.installationID "id" .id) }}
+  {{- end }}
+{{- $admins := list -}}
+{{- range .Values.accounts -}}
+{{- if has "connection-admin" .roles -}}
+{{- $admins = append $admins (include "ptah-console.username" (dict "installationID" $.Values.installationID "id" .id)) -}}
+{{- end -}}
+{{- end }}
+{{- if $admins }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $fullname }}-registry-admin
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["console.ptah.run"]
+    resources: ["consoleclusters", "consoleclusterpreferences"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $fullname }}-registry-admin
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $fullname }}-registry-admin
+subjects:
+  {{- range $admins }}
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end }}

@@ -125,7 +125,7 @@ func golden(t *testing.T, path, rendered string) string {
 
 func TestRendersMatchTheirGoldenFiles(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"minimal", "full"} {
+	for _, name := range []string{"minimal", "full", "registry"} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			c := qt.New(t)
@@ -151,7 +151,7 @@ func TestTheChartLints(t *testing.T) {
 // group, resource, verb or name.
 func TestNoRenderedRuleHasAWildcard(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"minimal", "full"} {
+	for _, name := range []string{"minimal", "full", "registry"} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			c := qt.New(t)
@@ -314,6 +314,8 @@ func TestEachRefusal(t *testing.T) {
 		{name: "every IPv4 address as a proxy", overlay: "trustedProxies: [0.0.0.0/0]", says: `/trustedProxies/0.*'not' failed`},
 		{name: "every IPv6 address as a proxy", overlay: "trustedProxies: ['::/0']", says: `/trustedProxies/0.*'not' failed`},
 		{name: "a proxy that is no network", overlay: "trustedProxies: [10.244.0.0]", says: `/trustedProxies/0.*does not match pattern`},
+		{name: "a registry value the chart does not read", overlay: "registry: {enabled: true, connectionUID: x}",
+			says: `/registry.*additional properties 'connectionUID' not allowed`},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

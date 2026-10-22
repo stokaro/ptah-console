@@ -1,0 +1,128 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.22.0
+  name: consoleclusterpreferences.console.ptah.run
+spec:
+  group: console.ptah.run
+  names:
+    kind: ConsoleClusterPreferences
+    listKind: ConsoleClusterPreferencesList
+    plural: consoleclusterpreferences
+    shortNames:
+    - cclp
+    singular: consoleclusterpreferences
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.clusterRef.name
+      name: Cluster
+      type: string
+    - jsonPath: .spec.displayName
+      name: Display name
+      type: string
+    - jsonPath: .spec.enabled
+      name: Enabled
+      type: boolean
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          ConsoleClusterPreferences is what a person may change about how a
+          connection is shown, apart from the connection's trust. Editing it grants
+          nothing: it names the connection by UID, and a ConsoleCluster recreated
+          under the same name is another connection these preferences do not follow.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec is the connection reference and the preferences.
+            properties:
+              clusterRef:
+                description: |-
+                  ClusterRef is the connection these preferences belong to, by name and
+                  connection UID. It is immutable.
+                properties:
+                  connectionUID:
+                    description: ConnectionUID is the connection UID the ConsoleCluster
+                      had.
+                    pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+                    type: string
+                  name:
+                    description: Name of the ConsoleCluster, in the same namespace.
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                required:
+                - connectionUID
+                - name
+                type: object
+                x-kubernetes-validations:
+                - message: clusterRef is immutable
+                  rule: self == oldSelf
+              displayName:
+                description: DisplayName is the name people see for the connection.
+                maxLength: 63
+                pattern: ^[^\x00-\x1f\x7f]*$
+                type: string
+              enabled:
+                default: true
+                description: |-
+                  Enabled is whether the console offers the connection; unset is true. A
+                  disabled connection keeps its configuration and dispatches nothing.
+                type: boolean
+              labels:
+                description: |-
+                  Labels group and filter connections in the console. They carry no
+                  authority: no grant, route or trust decision reads them.
+                items:
+                  description: PreferenceLabel is one label of a connection's preferences.
+                  properties:
+                    key:
+                      description: Key is a DNS label.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                    value:
+                      description: Value is at most 63 characters with no control
+                        character.
+                      maxLength: 63
+                      pattern: ^[^\x00-\x1f\x7f]*$
+                      type: string
+                  required:
+                  - key
+                  - value
+                  type: object
+                maxItems: 16
+                type: array
+                x-kubernetes-list-map-keys:
+                - key
+                x-kubernetes-list-type: map
+            required:
+            - clusterRef
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}

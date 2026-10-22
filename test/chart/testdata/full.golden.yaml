@@ -79,9 +79,11 @@ data:
 
 ---
 # Source: ptah-console/templates/impersonation.yaml
-# The console's one grant: impersonate exactly the accounts' usernames. No
-# groups, UIDs, extras or ServiceAccounts, so each account may do what RBAC
-# grants its username and nothing the console's ServiceAccount may.
+# The console's one grant outside the registry: impersonate exactly the
+# accounts' usernames. No groups, UIDs, extras or ServiceAccounts, so each
+# account may do what RBAC grants its username and nothing the console's
+# ServiceAccount may. With the registry on, the console may also list its
+# entries and write their status, in its own namespace.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
