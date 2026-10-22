@@ -43,10 +43,20 @@ credential:
 # refused before any call.
 namespaces: []
 
-# Required. The allowlist: the Console accounts the agent acts for, by ID.
-# The agent reads a changed list without a restart, and the chart grants it
-# impersonation of exactly these accounts' usernames.
+# Required. The allowlist: the Console accounts the agent acts for, and the
+# roles each has in every namespace of the ceiling here. The agent reads a
+# changed list without a restart, and the chart grants it impersonation of
+# exactly these accounts' usernames.
+#  - id: alex
+#    roles: [viewer, approver]
+# roles are viewer, plan-reader, desired-state-author, diagnostic-reader and
+# approver, as in the console's chart.
 accounts: []
+
+# The operator chart's approver ClusterRole in this cluster, which the
+# approver role binds. For the release name the operator's documentation
+# uses, ptah-operator, that is ptah-operator-ptah-operator-approver.
+approverClusterRole: ptah-operator-ptah-operator-approver
 
 resources:
   requests:

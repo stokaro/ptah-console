@@ -12,4 +12,6 @@ data:
     apiVersion: console.ptah.run/v1alpha1
     kind: AgentAccounts
     accounts:
-      {{- toYaml .Values.accounts | nindent 6 }}
+      {{- range .Values.accounts }}
+      - {{ .id }}
+      {{- end }}

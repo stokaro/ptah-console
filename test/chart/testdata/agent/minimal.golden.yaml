@@ -122,6 +122,158 @@ subjects:
     namespace: ptah-console-agent
 
 ---
+# Source: ptah-console-agent/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: agent-ptah-console-agent-viewer
+  namespace: storefront
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+rules:
+  - apiGroups:
+    - operator.ptah.run
+    resources:
+    - ptahschemas
+    - ptahschemaplans
+    - ptahschemaapprovals
+    - ptahmigrations
+    - ptahmigrationplans
+    - ptahmigrationapprovals
+    - ptahmigrationrunacknowledgments
+    verbs:
+    - get
+    - list
+    - watch
+
+---
+# Source: ptah-console-agent/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: agent-ptah-console-agent-viewer
+  namespace: billing
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+rules:
+  - apiGroups:
+    - operator.ptah.run
+    resources:
+    - ptahschemas
+    - ptahschemaplans
+    - ptahschemaapprovals
+    - ptahmigrations
+    - ptahmigrationplans
+    - ptahmigrationapprovals
+    - ptahmigrationrunacknowledgments
+    verbs:
+    - get
+    - list
+    - watch
+
+---
+# Source: ptah-console-agent/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agent-ptah-console-agent-viewer
+  namespace: storefront
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: agent-ptah-console-agent-viewer
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: ptah-console:prod:alex
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: ptah-console:prod:sam
+
+---
+# Source: ptah-console-agent/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agent-ptah-console-agent-approver
+  namespace: storefront
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ptah-operator-ptah-operator-approver
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: ptah-console:prod:alex
+
+---
+# Source: ptah-console-agent/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agent-ptah-console-agent-viewer
+  namespace: billing
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: agent-ptah-console-agent-viewer
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: ptah-console:prod:alex
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: ptah-console:prod:sam
+
+---
+# Source: ptah-console-agent/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agent-ptah-console-agent-approver
+  namespace: billing
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ptah-operator-ptah-operator-approver
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: ptah-console:prod:alex
+
+---
 # Source: ptah-console-agent/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment

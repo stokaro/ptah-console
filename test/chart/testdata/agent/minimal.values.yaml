@@ -21,4 +21,8 @@ console:
 credential:
   secretName: ptah-console-agent-credential
 namespaces: [storefront, billing]
-accounts: [alex, sam]
+accounts:
+  - id: alex
+    roles: [viewer, approver]
+  - id: sam
+    roles: [viewer]

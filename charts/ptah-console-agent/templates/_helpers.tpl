@@ -28,12 +28,17 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 {{- end -}}
 {{- end -}}
 
+{{/* The Kubernetes username an account acts as. */}}
+{{- define "ptah-console-agent.username" -}}
+{{- printf "ptah-console:%s:%s" .installationID .id -}}
+{{- end -}}
+
 {{/* The usernames the agent may act as, one per account: built here and in
 the agent from the same two values, and from nothing else. */}}
 {{- define "ptah-console-agent.usernames" -}}
 {{- $usernames := list -}}
 {{- range .Values.accounts -}}
-{{- $usernames = append $usernames (printf "ptah-console:%s:%s" $.Values.installationID .) -}}
+{{- $usernames = append $usernames (include "ptah-console-agent.username" (dict "installationID" $.Values.installationID "id" .id)) -}}
 {{- end -}}
 {{- toYaml $usernames -}}
 {{- end -}}
@@ -42,6 +47,13 @@ the agent from the same two values, and from nothing else. */}}
 {{- define "ptah-console-agent.validate" -}}
 {{- if not .Values.accounts -}}
 {{- fail "accounts: an empty list would leave the impersonation rule without resourceNames, which grants every user" -}}
+{{- end -}}
+{{- $ids := dict -}}
+{{- range .Values.accounts -}}
+{{- if hasKey $ids .id -}}
+{{- fail (printf "accounts: the id %s is given twice" .id) -}}
+{{- end -}}
+{{- $_ := set $ids .id true -}}
 {{- end -}}
 {{- if and .Values.networkPolicy.enabled (not .Values.networkPolicy.apiServer.cidrs) -}}
 {{- fail "networkPolicy: apiServer.cidrs names the API server, which the agent has to reach" -}}

@@ -1,0 +1,60 @@
+{{- /*
+In every namespace of the ceiling in this cluster: a Role for each role some
+account has, and a RoleBinding from those accounts' usernames to it, as the
+console's chart grants them in the cluster it runs in. The approver role
+binds the operator chart's ClusterRole there instead of a Role of its own.
+*/ -}}
+{{- $operator := .Files.Get "files/operator-roles.yaml" | fromYaml -}}
+{{- $rules := dict
+  "viewer" (list (dict
+    "apiGroups" (list "operator.ptah.run")
+    "resources" (list "ptahschemas" "ptahschemaplans" "ptahschemaapprovals" "ptahmigrations" "ptahmigrationplans" "ptahmigrationapprovals" "ptahmigrationrunacknowledgments")
+    "verbs" (list "get" "list" "watch")))
+  "plan-reader" (get $operator "plan-reader").rules
+  "desired-state-author" (get $operator "desired-state-author").rules
+  "diagnostic-reader" (get $operator "diagnostic-reader").rules
+-}}
+{{- $fullname := include "ptah-console-agent.fullname" . -}}
+{{- range $namespace := .Values.namespaces }}
+{{- range $role := list "viewer" "plan-reader" "desired-state-author" "diagnostic-reader" "approver" }}
+{{- $subjects := list -}}
+{{- range $.Values.accounts -}}
+{{- if has $role .roles -}}
+{{- $subjects = append $subjects (dict "apiGroup" "rbac.authorization.k8s.io" "kind" "User" "name" (include "ptah-console-agent.username" (dict "installationID" $.Values.installationID "id" .id))) -}}
+{{- end -}}
+{{- end -}}
+{{- if $subjects }}
+{{- if ne $role "approver" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $fullname }}-{{ $role }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "ptah-console-agent.labels" $ | nindent 4 }}
+rules:
+  {{- toYaml (get $rules $role) | nindent 2 }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $fullname }}-{{ $role }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "ptah-console-agent.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  {{- if eq $role "approver" }}
+  kind: ClusterRole
+  name: {{ $.Values.approverClusterRole }}
+  {{- else }}
+  kind: Role
+  name: {{ $fullname }}-{{ $role }}
+  {{- end }}
+subjects:
+  {{- toYaml $subjects | nindent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}
