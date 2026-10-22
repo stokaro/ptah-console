@@ -134,3 +134,28 @@ func CheckThisCluster(ctx context.Context, housekeeping client.Reader, want This
 	}
 	return nil
 }
+
+// ErrNoSuchConnection is a connection the user may not see, which reads the
+// same as one that does not exist.
+var ErrNoSuchConnection = errors.New("registry: no connection with that UID is visible to you")
+
+// Find returns the entry of the connection with connectionUID, read as the
+// user. The console's own identity finds the entry's name; the user's get
+// decides whether they see it.
+func Find(ctx context.Context, housekeeping, user client.Reader, namespace, connectionUID string) (*consolev1alpha1.ConsoleCluster, error) {
+	entries := &consolev1alpha1.ConsoleClusterList{}
+	if err := housekeeping.List(ctx, entries, client.InNamespace(namespace)); err != nil {
+		return nil, fmt.Errorf("list the registry: %w", err)
+	}
+	for _, listed := range entries.Items {
+		if listed.Spec.ConnectionUID != connectionUID {
+			continue
+		}
+		entry := &consolev1alpha1.ConsoleCluster{}
+		if err := user.Get(ctx, client.ObjectKeyFromObject(&listed), entry); err != nil || entry.Spec.ConnectionUID != connectionUID {
+			return nil, ErrNoSuchConnection
+		}
+		return entry, nil
+	}
+	return nil, ErrNoSuchConnection
+}
