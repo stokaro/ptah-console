@@ -19,6 +19,7 @@ import (
 	"connectrpc.com/connect/v2"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	consolev1alpha1 "github.com/stokaro/ptah-console/api/v1alpha1"
@@ -137,7 +138,7 @@ func (r *Router) envelope(ctx context.Context, principal kube.Principal) *agentv
 	}
 	return &agentv1.Envelope{
 		ConsoleInstance: r.instance, SessionGeneration: principal.Generation, AccountId: principal.AccountID,
-		Deadline: durationpb.New(deadline),
+		Deadline: durationpb.New(deadline), SentAt: timestamppb.Now(),
 	}
 }
 
