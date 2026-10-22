@@ -94,7 +94,38 @@ func (r *Router) check(ctx context.Context, principal kube.Principal, connection
 	if entry.Spec.Profile != consolev1alpha1.ProfileAgent {
 		return connect.Errorf(connect.CodeFailedPrecondition, "connection %s is not reached through an agent", connection)
 	}
+	fence, err := agentlink.FenceOf(ctx, r.housekeeping, r.namespace, connection)
+	if err != nil {
+		return connect.NewError(connect.CodeUnavailable, "the console could not read its revocations").WithCause(err)
+	}
+	switch {
+	case fence.Removed:
+		return connect.Errorf(connect.CodeFailedPrecondition, "connection %s was removed", connection)
+	case entry.Status.Channel != nil && fence.Fences(entry.Status.Channel.Generation):
+		return connect.Errorf(connect.CodeFailedPrecondition, "connection %s is quarantined", connection)
+	}
+	disabled, err := r.disabled(ctx, connection)
+	if err != nil {
+		return connect.NewError(connect.CodeUnavailable, "the console could not read the connection's preferences").WithCause(err)
+	}
+	if disabled {
+		return connect.Errorf(connect.CodeFailedPrecondition, "connection %s is disabled", connection)
+	}
 	return nil
+}
+
+// disabled reports whether the connection's preferences turn it off.
+func (r *Router) disabled(ctx context.Context, connection string) (bool, error) {
+	preferences := &consolev1alpha1.ConsoleClusterPreferencesList{}
+	if err := r.housekeeping.List(ctx, preferences, client.InNamespace(r.namespace)); err != nil {
+		return false, err
+	}
+	for _, item := range preferences.Items {
+		if item.Spec.ClusterRef.ConnectionUID == connection && item.Spec.Enabled != nil && !*item.Spec.Enabled {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // envelope is who a routed request is for, and how long it may take: the

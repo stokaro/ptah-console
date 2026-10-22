@@ -430,3 +430,34 @@ func TestAnEnrollmentHoldsWhatWasAskedAndReported(t *testing.T) {
 	owner.Spec.Accounts[0].Roles = []consolev1alpha1.EnrollmentRole{"connection-admin"}
 	c.Assert(refusedWith(plane.Admin.Create(t.Context(), owner), cause{"spec.accounts[0].roles[0]", "Unsupported value"}), qt.IsNil)
 }
+
+// A revocation cannot be edited, a quarantine names its generation, and a
+// removal names none.
+func TestARevocationHoldsItsFence(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	namespace := newNamespace(t)
+	generation := int64(3)
+	quarantine := &consolev1alpha1.ConsoleClusterRevocation{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "quarantine"},
+		Spec: consolev1alpha1.ConsoleClusterRevocationSpec{
+			ConnectionUID: otherConnection, Generation: &generation, Action: consolev1alpha1.RevocationQuarantine,
+			ClusterName: "prod-ap-2", RevokedBy: "alex",
+		},
+	}
+	c.Assert(plane.Admin.Create(t.Context(), quarantine), qt.IsNil)
+
+	lowered := quarantine.DeepCopy()
+	lowered.Spec.Generation = new(int64(2))
+	c.Assert(refusedWith(plane.Admin.Update(t.Context(), lowered), cause{"spec", "a revocation cannot be edited"}), qt.IsNil)
+	unbounded := quarantine.DeepCopy()
+	unbounded.ObjectMeta = metav1.ObjectMeta{Namespace: namespace, Name: "unbounded"}
+	unbounded.Spec.Generation = nil
+	c.Assert(refusedWith(plane.Admin.Create(t.Context(), unbounded),
+		cause{"spec", "a quarantine fences up to a generation, and a removal fences every generation"}), qt.IsNil)
+	bounded := quarantine.DeepCopy()
+	bounded.ObjectMeta = metav1.ObjectMeta{Namespace: namespace, Name: "bounded"}
+	bounded.Spec.Action = consolev1alpha1.RevocationRemove
+	c.Assert(refusedWith(plane.Admin.Create(t.Context(), bounded),
+		cause{"spec", "a quarantine fences up to a generation, and a removal fences every generation"}), qt.IsNil)
+}

@@ -142,6 +142,28 @@ enrollment once the agent shows connected. Their own client creates the
 and removes the enrollment, and the pending channel ends, so the agent opens
 it again as the connection's.
 
+## Disable, quarantine and removal
+
+Disabling a connection writes its preferences: every request to it is
+refused and its configuration stays. Quarantine and removal are fences the
+console keeps apart from the entry, in a `ConsoleClusterRevocation` by
+connection UID. Only the console's identity writes one, after the API server
+says the person may delete the entry; administrators read them and change
+none. A quarantine fences the channel up to its generation and drops the
+entry's credentials: the open channel ends, and neither the old credentials
+nor a recreated entry, as a GitOps reapply of the old record makes, bring it
+back. New credentials, issued past the fenced generation, lift it. A removal
+fences every generation, then removes the entry and its preferences as the
+person, and the revocation stays as the tombstone. It does not reach the
+target: an offline target is removed the same, and its cleanup is reported
+pending, with the steps for its administrator, the first of which removes the
+agent's impersonation binding and so its authority. A name reused later is a
+new connection UID, which the tombstone does not fence. `ptah-console cluster
+unenroll` removes the credential Secret enroll made, only for the connection
+named, and leaves Helm to remove the release. Tombstones are kept until the
+console namespace's administrator deletes them, which is safe once the
+removed connection's credentials have expired, 90 days at most.
+
 ## Credentials over time
 
 The credential expires; 90 days by default. The console warns from 14 days

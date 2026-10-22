@@ -140,6 +140,9 @@ func TestEachRegistryIdentityMayDoOnlyItsPart(t *testing.T) {
 	enrollment := func(verb, name string) authorizationv1.ResourceAttributes {
 		return authorizationv1.ResourceAttributes{Group: group, Resource: "consoleclusterenrollments", Namespace: hubNS, Verb: verb, Name: name}
 	}
+	revocation := func(verb string) authorizationv1.ResourceAttributes {
+		return authorizationv1.ResourceAttributes{Group: group, Resource: "consoleclusterrevocations", Namespace: hubNS, Verb: verb}
+	}
 	enrollmentStatus := func() authorizationv1.ResourceAttributes {
 		access := enrollment("patch", "prod-ap-3")
 		access.Subresource = "status"
@@ -177,6 +180,11 @@ func TestEachRegistryIdentityMayDoOnlyItsPart(t *testing.T) {
 		{name: "the console records an enrollment", user: hubSA, access: enrollmentStatus(), allowed: true},
 		{name: "the console removes an expired enrollment", user: hubSA, access: enrollment("delete", "prod-ap-3"), allowed: true},
 		{name: "the console changes no enrollment", user: hubSA, access: enrollment("update", "prod-ap-3")},
+		{name: "the console fences a connection", user: hubSA, access: revocation("create"), allowed: true},
+		{name: "the console lifts no fence by deleting it", user: hubSA, access: revocation("delete")},
+		{name: "an administrator reads the fences", user: hubPrefix + "alex", access: revocation("list"), allowed: true},
+		{name: "an administrator writes no fence", user: hubPrefix + "alex", access: revocation("create")},
+		{name: "an administrator lifts no fence by deleting it", user: hubPrefix + "alex", access: revocation("delete")},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

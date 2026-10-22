@@ -90,17 +90,13 @@ func arrangeRegistry(t *testing.T) client.ObjectKey {
 	t.Helper()
 	c := qt.New(t)
 	ctx := t.Context()
-	group := consolev1alpha1.GroupVersion.Group
 	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{GenerateName: "agents-"}}
 	c.Assert(plane.Admin.Create(ctx, namespace), qt.IsNil)
 	agentsNS := namespace.Name
 	for _, object := range []client.Object{
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{Namespace: agentsNS, Name: "housekeeping"},
-			Rules: []rbacv1.PolicyRule{
-				{APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterpreferences"}, Verbs: []string{"get", "list", "watch"}},
-				{APIGroups: []string{group}, Resources: []string{"consoleclusters/status"}, Verbs: []string{"update", "patch"}},
-			},
+			Rules:      housekeepingRules(),
 		},
 		&rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{Namespace: agentsNS, Name: "housekeeping"},
@@ -261,4 +257,17 @@ namespaces: [storefront]
 func registryAgents(certificates *pki) string {
 	return "  agents:\n    address: https://" + agentsName + "\n    serverName: " + agentsName +
 		"\n    caBundle: |\n      " + strings.ReplaceAll(strings.TrimSpace(certificates.caPEM), "\n", "\n      ") + "\n"
+}
+
+// housekeepingRules are the console's grant in its registry namespace, as
+// the chart's housekeeping Role gives it.
+func housekeepingRules() []rbacv1.PolicyRule {
+	group := consolev1alpha1.GroupVersion.Group
+	return []rbacv1.PolicyRule{
+		{APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterpreferences"}, Verbs: []string{"get", "list", "watch"}},
+		{APIGroups: []string{group}, Resources: []string{"consoleclusters/status"}, Verbs: []string{"update", "patch"}},
+		{APIGroups: []string{group}, Resources: []string{"consoleclusterenrollments"}, Verbs: []string{"get", "list", "watch", "delete"}},
+		{APIGroups: []string{group}, Resources: []string{"consoleclusterenrollments/status"}, Verbs: []string{"update", "patch"}},
+		{APIGroups: []string{group}, Resources: []string{"consoleclusterrevocations"}, Verbs: []string{"get", "list", "watch", "create"}},
+	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/stokaro/ptah-console/internal/enrollment"
+	"github.com/stokaro/ptah-console/internal/kube"
 	"github.com/stokaro/ptah-console/internal/localkube"
 )
 
@@ -19,7 +20,46 @@ func newCluster(stdin io.Reader, stdout io.Writer) *cobra.Command {
 		Args:  exactArgs(0),
 		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
 	}
-	command.AddCommand(newEnroll(stdin, stdout))
+	command.AddCommand(newEnroll(stdin, stdout), newUnenroll(stdout))
+	return command
+}
+
+func newUnenroll(stdout io.Writer) *cobra.Command {
+	var kubeconfig, kubeContext, connection, namespace, release string
+	command := &cobra.Command{
+		Use:   "unenroll",
+		Short: "Remove what enroll made on this cluster, after the connection is removed",
+		Long: "unenroll removes the agent's credential Secret that enroll made, and only when it is the named\n" +
+			"connection's, and prints the helm uninstall that removes the agent's release. It leaves the\n" +
+			"namespace, the operator and everything else alone.",
+		Args: exactArgs(0),
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if kubeContext == "" || connection == "" {
+				return fmt.Errorf("%w: --context and --connection-uid are required", errUsage)
+			}
+			resolved, err := localkube.Resolve(kubeconfig, kubeContext)
+			if err != nil {
+				return err
+			}
+			admin, err := kube.NewClient(resolved.Config)
+			if err != nil {
+				return err
+			}
+			if err := enrollment.Unenroll(cmd.Context(), admin, namespace, release, connection); err != nil {
+				return err
+			}
+			fmt.Fprintf(stdout, "The credential Secret is gone. Remove the agent with:\n\n"+
+				"  kubectl delete clusterrolebinding %s-impersonate   # ends its authority at once\n"+
+				"  helm uninstall %s --namespace %s\n", release, release, namespace)
+			return nil
+		},
+	}
+	flags := command.Flags()
+	flags.StringVar(&kubeContext, "context", "", "the kubeconfig context of the cluster (required)")
+	flags.StringVar(&kubeconfig, "kubeconfig", "", "the kubeconfig (default: KUBECONFIG, then ~/.kube/config)")
+	flags.StringVar(&connection, "connection-uid", "", "the removed connection's UID, as the console showed it (required)")
+	flags.StringVar(&namespace, "namespace", enrollment.DefaultAgentNamespace, "the namespace the agent runs in")
+	flags.StringVar(&release, "release", enrollment.DefaultRelease, "the agent's Helm release name")
 	return command
 }
 

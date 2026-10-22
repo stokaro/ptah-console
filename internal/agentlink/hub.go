@@ -19,9 +19,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	consolev1alpha1 "github.com/stokaro/ptah-console/api/v1alpha1"
-	"github.com/stokaro/ptah-console/internal/agent"
 	agentv1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/agent/v1"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/agent/v1/agentv1connect"
+	"github.com/stokaro/ptah-console/internal/wire"
 )
 
 // Errors a caller tells apart.
@@ -138,8 +138,8 @@ func (h *Hub) Channel(ctx context.Context, stream agentv1connect.AgentServiceCha
 		return err
 	}
 	hello := first.GetHello()
-	if hello == nil || hello.GetProtocol() != agent.Protocol {
-		return connect.Errorf(connect.CodeFailedPrecondition, "the agent has to open with a hello for protocol %d", agent.Protocol)
+	if hello == nil || hello.GetProtocol() != wire.Protocol {
+		return connect.Errorf(connect.CodeFailedPrecondition, "the agent has to open with a hello for protocol %d", wire.Protocol)
 	}
 	binding := &agentv1.Binding{ConnectionUid: entry.Spec.ConnectionUID, ConnectionGeneration: uint64(entry.Status.Channel.Generation)} // #nosec G115 -- the schema keeps it at 1 or more.
 	if !proto.Equal(first.GetBinding(), binding) {
@@ -191,6 +191,13 @@ func (h *Hub) authenticate(ctx context.Context, presented string, now time.Time)
 		}
 	}
 	if matches != 1 {
+		return nil, nil, errNotAccepted
+	}
+	fence, err := FenceOf(ctx, h.housekeeping, h.namespace, found.Spec.ConnectionUID)
+	if err != nil {
+		return nil, nil, connect.NewError(connect.CodeUnavailable, "the console could not read its revocations").WithCause(err)
+	}
+	if fence.Fences(found.Status.Channel.Generation) {
 		return nil, nil, errNotAccepted
 	}
 	return found, credential, nil

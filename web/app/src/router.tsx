@@ -3,8 +3,11 @@ import {
   createRoute,
   createRouter,
   lazyRouteComponent,
+  retainSearchParams,
   type RouterHistory,
 } from "@tanstack/react-router"
+
+import { ClusterProvider, readClusterSearch, type ClusterSearch } from "./api/cluster"
 
 import { Home, Launch, Login } from "./screens/Auth"
 import { Loading } from "./screens/common"
@@ -28,6 +31,12 @@ const DecisionDetail = lazyRouteComponent(
   () => import("./screens/DecisionDetail"),
   "DecisionDetail"
 )
+const Connections = lazyRouteComponent(() => import("./screens/Connections"), "Connections")
+const AddCluster = lazyRouteComponent(() => import("./screens/Connections"), "AddCluster")
+const ConnectionDetail = lazyRouteComponent(
+  () => import("./screens/Connections"),
+  "ConnectionDetail"
+)
 const ConsoleLayout = lazyRouteComponent(() => import("./screens/console/Layout"), "ConsoleLayout")
 const Resources = lazyRouteComponent(() => import("./screens/console/Resources"), "Resources")
 const Overview = lazyRouteComponent(() => import("./screens/console/Overview"), "Overview")
@@ -49,7 +58,21 @@ export interface RouterContext {
   launchError?: string
 }
 
-const rootRoute = createRootRouteWithContext<RouterContext>()({ component: Root })
+// The cluster a page shows is in the URL and follows every navigation, so a
+// link names its cluster and two clusters' pages never mix.
+const rootRoute = createRootRouteWithContext<RouterContext>()({
+  component: ClusterRoot,
+  validateSearch: readClusterSearch,
+  search: { middlewares: [retainSearchParams<ClusterSearch>(["cluster"])] },
+})
+
+function ClusterRoot() {
+  return (
+    <ClusterProvider>
+      <Root />
+    </ClusterProvider>
+  )
+}
 
 // The focused view: its pages share one column and the role tabs.
 const focus = createRoute({ getParentRoute: () => rootRoute, id: "_focus", component: FocusRoute })
@@ -103,6 +126,27 @@ const decision = createRoute({
   path: "decisions/$namespace/$kind/$name",
   component: DecisionDetail,
 })
+
+const connections = createRoute({
+  getParentRoute: () => focus,
+  path: "connections",
+  component: Connections,
+})
+const addCluster = createRoute({
+  getParentRoute: () => focus,
+  path: "connections/new",
+  component: AddCluster,
+})
+const connection = createRoute({
+  getParentRoute: () => focus,
+  path: "connections/$name",
+  component: ConnectionRoute,
+})
+
+function ConnectionRoute() {
+  const { name } = connection.useParams()
+  return <ConnectionDetail name={name} />
+}
 
 // The full console: every resource, with a sidebar between its pages.
 const consoleRoute = createRoute({
@@ -196,6 +240,9 @@ export const routeTree = rootRoute.addChildren([
     incidentDetail,
     decisions,
     decision,
+    connections,
+    addCluster,
+    connection,
   ]),
   consoleRoute.addChildren([
     consoleIndex,

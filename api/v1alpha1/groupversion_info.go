@@ -29,6 +29,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ConsoleCluster{}, &ConsoleClusterList{},
 		&ConsoleClusterPreferences{}, &ConsoleClusterPreferencesList{},
 		&ConsoleClusterEnrollment{}, &ConsoleClusterEnrollmentList{},
+		&ConsoleClusterRevocation{}, &ConsoleClusterRevocationList{},
 	)
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 	return nil

@@ -1,0 +1,111 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.22.0
+  name: consoleclusterrevocations.console.ptah.run
+spec:
+  group: console.ptah.run
+  names:
+    kind: ConsoleClusterRevocation
+    listKind: ConsoleClusterRevocationList
+    plural: consoleclusterrevocations
+    shortNames:
+    - ccr
+    singular: consoleclusterrevocation
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.connectionUID
+      name: Connection
+      type: string
+    - jsonPath: .spec.action
+      name: Action
+      type: string
+    - jsonPath: .spec.generation
+      name: Generation
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          ConsoleClusterRevocation fences a connection's identity. A channel of the
+          connection UID at the generation it names, or at any earlier one, is
+          refused, and so is every credential the connection had then; without a
+          generation, every generation is. It outlives the registry entry, so
+          recreating the entry, as a GitOps reapply of the old record does, revives
+          nothing. Only the console's own identity writes it; administrators read
+          it.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec is what is fenced. It is immutable.
+            properties:
+              action:
+                description: Action is why.
+                enum:
+                - Quarantine
+                - Remove
+                type: string
+              clusterName:
+                description: |-
+                  ClusterName is the entry's name when it was fenced, for a person
+                  reading the record.
+                maxLength: 63
+                type: string
+              connectionUID:
+                description: ConnectionUID is the fenced connection.
+                pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+                type: string
+              generation:
+                description: Generation is the highest fenced generation; unset is
+                  every one.
+                format: int64
+                minimum: 1
+                type: integer
+              reason:
+                description: Reason is what the administrator gave.
+                maxLength: 256
+                type: string
+              revokedBy:
+                description: RevokedBy is the Console account that asked for it.
+                maxLength: 63
+                type: string
+            required:
+            - action
+            - clusterName
+            - connectionUID
+            - revokedBy
+            type: object
+            x-kubernetes-validations:
+            - message: a revocation cannot be edited
+              rule: self == oldSelf
+            - message: a quarantine fences up to a generation, and a removal fences
+                every generation
+              rule: 'self.action == ''Remove'' ? !has(self.generation) : has(self.generation)'
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}
