@@ -124,6 +124,13 @@ registry_secrets() {
 up() {
 	[ -z "${E2E_TUNNEL_PID:-}" ] ||
 		fail 'the two-cluster rows reach the clusters over the Docker host network; bring the lab up with direct host access'
+	# Playwright runs the rows' beforeAll again in the worker it starts after a
+	# failed row. The environment those rows left is what the next ones read,
+	# so a second up changes nothing.
+	if [ -f "$TARGET_DIR/up" ]; then
+		say "the target cluster $TARGET_CLUSTER is already up"
+		return 0
+	fi
 	mkdir -p "$TARGET_DIR"
 	"$E2E_DIR/hosted.sh" agents
 
@@ -224,6 +231,7 @@ EOF
 	arch=$(target get nodes -o jsonpath='{.items[0].status.nodeInfo.architecture}')
 	lab_docker make -C "$ROOT_DIR" image-agent ARCH="$arch" AGENT_IMAGE="$AGENT_IMAGE" >/dev/null
 	lab_docker kind load docker-image "$AGENT_IMAGE" --name "$TARGET_CLUSTER" >/dev/null
+	touch "$TARGET_DIR/up"
 	say "the target cluster $TARGET_CLUSTER is up; nothing on it knows the console yet"
 }
 

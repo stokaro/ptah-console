@@ -200,6 +200,9 @@ export const test = base.extend<{ lab: Lab }>({
           child.kill()
         }
         origin = fact("HOSTED_URL")
+        // A row may sign in as one account and then another: the earlier
+        // session would otherwise send the sign-in page on to the console.
+        await page.context().clearCookies()
         await page.goto(`${origin}/login`)
         const form = page.getByRole("form", { name: "Sign in" })
         await expect(form).toBeVisible({ timeout: 60_000 })

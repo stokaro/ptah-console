@@ -14,7 +14,15 @@ import { act, expect, fact, outPath, test } from "./lab"
 
 const name = "lab-2"
 const enrollmentFile = outPath(`${name}.enroll`)
-let connectionUid = ""
+
+/**
+ * The connection UID the enrollment file names. It is read from the file
+ * rather than kept in a variable: Playwright starts a new worker after a row
+ * fails, and a variable would not survive it.
+ */
+function uidOf(file: string): string {
+  return /connectionUID: "?([0-9a-f-]{36})/.exec(readFileSync(file, "utf8"))?.[1] ?? ""
+}
 
 // The console serves certificates hosted.sh issued for localhost and for the
 // agent listener's name.
@@ -86,9 +94,7 @@ test("an administrator enrolls a second cluster, which reaches the console only 
   const downloading = page.waitForEvent("download")
   await page.getByRole("button", { name: `Download ${name}.enroll` }).click()
   await (await downloading).saveAs(enrollmentFile)
-  connectionUid =
-    /connectionUID: "?([0-9a-f-]{36})/.exec(readFileSync(enrollmentFile, "utf8"))?.[1] ?? ""
-  expect(connectionUid).toMatch(/^[0-9a-f-]{36}$/)
+  expect(uidOf(enrollmentFile)).toMatch(/^[0-9a-f-]{36}$/)
   const copy = page.getByRole("button", { name: /^Copy fingerprint / })
   const shown = ((await copy.getAttribute("aria-label")) ?? "").replace("Copy fingerprint ", "")
   expect(shown).toMatch(/^sha256:[0-9a-f]{64}$/)
@@ -199,7 +205,7 @@ test("an account the agent was never told of reaches nothing on the target", asy
     lab.origin(),
     "ScopeService/ListNamespaces",
     {},
-    connectionUid
+    uidOf(enrollmentFile)
   )
   expect(status).toBe(404)
   expect(body.message).toContain("no connection with that UID is visible to you")
@@ -213,7 +219,7 @@ test("an account the agent was never told of reaches nothing on the target", asy
     lab.origin(),
     "SchemaService/ListSchemas",
     { namespaces: ["kube-system"] },
-    connectionUid
+    uidOf(enrollmentFile)
   )
   expect(outside.status).toBe(403)
   expect(outside.body.message).toContain(
@@ -224,25 +230,39 @@ test("an account the agent was never told of reaches nothing on the target", asy
     lab.origin(),
     "SchemaService/ListSchemas",
     { namespaces: [fact("NAMESPACE")] },
-    connectionUid
+    uidOf(enrollmentFile)
   )
   expect(inside.status).toBe(200)
   await lab.caption("Even Avery is refused outside the namespaces lab-2's administrator granted.")
 })
 
 test("the agent's channel takes no credential, binding or protocol but its own", async () => {
-  expect(await act("external", "probe", "garbage", "-connection", connectionUid)).toBe(
+  expect(await act("external", "probe", "garbage", "-connection", uidOf(enrollmentFile))).toBe(
     "refused unauthenticated: the credential is not one this console accepts"
   )
   expect(
-    await act("external", "probe", `bootstrap:${enrollmentFile}`, "-connection", connectionUid)
+    await act(
+      "external",
+      "probe",
+      `bootstrap:${enrollmentFile}`,
+      "-connection",
+      uidOf(enrollmentFile)
+    )
   ).toBe("refused unauthenticated: the credential is not one this console accepts")
   const other = "00000000-0000-4000-8000-0000000000aa"
   expect(await act("external", "probe", "credential", "-connection", other)).toBe(
-    `refused permission_denied: the agent bound its channel to connection ${other} generation 1; its credential is for ${connectionUid} generation 1`
+    `refused permission_denied: the agent bound its channel to connection ${other} generation 1; its credential is for ${uidOf(enrollmentFile)} generation 1`
   )
   expect(
-    await act("external", "probe", "credential", "-connection", connectionUid, "-protocol", "2")
+    await act(
+      "external",
+      "probe",
+      "credential",
+      "-connection",
+      uidOf(enrollmentFile),
+      "-protocol",
+      "2"
+    )
   ).toBe("refused failed_precondition: the agent has to open with a hello for protocol 1")
   const misuse = await act("external", "misuse")
   expect(misuse).toContain("console api: 401")
@@ -267,7 +287,13 @@ test("a restart on either side keeps what the target granted", async ({ page, la
   await lab.skip(() => act("external", "restart"))
   await lab.signInHosted("author")
   await switchTo(page, name)
-  const { body } = await call(page, lab.origin(), "ScopeService/ListNamespaces", {}, connectionUid)
+  const { body } = await call(
+    page,
+    lab.origin(),
+    "ScopeService/ListNamespaces",
+    {},
+    uidOf(enrollmentFile)
+  )
   expect(body.namespaces).toEqual([
     expect.objectContaining({
       name: fact("NAMESPACE"),
@@ -387,7 +413,7 @@ test("a frozen target gets no decision late, and a fresh one goes through", asyn
 })
 
 test("the registry refuses through kubectl what the console's pages never offer", async () => {
-  const said = await act("external", "direct", name, connectionUid)
+  const said = await act("external", "direct", name, uidOf(enrollmentFile))
   expect(said).toMatch(
     /^admin-edits-trust: refused: .*a connection's trust and reach are immutable/m
   )
@@ -419,7 +445,7 @@ test("a quarantine holds when the entry is applied again, and a new generation l
   // what was kept, its recorded credentials included.
   await act("external", "drop", name)
   await act("external", "restore", name)
-  expect(await act("external", "probe", "credential", "-connection", connectionUid)).toBe(
+  expect(await act("external", "probe", "credential", "-connection", uidOf(enrollmentFile))).toBe(
     "refused unauthenticated: the credential is not one this console accepts"
   )
   await untilShown(page, async () => {
@@ -471,11 +497,27 @@ test("removing an offline target revokes it at once and leaves its cleanup to it
 
   await lab.skip(() => act("external", "online"))
   expect(
-    await act("external", "probe", "credential", "-connection", connectionUid, "-generation", "2")
+    await act(
+      "external",
+      "probe",
+      "credential",
+      "-connection",
+      uidOf(enrollmentFile),
+      "-generation",
+      "2"
+    )
   ).toBe("refused unauthenticated: the credential is not one this console accepts")
   await act("external", "restore", name)
   expect(
-    await act("external", "probe", "credential", "-connection", connectionUid, "-generation", "2")
+    await act(
+      "external",
+      "probe",
+      "credential",
+      "-connection",
+      uidOf(enrollmentFile),
+      "-generation",
+      "2"
+    )
   ).toBe("refused unauthenticated: the credential is not one this console accepts")
   await act("external", "drop", name)
   await lab.caption(
@@ -498,13 +540,13 @@ test("removing an offline target revokes it at once and leaves its cleanup to it
   await page.getByRole("button", { name: `Download ${name}.enroll` }).click()
   const again = outPath(`${name}-again.enroll`)
   await (await downloading).saveAs(again)
-  const reused = /connectionUID: "?([0-9a-f-]{36})/.exec(readFileSync(again, "utf8"))?.[1] ?? ""
+  const reused = uidOf(again)
   expect(reused).toMatch(/^[0-9a-f-]{36}$/)
-  expect(reused).not.toBe(connectionUid)
+  expect(reused).not.toBe(uidOf(enrollmentFile))
   await lab.caption(
     "lab-2's name was reused: the new enrollment is a new connection, which the old agent's credential does not open."
   )
 
-  const cleanup = await lab.skip(() => act("external", "unenroll", connectionUid))
+  const cleanup = await lab.skip(() => act("external", "unenroll", uidOf(enrollmentFile)))
   expect(cleanup).toContain("The credential Secret is gone.")
 })
