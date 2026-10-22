@@ -1,0 +1,144 @@
+syntax = "proto3";
+
+package ptah.console.agent.v1;
+
+import "google/protobuf/duration.proto";
+import "ptah/console/v1/decisions.proto";
+import "ptah/console/v1/diagnostics.proto";
+import "ptah/console/v1/resources.proto";
+import "ptah/console/v1/watch.proto";
+
+option go_package = "github.com/stokaro/ptah-console/internal/gen/ptah/console/agent/v1;agentv1";
+
+// AgentService is the channel between a console and the agent of a cluster
+// the console does not run in. The agent opens it, outbound, and holds it
+// open; the console sends typed requests down it and the agent answers each.
+// The agent serves the operations the console performs on the cluster it runs
+// in, with the same messages, and no other.
+service AgentService {
+  // Channel carries ChannelRequest frames from the agent, its hello and then
+  // results, and ChannelResponse frames from the console, requests and
+  // cancellations. The bearer credential on the call authenticates the agent.
+  rpc Channel(stream ChannelRequest) returns (stream ChannelResponse);
+}
+
+// Binding names the connection a frame belongs to. Every frame repeats it,
+// and a frame that names another connection or generation closes the channel.
+message Binding {
+  string connection_uid = 1;
+  uint64 connection_generation = 2;
+}
+
+// ChannelRequest is a frame the agent sends.
+message ChannelRequest {
+  Binding binding = 1;
+  oneof body {
+    Hello hello = 2;
+    Result result = 3;
+  }
+}
+
+// Hello is the agent's first frame.
+message Hello {
+  // Protocol is the version of this channel the agent speaks.
+  uint32 protocol = 1;
+  string agent_version = 2;
+}
+
+// ChannelResponse is a frame the console sends.
+message ChannelResponse {
+  Binding binding = 1;
+  oneof body {
+    Request request = 2;
+    Cancel cancel = 3;
+  }
+}
+
+// Envelope is who a request is for and how long it may take. The agent maps
+// account_id through its own allowlist to the one Kubernetes username it acts
+// as; nothing else in a request names an identity.
+message Envelope {
+  // RequestId is unique per connection; the agent refuses one it has seen.
+  string request_id = 1;
+  string console_instance = 2;
+  // SessionGeneration is the generation of the console session the request
+  // comes from.
+  uint64 session_generation = 3;
+  string account_id = 4;
+  // Deadline bounds the request on the agent's clock: at most 30 seconds.
+  google.protobuf.Duration deadline = 5;
+}
+
+// Request is one operation, as the person it names.
+message Request {
+  Envelope envelope = 1;
+  oneof action {
+    WhoAmIRequest who_am_i = 10;
+    ptah.console.v1.ListNamespacesRequest list_namespaces = 11;
+    ptah.console.v1.ListSchemasRequest list_schemas = 12;
+    ptah.console.v1.GetSchemaRequest get_schema = 13;
+    ptah.console.v1.GetSchemaPlanRequest get_schema_plan = 14;
+    ptah.console.v1.ListMigrationsRequest list_migrations = 15;
+    ptah.console.v1.GetMigrationRequest get_migration = 16;
+    ptah.console.v1.GetMigrationPlanRequest get_migration_plan = 17;
+    ptah.console.v1.ListDecisionsRequest list_decisions = 18;
+    ptah.console.v1.GetDecisionRequest get_decision = 19;
+    ptah.console.v1.ApproveSchemaPlanRequest approve_schema_plan = 20;
+    ptah.console.v1.ApproveMigrationPlanRequest approve_migration_plan = 21;
+    ptah.console.v1.AcknowledgeMigrationRunRequest acknowledge_migration_run = 22;
+    ptah.console.v1.SetSuspendedRequest set_suspended = 23;
+    ptah.console.v1.GetDiagnosticsRequest get_diagnostics = 24;
+    // Watch is one window: the agent watches until the deadline and ends.
+    ptah.console.v1.SubscribeRequest watch = 25;
+  }
+}
+
+// Cancel ends a request in flight.
+message Cancel {
+  string request_id = 1;
+}
+
+// WhoAmIRequest asks whom the agent acts as for the account.
+message WhoAmIRequest {}
+
+// WhoAmIResponse is what the API server says, through SelfSubjectReview.
+message WhoAmIResponse {
+  string username = 1;
+  repeated string groups = 2;
+}
+
+// Result answers a request. A watch sends its events as results before the
+// last one; every other request has exactly one result.
+message Result {
+  string request_id = 1;
+  // Last ends the request. A last result with no outcome ends a watch window
+  // that ran to its deadline.
+  bool last = 2;
+  oneof outcome {
+    Failure failure = 3;
+    WhoAmIResponse who_am_i = 10;
+    ptah.console.v1.ListNamespacesResponse list_namespaces = 11;
+    ptah.console.v1.ListSchemasResponse list_schemas = 12;
+    ptah.console.v1.GetSchemaResponse get_schema = 13;
+    ptah.console.v1.GetSchemaPlanResponse get_schema_plan = 14;
+    ptah.console.v1.ListMigrationsResponse list_migrations = 15;
+    ptah.console.v1.GetMigrationResponse get_migration = 16;
+    ptah.console.v1.GetMigrationPlanResponse get_migration_plan = 17;
+    ptah.console.v1.ListDecisionsResponse list_decisions = 18;
+    ptah.console.v1.GetDecisionResponse get_decision = 19;
+    ptah.console.v1.ApproveSchemaPlanResponse approve_schema_plan = 20;
+    ptah.console.v1.ApproveMigrationPlanResponse approve_migration_plan = 21;
+    ptah.console.v1.AcknowledgeMigrationRunResponse acknowledge_migration_run = 22;
+    ptah.console.v1.SetSuspendedResponse set_suspended = 23;
+    ptah.console.v1.GetDiagnosticsResponse get_diagnostics = 24;
+    ptah.console.v1.SubscribeResponse watch = 25;
+  }
+}
+
+// Failure is how a request ended when it did not succeed: the Connect code
+// and message the console's own service would have returned, such as
+// permission_denied with the API server's message.
+message Failure {
+  string code = 1;
+  string message = 2;
+}
