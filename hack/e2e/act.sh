@@ -19,6 +19,7 @@
 #   act.sh outage start|stop          freeze or release the API server's
 #                                     load balancer
 #   act.sh hosted ...                 the hosted console; see hosted.sh
+#   act.sh external ...               the second cluster; see external.sh
 #   act.sh insync <schema>            wait for a schema to be InSync
 set -eu
 # shellcheck source=lib.sh
@@ -31,6 +32,9 @@ shift
 case "$action" in
 hosted)
 	exec "$E2E_DIR/hosted.sh" "$@"
+	;;
+external)
+	exec "$E2E_DIR/external.sh" "$@"
 	;;
 insync)
 	wait_condition ptahschema "${1:?name a schema}" InSync 900s

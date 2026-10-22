@@ -10,11 +10,24 @@ name: Acceptance
 # the cluster's own account of what the rows decided, and the recordings are
 # joined into the demo film.
 #
+# The two-cluster rows (web/e2e/two-clusters.spec.ts) then add a second kind
+# cluster beside the lab, with the operator and no setup for the console, and
+# enroll it through the agent.
+#
 # It runs on request, and on a pull request that changes the environment, the
-# rows, the chart or the image: a run takes a cluster and about an hour.
+# rows, the charts, the images, the agent or the registry: a run takes two
+# clusters and over an hour. A request may name some of the row files, to
+# rerun those alone; the cluster's own account is then not checked, since the
+# rows it reads did not run.
 
 on:
   workflow_dispatch:
+    inputs:
+      rows:
+        description: Row files to run, such as two-clusters.spec.ts; empty runs them all
+        required: false
+        type: string
+        default: ""
   pull_request:
     paths:
       - .github/workflows/acceptance.yml
@@ -22,6 +35,16 @@ on:
       - web/e2e/**
       - charts/**
       - Dockerfile
+      - Dockerfile.agent
+      - api/**
+      - cmd/ptah-console-agent/**
+      - internal/agent/**
+      - internal/agentlink/**
+      - internal/enrollment/**
+      - internal/registry/**
+      - internal/route/**
+      - internal/wire/**
+      - proto/ptah/console/agent/**
 
 permissions:
   contents: read
@@ -140,9 +163,14 @@ jobs:
         env:
           OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
           OUT_DIR: ${{ runner.temp }}/e2e
-        run: make e2e-rows
+          E2E_ROWS: ${{ inputs.rows }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${E2E_ROWS:-}" =~ ^[a-z0-9.\ -]*$ ]] || { echo "rows names files, such as two-clusters.spec.ts"; exit 1; }
+          make e2e-rows
       - name: Check the outcome against the cluster
-        if: always() && steps.operator.outputs.dir != ''
+        if: always() && steps.operator.outputs.dir != '' && inputs.rows == ''
         env:
           OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
           OUT_DIR: ${{ runner.temp }}/e2e

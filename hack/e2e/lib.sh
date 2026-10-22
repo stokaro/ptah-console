@@ -63,6 +63,13 @@ fact() {
 	mv "$OUT_DIR/facts.new" "$OUT_DIR/facts"
 }
 
+# fact_of prints a fact recorded earlier, and refuses one nobody recorded.
+fact_of() {
+	fact_value=$(sed -n "s/^$1=//p" "$OUT_DIR/facts" 2>/dev/null | tail -n 1)
+	[ -n "$fact_value" ] || fail "no fact $1 was recorded"
+	printf '%s\n' "$fact_value"
+}
+
 # digest prints the digest an earlier push recorded under a name.
 digest() {
 	[ -s "$OUT_DIR/digests/$1" ] || fail "nothing was published as $1"
@@ -152,6 +159,49 @@ wait_plan() {
 		sleep 3
 	done
 	fail "$wait_plan_kind/$wait_plan_name published no new plan to approve"
+}
+
+# postgres_server stands up the PostgreSQL server the acceptance databases live
+# in, in the lab namespace, through the kubectl function named first: admin for
+# the lab's cluster, target for the second cluster external.sh adds.
+postgres_server() {
+	server_kubectl=$1
+	server_password=$2
+	"$server_kubectl" -n "$NAMESPACE" create secret generic e2e-postgres --from-literal=password="$server_password" \
+		--dry-run=client -o yaml | "$server_kubectl" apply -f - >/dev/null
+	jq -n --arg namespace "$NAMESPACE" --arg image "$E2E_POSTGRES_IMAGE" '
+	  def labels: {"app.kubernetes.io/name": "e2e-postgres"};
+	  {
+	    apiVersion: "v1", kind: "List",
+	    items: [
+	      {
+	        apiVersion: "apps/v1", kind: "Deployment",
+	        metadata: {namespace: $namespace, name: "e2e-postgres"},
+	        spec: {
+	          replicas: 1,
+	          selector: {matchLabels: labels},
+	          template: {
+	            metadata: {labels: labels},
+	            spec: {
+	              automountServiceAccountToken: false,
+	              containers: [{
+	                name: "postgres", image: $image, imagePullPolicy: "IfNotPresent",
+	                env: [{name: "POSTGRES_PASSWORD", valueFrom: {secretKeyRef: {name: "e2e-postgres", key: "password"}}}],
+	                ports: [{name: "postgresql", containerPort: 5432}],
+	                readinessProbe: {exec: {command: ["pg_isready", "-h", "127.0.0.1", "-U", "postgres"]}, periodSeconds: 3}
+	              }]
+	            }
+	          }
+	        }
+	      },
+	      {
+	        apiVersion: "v1", kind: "Service",
+	        metadata: {namespace: $namespace, name: "e2e-postgres"},
+	        spec: {selector: labels, ports: [{name: "postgresql", port: 5432, targetPort: "postgresql"}]}
+	      }
+	    ]
+	  }' | "$server_kubectl" apply -f - >/dev/null
+	"$server_kubectl" -n "$NAMESPACE" rollout status deployment/e2e-postgres --timeout=180s >/dev/null
 }
 
 # postgres runs psql as the superuser of the acceptance database server.
