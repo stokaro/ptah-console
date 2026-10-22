@@ -253,6 +253,7 @@ func (o Options) browser(config *accounts.Config, passwords *accounts.Passwords,
 		connections = api.NewConnectionService(factory, housekeeping, enrollmentSelf(config), o.Now, o.Audit)
 		connections.Validity = agentlink.DefaultValidity
 		connections.Activated = agents.hub.EndPending
+		connections.Ended = agents.hub.End
 	}
 	handler, err := server.New(server.Options{
 		Mode:         consolev1.Mode_MODE_HOSTED,

@@ -125,10 +125,7 @@ func arrangeRouting(t *testing.T) *routing {
 	for _, object := range []client.Object{
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "housekeeping"},
-			Rules: []rbacv1.PolicyRule{
-				{APIGroups: []string{group}, Resources: []string{"consoleclusters"}, Verbs: []string{"get", "list", "watch"}},
-				{APIGroups: []string{group}, Resources: []string{"consoleclusters/status"}, Verbs: []string{"update", "patch"}},
-			},
+			Rules:      housekeepingRules(),
 		},
 		&rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "housekeeping"},

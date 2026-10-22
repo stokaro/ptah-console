@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ptah/console/v1/connections.proto.
  */
 export const file_ptah_console_v1_connections: GenFile = /*@__PURE__*/
-  fileDesc("CiFwdGFoL2NvbnNvbGUvdjEvY29ubmVjdGlvbnMucHJvdG8SD3B0YWguY29uc29sZS52MSKYAQoXQ3JlYXRlRW5yb2xsbWVudFJlcXVlc3QSFAoMY2x1c3Rlcl9uYW1lGAEgASgJEhIKCm5hbWVzcGFjZXMYAiADKAkSNAoIYWNjb3VudHMYAyADKAsyIi5wdGFoLmNvbnNvbGUudjEuRW5yb2xsbWVudEFjY291bnQSHQoVYXBwcm92ZXJfY2x1c3Rlcl9yb2xlGAQgASgJIi4KEUVucm9sbG1lbnRBY2NvdW50EgoKAmlkGAEgASgJEg0KBXJvbGVzGAIgAygJIpABChhDcmVhdGVFbnJvbGxtZW50UmVzcG9uc2USFwoPZW5yb2xsbWVudF9maWxlGAEgASgMEhMKC2ZpbmdlcnByaW50GAIgASgJEi4KCmV4cGlyZXNfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDmNvbm5lY3Rpb25fdWlkGAQgASgJIhgKFkxpc3RFbnJvbGxtZW50c1JlcXVlc3QiSwoXTGlzdEVucm9sbG1lbnRzUmVzcG9uc2USMAoLZW5yb2xsbWVudHMYASADKAsyGy5wdGFoLmNvbnNvbGUudjEuRW5yb2xsbWVudCK8AgoKRW5yb2xsbWVudBIUCgxjbHVzdGVyX25hbWUYASABKAkSFgoOY29ubmVjdGlvbl91aWQYAiABKAkSEgoKbmFtZXNwYWNlcxgDIAMoCRI0CghhY2NvdW50cxgEIAMoCzIiLnB0YWguY29uc29sZS52MS5FbnJvbGxtZW50QWNjb3VudBIdChVhcHByb3Zlcl9jbHVzdGVyX3JvbGUYBSABKAkSEwoLZmluZ2VycHJpbnQYBiABKAkSLgoKZXhwaXJlc19hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASOQoKY29tcGxldGlvbhgIIAEoCzIlLnB0YWguY29uc29sZS52MS5FbnJvbGxtZW50Q29tcGxldGlvbhIXCg9hZ2VudF9jb25uZWN0ZWQYCSABKAgieQoURW5yb2xsbWVudENvbXBsZXRpb24SFQoNdGFyZ2V0X3NlcnZlchgBIAEoCRIYChB0YXJnZXRfY2Ffc2hhMjU2GAIgASgJEjAKDGNvbXBsZXRlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiMQoZQWN0aXZhdGVFbnJvbGxtZW50UmVxdWVzdBIUCgxjbHVzdGVyX25hbWUYASABKAkiNAoaQWN0aXZhdGVFbnJvbGxtZW50UmVzcG9uc2USFgoOY29ubmVjdGlvbl91aWQYASABKAky1gIKEUNvbm5lY3Rpb25TZXJ2aWNlEmcKEENyZWF0ZUVucm9sbG1lbnQSKC5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlRW5yb2xsbWVudFJlcXVlc3QaKS5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlRW5yb2xsbWVudFJlc3BvbnNlEmkKD0xpc3RFbnJvbGxtZW50cxInLnB0YWguY29uc29sZS52MS5MaXN0RW5yb2xsbWVudHNSZXF1ZXN0GigucHRhaC5jb25zb2xlLnYxLkxpc3RFbnJvbGxtZW50c1Jlc3BvbnNlIgOQAgESbQoSQWN0aXZhdGVFbnJvbGxtZW50EioucHRhaC5jb25zb2xlLnYxLkFjdGl2YXRlRW5yb2xsbWVudFJlcXVlc3QaKy5wdGFoLmNvbnNvbGUudjEuQWN0aXZhdGVFbnJvbGxtZW50UmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9zdG9rYXJvL3B0YWgtY29uc29sZS9pbnRlcm5hbC9nZW4vcHRhaC9jb25zb2xlL3YxO2NvbnNvbGV2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("CiFwdGFoL2NvbnNvbGUvdjEvY29ubmVjdGlvbnMucHJvdG8SD3B0YWguY29uc29sZS52MSKYAQoXQ3JlYXRlRW5yb2xsbWVudFJlcXVlc3QSFAoMY2x1c3Rlcl9uYW1lGAEgASgJEhIKCm5hbWVzcGFjZXMYAiADKAkSNAoIYWNjb3VudHMYAyADKAsyIi5wdGFoLmNvbnNvbGUudjEuRW5yb2xsbWVudEFjY291bnQSHQoVYXBwcm92ZXJfY2x1c3Rlcl9yb2xlGAQgASgJIi4KEUVucm9sbG1lbnRBY2NvdW50EgoKAmlkGAEgASgJEg0KBXJvbGVzGAIgAygJIpABChhDcmVhdGVFbnJvbGxtZW50UmVzcG9uc2USFwoPZW5yb2xsbWVudF9maWxlGAEgASgMEhMKC2ZpbmdlcnByaW50GAIgASgJEi4KCmV4cGlyZXNfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDmNvbm5lY3Rpb25fdWlkGAQgASgJIhgKFkxpc3RFbnJvbGxtZW50c1JlcXVlc3QiSwoXTGlzdEVucm9sbG1lbnRzUmVzcG9uc2USMAoLZW5yb2xsbWVudHMYASADKAsyGy5wdGFoLmNvbnNvbGUudjEuRW5yb2xsbWVudCK8AgoKRW5yb2xsbWVudBIUCgxjbHVzdGVyX25hbWUYASABKAkSFgoOY29ubmVjdGlvbl91aWQYAiABKAkSEgoKbmFtZXNwYWNlcxgDIAMoCRI0CghhY2NvdW50cxgEIAMoCzIiLnB0YWguY29uc29sZS52MS5FbnJvbGxtZW50QWNjb3VudBIdChVhcHByb3Zlcl9jbHVzdGVyX3JvbGUYBSABKAkSEwoLZmluZ2VycHJpbnQYBiABKAkSLgoKZXhwaXJlc19hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASOQoKY29tcGxldGlvbhgIIAEoCzIlLnB0YWguY29uc29sZS52MS5FbnJvbGxtZW50Q29tcGxldGlvbhIXCg9hZ2VudF9jb25uZWN0ZWQYCSABKAgieQoURW5yb2xsbWVudENvbXBsZXRpb24SFQoNdGFyZ2V0X3NlcnZlchgBIAEoCRIYChB0YXJnZXRfY2Ffc2hhMjU2GAIgASgJEjAKDGNvbXBsZXRlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiMQoZQWN0aXZhdGVFbnJvbGxtZW50UmVxdWVzdBIUCgxjbHVzdGVyX25hbWUYASABKAkiNAoaQWN0aXZhdGVFbnJvbGxtZW50UmVzcG9uc2USFgoOY29ubmVjdGlvbl91aWQYASABKAkiRAobU2V0Q29ubmVjdGlvbkVuYWJsZWRSZXF1ZXN0EhQKDGNsdXN0ZXJfbmFtZRgBIAEoCRIPCgdlbmFibGVkGAIgASgIIh4KHFNldENvbm5lY3Rpb25FbmFibGVkUmVzcG9uc2UiQwobUXVhcmFudGluZUNvbm5lY3Rpb25SZXF1ZXN0EhQKDGNsdXN0ZXJfbmFtZRgBIAEoCRIOCgZyZWFzb24YAiABKAkiMgocUXVhcmFudGluZUNvbm5lY3Rpb25SZXNwb25zZRISCgpnZW5lcmF0aW9uGAEgASgDIj8KF1JlbW92ZUNvbm5lY3Rpb25SZXF1ZXN0EhQKDGNsdXN0ZXJfbmFtZRgBIAEoCRIOCgZyZWFzb24YAiABKAkiYgoYUmVtb3ZlQ29ubmVjdGlvblJlc3BvbnNlEhYKDmNvbm5lY3Rpb25fdWlkGAEgASgJEhcKD2NsZWFudXBfcGVuZGluZxgCIAEoCBIVCg1jbGVhbnVwX3N0ZXBzGAMgAygJIjUKHUlzc3VlQ2hhbm5lbENyZWRlbnRpYWxSZXF1ZXN0EhQKDGNsdXN0ZXJfbmFtZRgBIAEoCSJ3Ch5Jc3N1ZUNoYW5uZWxDcmVkZW50aWFsUmVzcG9uc2USEgoKY3JlZGVudGlhbBgBIAEoCRISCgpnZW5lcmF0aW9uGAIgASgDEi0KCW5vdF9hZnRlchgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAypAYKEUNvbm5lY3Rpb25TZXJ2aWNlEmcKEENyZWF0ZUVucm9sbG1lbnQSKC5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlRW5yb2xsbWVudFJlcXVlc3QaKS5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlRW5yb2xsbWVudFJlc3BvbnNlEmkKD0xpc3RFbnJvbGxtZW50cxInLnB0YWguY29uc29sZS52MS5MaXN0RW5yb2xsbWVudHNSZXF1ZXN0GigucHRhaC5jb25zb2xlLnYxLkxpc3RFbnJvbGxtZW50c1Jlc3BvbnNlIgOQAgESbQoSQWN0aXZhdGVFbnJvbGxtZW50EioucHRhaC5jb25zb2xlLnYxLkFjdGl2YXRlRW5yb2xsbWVudFJlcXVlc3QaKy5wdGFoLmNvbnNvbGUudjEuQWN0aXZhdGVFbnJvbGxtZW50UmVzcG9uc2UScwoUU2V0Q29ubmVjdGlvbkVuYWJsZWQSLC5wdGFoLmNvbnNvbGUudjEuU2V0Q29ubmVjdGlvbkVuYWJsZWRSZXF1ZXN0Gi0ucHRhaC5jb25zb2xlLnYxLlNldENvbm5lY3Rpb25FbmFibGVkUmVzcG9uc2UScwoUUXVhcmFudGluZUNvbm5lY3Rpb24SLC5wdGFoLmNvbnNvbGUudjEuUXVhcmFudGluZUNvbm5lY3Rpb25SZXF1ZXN0Gi0ucHRhaC5jb25zb2xlLnYxLlF1YXJhbnRpbmVDb25uZWN0aW9uUmVzcG9uc2USZwoQUmVtb3ZlQ29ubmVjdGlvbhIoLnB0YWguY29uc29sZS52MS5SZW1vdmVDb25uZWN0aW9uUmVxdWVzdBopLnB0YWguY29uc29sZS52MS5SZW1vdmVDb25uZWN0aW9uUmVzcG9uc2USeQoWSXNzdWVDaGFubmVsQ3JlZGVudGlhbBIuLnB0YWguY29uc29sZS52MS5Jc3N1ZUNoYW5uZWxDcmVkZW50aWFsUmVxdWVzdBovLnB0YWguY29uc29sZS52MS5Jc3N1ZUNoYW5uZWxDcmVkZW50aWFsUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9zdG9rYXJvL3B0YWgtY29uc29sZS9pbnRlcm5hbC9nZW4vcHRhaC9jb25zb2xlL3YxO2NvbnNvbGV2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message ptah.console.v1.CreateEnrollmentRequest
@@ -274,6 +274,184 @@ export const ActivateEnrollmentResponseSchema: GenMessage<ActivateEnrollmentResp
   messageDesc(file_ptah_console_v1_connections, 8);
 
 /**
+ * @generated from message ptah.console.v1.SetConnectionEnabledRequest
+ */
+export type SetConnectionEnabledRequest = Message<"ptah.console.v1.SetConnectionEnabledRequest"> & {
+  /**
+   * @generated from field: string cluster_name = 1;
+   */
+  clusterName: string;
+
+  /**
+   * @generated from field: bool enabled = 2;
+   */
+  enabled: boolean;
+};
+
+/**
+ * Describes the message ptah.console.v1.SetConnectionEnabledRequest.
+ * Use `create(SetConnectionEnabledRequestSchema)` to create a new message.
+ */
+export const SetConnectionEnabledRequestSchema: GenMessage<SetConnectionEnabledRequest> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 9);
+
+/**
+ * @generated from message ptah.console.v1.SetConnectionEnabledResponse
+ */
+export type SetConnectionEnabledResponse = Message<"ptah.console.v1.SetConnectionEnabledResponse"> & {
+};
+
+/**
+ * Describes the message ptah.console.v1.SetConnectionEnabledResponse.
+ * Use `create(SetConnectionEnabledResponseSchema)` to create a new message.
+ */
+export const SetConnectionEnabledResponseSchema: GenMessage<SetConnectionEnabledResponse> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 10);
+
+/**
+ * @generated from message ptah.console.v1.QuarantineConnectionRequest
+ */
+export type QuarantineConnectionRequest = Message<"ptah.console.v1.QuarantineConnectionRequest"> & {
+  /**
+   * @generated from field: string cluster_name = 1;
+   */
+  clusterName: string;
+
+  /**
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message ptah.console.v1.QuarantineConnectionRequest.
+ * Use `create(QuarantineConnectionRequestSchema)` to create a new message.
+ */
+export const QuarantineConnectionRequestSchema: GenMessage<QuarantineConnectionRequest> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 11);
+
+/**
+ * @generated from message ptah.console.v1.QuarantineConnectionResponse
+ */
+export type QuarantineConnectionResponse = Message<"ptah.console.v1.QuarantineConnectionResponse"> & {
+  /**
+   * Generation is the fenced generation; new credentials come after it.
+   *
+   * @generated from field: int64 generation = 1;
+   */
+  generation: bigint;
+};
+
+/**
+ * Describes the message ptah.console.v1.QuarantineConnectionResponse.
+ * Use `create(QuarantineConnectionResponseSchema)` to create a new message.
+ */
+export const QuarantineConnectionResponseSchema: GenMessage<QuarantineConnectionResponse> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 12);
+
+/**
+ * @generated from message ptah.console.v1.RemoveConnectionRequest
+ */
+export type RemoveConnectionRequest = Message<"ptah.console.v1.RemoveConnectionRequest"> & {
+  /**
+   * @generated from field: string cluster_name = 1;
+   */
+  clusterName: string;
+
+  /**
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message ptah.console.v1.RemoveConnectionRequest.
+ * Use `create(RemoveConnectionRequestSchema)` to create a new message.
+ */
+export const RemoveConnectionRequestSchema: GenMessage<RemoveConnectionRequest> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 13);
+
+/**
+ * @generated from message ptah.console.v1.RemoveConnectionResponse
+ */
+export type RemoveConnectionResponse = Message<"ptah.console.v1.RemoveConnectionResponse"> & {
+  /**
+   * @generated from field: string connection_uid = 1;
+   */
+  connectionUid: string;
+
+  /**
+   * CleanupPending is true: the console cannot see the target clean up.
+   *
+   * @generated from field: bool cleanup_pending = 2;
+   */
+  cleanupPending: boolean;
+
+  /**
+   * CleanupSteps are what the target's administrator runs there.
+   *
+   * @generated from field: repeated string cleanup_steps = 3;
+   */
+  cleanupSteps: string[];
+};
+
+/**
+ * Describes the message ptah.console.v1.RemoveConnectionResponse.
+ * Use `create(RemoveConnectionResponseSchema)` to create a new message.
+ */
+export const RemoveConnectionResponseSchema: GenMessage<RemoveConnectionResponse> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 14);
+
+/**
+ * @generated from message ptah.console.v1.IssueChannelCredentialRequest
+ */
+export type IssueChannelCredentialRequest = Message<"ptah.console.v1.IssueChannelCredentialRequest"> & {
+  /**
+   * @generated from field: string cluster_name = 1;
+   */
+  clusterName: string;
+};
+
+/**
+ * Describes the message ptah.console.v1.IssueChannelCredentialRequest.
+ * Use `create(IssueChannelCredentialRequestSchema)` to create a new message.
+ */
+export const IssueChannelCredentialRequestSchema: GenMessage<IssueChannelCredentialRequest> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 15);
+
+/**
+ * @generated from message ptah.console.v1.IssueChannelCredentialResponse
+ */
+export type IssueChannelCredentialResponse = Message<"ptah.console.v1.IssueChannelCredentialResponse"> & {
+  /**
+   * Credential goes into the agent's Secret. The console keeps only its
+   * verifier.
+   *
+   * @generated from field: string credential = 1;
+   */
+  credential: string;
+
+  /**
+   * Generation is the one the agent's installation names.
+   *
+   * @generated from field: int64 generation = 2;
+   */
+  generation: bigint;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp not_after = 3;
+   */
+  notAfter?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message ptah.console.v1.IssueChannelCredentialResponse.
+ * Use `create(IssueChannelCredentialResponseSchema)` to create a new message.
+ */
+export const IssueChannelCredentialResponseSchema: GenMessage<IssueChannelCredentialResponse> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 16);
+
+/**
  * ConnectionService changes the registry of the clusters the console
  * reaches. The API server decides who may: a request runs as the person, and
  * only installation administrators are granted the registry's kinds.
@@ -312,6 +490,51 @@ export const ConnectionService: GenService<{
     methodKind: "unary";
     input: typeof ActivateEnrollmentRequestSchema;
     output: typeof ActivateEnrollmentResponseSchema;
+  },
+  /**
+   * SetConnectionEnabled turns a connection off for every page and every
+   * request, keeping its configuration, or on again.
+   *
+   * @generated from rpc ptah.console.v1.ConnectionService.SetConnectionEnabled
+   */
+  setConnectionEnabled: {
+    methodKind: "unary";
+    input: typeof SetConnectionEnabledRequestSchema;
+    output: typeof SetConnectionEnabledResponseSchema;
+  },
+  /**
+   * QuarantineConnection fences the connection's channel at its generation
+   * and drops its credentials. New credentials lift it.
+   *
+   * @generated from rpc ptah.console.v1.ConnectionService.QuarantineConnection
+   */
+  quarantineConnection: {
+    methodKind: "unary";
+    input: typeof QuarantineConnectionRequestSchema;
+    output: typeof QuarantineConnectionResponseSchema;
+  },
+  /**
+   * RemoveConnection revokes the connection, then removes it, and keeps a
+   * tombstone. The target's cleanup is left to its administrator.
+   *
+   * @generated from rpc ptah.console.v1.ConnectionService.RemoveConnection
+   */
+  removeConnection: {
+    methodKind: "unary";
+    input: typeof RemoveConnectionRequestSchema;
+    output: typeof RemoveConnectionResponseSchema;
+  },
+  /**
+   * IssueChannelCredential gives an agent connection a new channel
+   * credential, shown this once: a rotation's second credential, or the one
+   * that lifts a quarantine.
+   *
+   * @generated from rpc ptah.console.v1.ConnectionService.IssueChannelCredential
+   */
+  issueChannelCredential: {
+    methodKind: "unary";
+    input: typeof IssueChannelCredentialRequestSchema;
+    output: typeof IssueChannelCredentialResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_ptah_console_v1_connections, 0);

@@ -3,15 +3,18 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"connectrpc.com/connect/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	consolev1alpha1 "github.com/stokaro/ptah-console/api/v1alpha1"
+	"github.com/stokaro/ptah-console/internal/agentlink"
 	"github.com/stokaro/ptah-console/internal/audit"
 	"github.com/stokaro/ptah-console/internal/enrollment"
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
@@ -34,6 +37,9 @@ type ConnectionService struct {
 	// Activated is told the connection UID of each activated enrollment, so
 	// the agent's pending channel ends and opens again as the connection's.
 	Activated func(connectionUID string)
+	// Ended is told the connection UID of each connection quarantined or
+	// removed, so its open channel ends.
+	Ended func(connectionUID string)
 }
 
 // NewConnectionService returns the ConnectionService of a console that
@@ -178,6 +184,149 @@ func activationError(err error) error {
 		return connect.NewError(connect.CodeDeadlineExceeded, err.Error())
 	case apierrors.IsNotFound(err):
 		return connect.NewError(connect.CodeNotFound, "no enrollment with that name is visible to you").WithCause(err)
+	default:
+		return enrollmentError(err)
+	}
+}
+
+// SetConnectionEnabled writes the connection's enabled preference, as the
+// person.
+func (s *ConnectionService) SetConnectionEnabled(ctx context.Context, request *consolev1.SetConnectionEnabledRequest) (*consolev1.SetConnectionEnabledResponse, error) {
+	user, principal, err := actor(ctx, s.factory)
+	if err != nil {
+		return nil, err
+	}
+	err = setEnabled(ctx, user, s.self.Namespace, request.GetClusterName(), request.GetEnabled())
+	s.record(ctx, principal, "set-connection-enabled", request.GetClusterName(), "", err)
+	if err != nil {
+		return nil, enrollmentError(err)
+	}
+	return &consolev1.SetConnectionEnabledResponse{}, nil
+}
+
+// setEnabled writes the preferences of the entry named name.
+func setEnabled(ctx context.Context, user client.Client, namespace, name string, enabled bool) error {
+	entry := &consolev1alpha1.ConsoleCluster{}
+	if err := user.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, entry); err != nil {
+		return err
+	}
+	preferences := &consolev1alpha1.ConsoleClusterPreferences{}
+	err := user.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, preferences)
+	switch {
+	case apierrors.IsNotFound(err):
+		preferences = &consolev1alpha1.ConsoleClusterPreferences{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+			Spec: consolev1alpha1.ConsoleClusterPreferencesSpec{
+				ClusterRef: consolev1alpha1.ConnectionReference{Name: name, ConnectionUID: entry.Spec.ConnectionUID},
+				Enabled:    &enabled,
+			},
+		}
+		return user.Create(ctx, preferences)
+	case err != nil:
+		return err
+	case preferences.Spec.ClusterRef.ConnectionUID != entry.Spec.ConnectionUID:
+		return fmt.Errorf("the preferences named %s belong to another connection", name)
+	}
+	preferences.Spec.Enabled = &enabled
+	return user.Update(ctx, preferences)
+}
+
+// QuarantineConnection fences the connection, as a person allowed to delete
+// it.
+func (s *ConnectionService) QuarantineConnection(ctx context.Context, request *consolev1.QuarantineConnectionRequest) (*consolev1.QuarantineConnectionResponse, error) {
+	user, principal, err := actor(ctx, s.factory)
+	if err != nil {
+		return nil, err
+	}
+	key := client.ObjectKey{Namespace: s.self.Namespace, Name: request.GetClusterName()}
+	uid := s.connectionUID(ctx, key)
+	generation, err := agentlink.Quarantine(ctx, user, s.housekeeping, key, request.GetReason(), principal.AccountID)
+	s.record(ctx, principal, "quarantine-connection", request.GetClusterName(), uid, err)
+	if err != nil {
+		return nil, revocationError(err)
+	}
+	if s.Ended != nil {
+		s.Ended(uid)
+	}
+	return &consolev1.QuarantineConnectionResponse{Generation: generation}, nil
+}
+
+// RemoveConnection revokes and removes the connection, as a person allowed
+// to delete it.
+func (s *ConnectionService) RemoveConnection(ctx context.Context, request *consolev1.RemoveConnectionRequest) (*consolev1.RemoveConnectionResponse, error) {
+	user, principal, err := actor(ctx, s.factory)
+	if err != nil {
+		return nil, err
+	}
+	key := client.ObjectKey{Namespace: s.self.Namespace, Name: request.GetClusterName()}
+	uid := s.connectionUID(ctx, key)
+	removal, err := agentlink.Remove(ctx, user, s.housekeeping, key, request.GetReason(), principal.AccountID)
+	s.record(ctx, principal, "remove-connection", request.GetClusterName(), uid, err)
+	if err != nil {
+		return nil, revocationError(err)
+	}
+	if s.Ended != nil {
+		s.Ended(removal.ConnectionUID)
+	}
+	return &consolev1.RemoveConnectionResponse{ConnectionUid: removal.ConnectionUID, CleanupPending: true, CleanupSteps: removal.Cleanup}, nil
+}
+
+// IssueChannelCredential gives the connection a new credential, as a person
+// allowed to delete it.
+func (s *ConnectionService) IssueChannelCredential(ctx context.Context, request *consolev1.IssueChannelCredentialRequest) (*consolev1.IssueChannelCredentialResponse, error) {
+	user, principal, err := actor(ctx, s.factory)
+	if err != nil {
+		return nil, err
+	}
+	key := client.ObjectKey{Namespace: s.self.Namespace, Name: request.GetClusterName()}
+	uid := s.connectionUID(ctx, key)
+	now := s.now()
+	credential, err := agentlink.IssueAs(ctx, user, s.housekeeping, key, now, s.Validity)
+	s.record(ctx, principal, "issue-channel-credential", request.GetClusterName(), uid, err)
+	if err != nil {
+		return nil, revocationError(err)
+	}
+	entry := &consolev1alpha1.ConsoleCluster{}
+	if err := s.housekeeping.Get(ctx, key, entry); err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, "the console could not read the connection back").WithCause(err)
+	}
+	return &consolev1.IssueChannelCredentialResponse{
+		Credential: credential, Generation: entry.Status.Channel.Generation, NotAfter: timestamppb.New(now.Add(s.Validity)),
+	}, nil
+}
+
+// connectionUID is the entry's connection UID, for the audit, or empty.
+func (s *ConnectionService) connectionUID(ctx context.Context, key client.ObjectKey) string {
+	entry := &consolev1alpha1.ConsoleCluster{}
+	if err := s.housekeeping.Get(ctx, key, entry); err != nil {
+		return ""
+	}
+	return entry.Spec.ConnectionUID
+}
+
+// record audits one change to a connection.
+func (s *ConnectionService) record(ctx context.Context, principal kube.Principal, action, name, uid string, err error) {
+	event := audit.Event{
+		Action: action, Context: principal.Context, AccountID: principal.AccountID,
+		Namespace: s.self.Namespace, Kind: "ConsoleCluster", Name: name, UID: uid, Outcome: audit.Admitted,
+	}
+	if err != nil {
+		event.Outcome = audit.Refused
+	}
+	s.audit.Record(ctx, event)
+}
+
+// revocationError is what the person is told.
+func revocationError(err error) error {
+	switch {
+	case errors.Is(err, agentlink.ErrNotAllowed):
+		return connect.NewError(connect.CodePermissionDenied, err.Error())
+	case errors.Is(err, agentlink.ErrRemoved):
+		return connect.NewError(connect.CodeFailedPrecondition, err.Error())
+	case errors.Is(err, agentlink.ErrRotationInProgress):
+		return connect.NewError(connect.CodeFailedPrecondition, err.Error())
+	case apierrors.IsNotFound(err):
+		return connect.NewError(connect.CodeNotFound, "no connection with that name is visible to you").WithCause(err)
 	default:
 		return enrollmentError(err)
 	}

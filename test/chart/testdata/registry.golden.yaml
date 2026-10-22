@@ -112,6 +112,11 @@ rules:
   - apiGroups: ["console.ptah.run"]
     resources: ["consoleclusterenrollments/status"]
     verbs: ["update", "patch"]
+  # Revocations: the fences of quarantined and removed connections, which
+  # only the console writes, after it has asked whether the person may.
+  - apiGroups: ["console.ptah.run"]
+    resources: ["consoleclusterrevocations"]
+    verbs: ["get", "list", "watch", "create"]
 
 ---
 # Source: ptah-console/templates/registry.yaml
@@ -149,6 +154,11 @@ rules:
   - apiGroups: ["console.ptah.run"]
     resources: ["consoleclusters", "consoleclusterpreferences", "consoleclusterenrollments"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Administrators read the fences and change none: a fence the console
+  # wrote is lifted by new credentials, never by an edit.
+  - apiGroups: ["console.ptah.run"]
+    resources: ["consoleclusterrevocations"]
+    verbs: ["get", "list", "watch"]
 
 ---
 # Source: ptah-console/templates/roles.yaml

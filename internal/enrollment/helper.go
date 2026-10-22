@@ -299,3 +299,28 @@ func (h *Helper) writeValues() error {
 
 // schemaKind is how the helper asks whether the operator is installed.
 var schemaKind = operatorv1alpha1.GroupVersion.WithKind("PtahSchema")
+
+// ErrNotThisConnection is a credential Secret enroll did not make for the
+// connection named.
+var ErrNotThisConnection = errors.New("enrollment: the Secret is not the credential enroll made for that connection; it was left alone")
+
+// Unenroll removes what enroll made on the target that Helm does not own:
+// the agent's credential Secret, and only when it is the named connection's.
+// It removes nothing else; the Helm release goes with helm uninstall.
+func Unenroll(ctx context.Context, admin client.Client, namespace, release, connectionUID string) error {
+	secret := &corev1.Secret{}
+	key := client.ObjectKey{Namespace: namespace, Name: release + "-credential"}
+	if err := admin.Get(ctx, key, secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("enrollment: read Secret %s: %w", key, err)
+	}
+	if secret.Annotations[connectionAnnotation] != connectionUID {
+		return fmt.Errorf("%w: %s", ErrNotThisConnection, key)
+	}
+	if err := admin.Delete(ctx, secret, client.Preconditions{UID: &secret.UID}); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("enrollment: remove Secret %s: %w", key, err)
+	}
+	return nil
+}

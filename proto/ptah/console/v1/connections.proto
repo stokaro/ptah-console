@@ -20,6 +20,19 @@ service ConnectionService {
   // ActivateEnrollment makes a completed enrollment whose agent has
   // connected a connection.
   rpc ActivateEnrollment(ActivateEnrollmentRequest) returns (ActivateEnrollmentResponse) {}
+  // SetConnectionEnabled turns a connection off for every page and every
+  // request, keeping its configuration, or on again.
+  rpc SetConnectionEnabled(SetConnectionEnabledRequest) returns (SetConnectionEnabledResponse) {}
+  // QuarantineConnection fences the connection's channel at its generation
+  // and drops its credentials. New credentials lift it.
+  rpc QuarantineConnection(QuarantineConnectionRequest) returns (QuarantineConnectionResponse) {}
+  // RemoveConnection revokes the connection, then removes it, and keeps a
+  // tombstone. The target's cleanup is left to its administrator.
+  rpc RemoveConnection(RemoveConnectionRequest) returns (RemoveConnectionResponse) {}
+  // IssueChannelCredential gives an agent connection a new channel
+  // credential, shown this once: a rotation's second credential, or the one
+  // that lifts a quarantine.
+  rpc IssueChannelCredential(IssueChannelCredentialRequest) returns (IssueChannelCredentialResponse) {}
 }
 
 message CreateEnrollmentRequest {
@@ -85,4 +98,47 @@ message ActivateEnrollmentRequest {
 
 message ActivateEnrollmentResponse {
   string connection_uid = 1;
+}
+
+message SetConnectionEnabledRequest {
+  string cluster_name = 1;
+  bool enabled = 2;
+}
+
+message SetConnectionEnabledResponse {}
+
+message QuarantineConnectionRequest {
+  string cluster_name = 1;
+  string reason = 2;
+}
+
+message QuarantineConnectionResponse {
+  // Generation is the fenced generation; new credentials come after it.
+  int64 generation = 1;
+}
+
+message RemoveConnectionRequest {
+  string cluster_name = 1;
+  string reason = 2;
+}
+
+message RemoveConnectionResponse {
+  string connection_uid = 1;
+  // CleanupPending is true: the console cannot see the target clean up.
+  bool cleanup_pending = 2;
+  // CleanupSteps are what the target's administrator runs there.
+  repeated string cleanup_steps = 3;
+}
+
+message IssueChannelCredentialRequest {
+  string cluster_name = 1;
+}
+
+message IssueChannelCredentialResponse {
+  // Credential goes into the agent's Secret. The console keeps only its
+  // verifier.
+  string credential = 1;
+  // Generation is the one the agent's installation names.
+  int64 generation = 2;
+  google.protobuf.Timestamp not_after = 3;
 }

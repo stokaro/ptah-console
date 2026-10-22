@@ -560,6 +560,412 @@ func (x *ActivateEnrollmentResponse) GetConnectionUid() string {
 	return ""
 }
 
+type SetConnectionEnabledRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClusterName   string                 `protobuf:"bytes,1,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	Enabled       bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetConnectionEnabledRequest) Reset() {
+	*x = SetConnectionEnabledRequest{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetConnectionEnabledRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetConnectionEnabledRequest) ProtoMessage() {}
+
+func (x *SetConnectionEnabledRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetConnectionEnabledRequest.ProtoReflect.Descriptor instead.
+func (*SetConnectionEnabledRequest) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SetConnectionEnabledRequest) GetClusterName() string {
+	if x != nil {
+		return x.ClusterName
+	}
+	return ""
+}
+
+func (x *SetConnectionEnabledRequest) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+type SetConnectionEnabledResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetConnectionEnabledResponse) Reset() {
+	*x = SetConnectionEnabledResponse{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetConnectionEnabledResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetConnectionEnabledResponse) ProtoMessage() {}
+
+func (x *SetConnectionEnabledResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetConnectionEnabledResponse.ProtoReflect.Descriptor instead.
+func (*SetConnectionEnabledResponse) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{10}
+}
+
+type QuarantineConnectionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClusterName   string                 `protobuf:"bytes,1,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QuarantineConnectionRequest) Reset() {
+	*x = QuarantineConnectionRequest{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuarantineConnectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuarantineConnectionRequest) ProtoMessage() {}
+
+func (x *QuarantineConnectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuarantineConnectionRequest.ProtoReflect.Descriptor instead.
+func (*QuarantineConnectionRequest) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *QuarantineConnectionRequest) GetClusterName() string {
+	if x != nil {
+		return x.ClusterName
+	}
+	return ""
+}
+
+func (x *QuarantineConnectionRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type QuarantineConnectionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Generation is the fenced generation; new credentials come after it.
+	Generation    int64 `protobuf:"varint,1,opt,name=generation,proto3" json:"generation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QuarantineConnectionResponse) Reset() {
+	*x = QuarantineConnectionResponse{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuarantineConnectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuarantineConnectionResponse) ProtoMessage() {}
+
+func (x *QuarantineConnectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuarantineConnectionResponse.ProtoReflect.Descriptor instead.
+func (*QuarantineConnectionResponse) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *QuarantineConnectionResponse) GetGeneration() int64 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+type RemoveConnectionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClusterName   string                 `protobuf:"bytes,1,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveConnectionRequest) Reset() {
+	*x = RemoveConnectionRequest{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveConnectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveConnectionRequest) ProtoMessage() {}
+
+func (x *RemoveConnectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveConnectionRequest.ProtoReflect.Descriptor instead.
+func (*RemoveConnectionRequest) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *RemoveConnectionRequest) GetClusterName() string {
+	if x != nil {
+		return x.ClusterName
+	}
+	return ""
+}
+
+func (x *RemoveConnectionRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type RemoveConnectionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ConnectionUid string                 `protobuf:"bytes,1,opt,name=connection_uid,json=connectionUid,proto3" json:"connection_uid,omitempty"`
+	// CleanupPending is true: the console cannot see the target clean up.
+	CleanupPending bool `protobuf:"varint,2,opt,name=cleanup_pending,json=cleanupPending,proto3" json:"cleanup_pending,omitempty"`
+	// CleanupSteps are what the target's administrator runs there.
+	CleanupSteps  []string `protobuf:"bytes,3,rep,name=cleanup_steps,json=cleanupSteps,proto3" json:"cleanup_steps,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveConnectionResponse) Reset() {
+	*x = RemoveConnectionResponse{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveConnectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveConnectionResponse) ProtoMessage() {}
+
+func (x *RemoveConnectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveConnectionResponse.ProtoReflect.Descriptor instead.
+func (*RemoveConnectionResponse) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *RemoveConnectionResponse) GetConnectionUid() string {
+	if x != nil {
+		return x.ConnectionUid
+	}
+	return ""
+}
+
+func (x *RemoveConnectionResponse) GetCleanupPending() bool {
+	if x != nil {
+		return x.CleanupPending
+	}
+	return false
+}
+
+func (x *RemoveConnectionResponse) GetCleanupSteps() []string {
+	if x != nil {
+		return x.CleanupSteps
+	}
+	return nil
+}
+
+type IssueChannelCredentialRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClusterName   string                 `protobuf:"bytes,1,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IssueChannelCredentialRequest) Reset() {
+	*x = IssueChannelCredentialRequest{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IssueChannelCredentialRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IssueChannelCredentialRequest) ProtoMessage() {}
+
+func (x *IssueChannelCredentialRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IssueChannelCredentialRequest.ProtoReflect.Descriptor instead.
+func (*IssueChannelCredentialRequest) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *IssueChannelCredentialRequest) GetClusterName() string {
+	if x != nil {
+		return x.ClusterName
+	}
+	return ""
+}
+
+type IssueChannelCredentialResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Credential goes into the agent's Secret. The console keeps only its
+	// verifier.
+	Credential string `protobuf:"bytes,1,opt,name=credential,proto3" json:"credential,omitempty"`
+	// Generation is the one the agent's installation names.
+	Generation    int64                  `protobuf:"varint,2,opt,name=generation,proto3" json:"generation,omitempty"`
+	NotAfter      *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=not_after,json=notAfter,proto3" json:"not_after,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IssueChannelCredentialResponse) Reset() {
+	*x = IssueChannelCredentialResponse{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IssueChannelCredentialResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IssueChannelCredentialResponse) ProtoMessage() {}
+
+func (x *IssueChannelCredentialResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IssueChannelCredentialResponse.ProtoReflect.Descriptor instead.
+func (*IssueChannelCredentialResponse) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *IssueChannelCredentialResponse) GetCredential() string {
+	if x != nil {
+		return x.Credential
+	}
+	return ""
+}
+
+func (x *IssueChannelCredentialResponse) GetGeneration() int64 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+func (x *IssueChannelCredentialResponse) GetNotAfter() *timestamppb.Timestamp {
+	if x != nil {
+		return x.NotAfter
+	}
+	return nil
+}
+
 var File_ptah_console_v1_connections_proto protoreflect.FileDescriptor
 
 const file_ptah_console_v1_connections_proto_rawDesc = "" +
@@ -607,11 +1013,43 @@ const file_ptah_console_v1_connections_proto_rawDesc = "" +
 	"\x19ActivateEnrollmentRequest\x12!\n" +
 	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\"C\n" +
 	"\x1aActivateEnrollmentResponse\x12%\n" +
-	"\x0econnection_uid\x18\x01 \x01(\tR\rconnectionUid2\xda\x02\n" +
+	"\x0econnection_uid\x18\x01 \x01(\tR\rconnectionUid\"Z\n" +
+	"\x1bSetConnectionEnabledRequest\x12!\n" +
+	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12\x18\n" +
+	"\aenabled\x18\x02 \x01(\bR\aenabled\"\x1e\n" +
+	"\x1cSetConnectionEnabledResponse\"X\n" +
+	"\x1bQuarantineConnectionRequest\x12!\n" +
+	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\">\n" +
+	"\x1cQuarantineConnectionResponse\x12\x1e\n" +
+	"\n" +
+	"generation\x18\x01 \x01(\x03R\n" +
+	"generation\"T\n" +
+	"\x17RemoveConnectionRequest\x12!\n" +
+	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\x8f\x01\n" +
+	"\x18RemoveConnectionResponse\x12%\n" +
+	"\x0econnection_uid\x18\x01 \x01(\tR\rconnectionUid\x12'\n" +
+	"\x0fcleanup_pending\x18\x02 \x01(\bR\x0ecleanupPending\x12#\n" +
+	"\rcleanup_steps\x18\x03 \x03(\tR\fcleanupSteps\"B\n" +
+	"\x1dIssueChannelCredentialRequest\x12!\n" +
+	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\"\x99\x01\n" +
+	"\x1eIssueChannelCredentialResponse\x12\x1e\n" +
+	"\n" +
+	"credential\x18\x01 \x01(\tR\n" +
+	"credential\x12\x1e\n" +
+	"\n" +
+	"generation\x18\x02 \x01(\x03R\n" +
+	"generation\x127\n" +
+	"\tnot_after\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\bnotAfter2\xb0\x06\n" +
 	"\x11ConnectionService\x12i\n" +
 	"\x10CreateEnrollment\x12(.ptah.console.v1.CreateEnrollmentRequest\x1a).ptah.console.v1.CreateEnrollmentResponse\"\x00\x12i\n" +
 	"\x0fListEnrollments\x12'.ptah.console.v1.ListEnrollmentsRequest\x1a(.ptah.console.v1.ListEnrollmentsResponse\"\x03\x90\x02\x01\x12o\n" +
-	"\x12ActivateEnrollment\x12*.ptah.console.v1.ActivateEnrollmentRequest\x1a+.ptah.console.v1.ActivateEnrollmentResponse\"\x00BHZFgithub.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1b\x06proto3"
+	"\x12ActivateEnrollment\x12*.ptah.console.v1.ActivateEnrollmentRequest\x1a+.ptah.console.v1.ActivateEnrollmentResponse\"\x00\x12u\n" +
+	"\x14SetConnectionEnabled\x12,.ptah.console.v1.SetConnectionEnabledRequest\x1a-.ptah.console.v1.SetConnectionEnabledResponse\"\x00\x12u\n" +
+	"\x14QuarantineConnection\x12,.ptah.console.v1.QuarantineConnectionRequest\x1a-.ptah.console.v1.QuarantineConnectionResponse\"\x00\x12i\n" +
+	"\x10RemoveConnection\x12(.ptah.console.v1.RemoveConnectionRequest\x1a).ptah.console.v1.RemoveConnectionResponse\"\x00\x12{\n" +
+	"\x16IssueChannelCredential\x12..ptah.console.v1.IssueChannelCredentialRequest\x1a/.ptah.console.v1.IssueChannelCredentialResponse\"\x00BHZFgithub.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1b\x06proto3"
 
 var (
 	file_ptah_console_v1_connections_proto_rawDescOnce sync.Once
@@ -625,38 +1063,55 @@ func file_ptah_console_v1_connections_proto_rawDescGZIP() []byte {
 	return file_ptah_console_v1_connections_proto_rawDescData
 }
 
-var file_ptah_console_v1_connections_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_ptah_console_v1_connections_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_ptah_console_v1_connections_proto_goTypes = []any{
-	(*CreateEnrollmentRequest)(nil),    // 0: ptah.console.v1.CreateEnrollmentRequest
-	(*EnrollmentAccount)(nil),          // 1: ptah.console.v1.EnrollmentAccount
-	(*CreateEnrollmentResponse)(nil),   // 2: ptah.console.v1.CreateEnrollmentResponse
-	(*ListEnrollmentsRequest)(nil),     // 3: ptah.console.v1.ListEnrollmentsRequest
-	(*ListEnrollmentsResponse)(nil),    // 4: ptah.console.v1.ListEnrollmentsResponse
-	(*Enrollment)(nil),                 // 5: ptah.console.v1.Enrollment
-	(*EnrollmentCompletion)(nil),       // 6: ptah.console.v1.EnrollmentCompletion
-	(*ActivateEnrollmentRequest)(nil),  // 7: ptah.console.v1.ActivateEnrollmentRequest
-	(*ActivateEnrollmentResponse)(nil), // 8: ptah.console.v1.ActivateEnrollmentResponse
-	(*timestamppb.Timestamp)(nil),      // 9: google.protobuf.Timestamp
+	(*CreateEnrollmentRequest)(nil),        // 0: ptah.console.v1.CreateEnrollmentRequest
+	(*EnrollmentAccount)(nil),              // 1: ptah.console.v1.EnrollmentAccount
+	(*CreateEnrollmentResponse)(nil),       // 2: ptah.console.v1.CreateEnrollmentResponse
+	(*ListEnrollmentsRequest)(nil),         // 3: ptah.console.v1.ListEnrollmentsRequest
+	(*ListEnrollmentsResponse)(nil),        // 4: ptah.console.v1.ListEnrollmentsResponse
+	(*Enrollment)(nil),                     // 5: ptah.console.v1.Enrollment
+	(*EnrollmentCompletion)(nil),           // 6: ptah.console.v1.EnrollmentCompletion
+	(*ActivateEnrollmentRequest)(nil),      // 7: ptah.console.v1.ActivateEnrollmentRequest
+	(*ActivateEnrollmentResponse)(nil),     // 8: ptah.console.v1.ActivateEnrollmentResponse
+	(*SetConnectionEnabledRequest)(nil),    // 9: ptah.console.v1.SetConnectionEnabledRequest
+	(*SetConnectionEnabledResponse)(nil),   // 10: ptah.console.v1.SetConnectionEnabledResponse
+	(*QuarantineConnectionRequest)(nil),    // 11: ptah.console.v1.QuarantineConnectionRequest
+	(*QuarantineConnectionResponse)(nil),   // 12: ptah.console.v1.QuarantineConnectionResponse
+	(*RemoveConnectionRequest)(nil),        // 13: ptah.console.v1.RemoveConnectionRequest
+	(*RemoveConnectionResponse)(nil),       // 14: ptah.console.v1.RemoveConnectionResponse
+	(*IssueChannelCredentialRequest)(nil),  // 15: ptah.console.v1.IssueChannelCredentialRequest
+	(*IssueChannelCredentialResponse)(nil), // 16: ptah.console.v1.IssueChannelCredentialResponse
+	(*timestamppb.Timestamp)(nil),          // 17: google.protobuf.Timestamp
 }
 var file_ptah_console_v1_connections_proto_depIdxs = []int32{
 	1,  // 0: ptah.console.v1.CreateEnrollmentRequest.accounts:type_name -> ptah.console.v1.EnrollmentAccount
-	9,  // 1: ptah.console.v1.CreateEnrollmentResponse.expires_at:type_name -> google.protobuf.Timestamp
+	17, // 1: ptah.console.v1.CreateEnrollmentResponse.expires_at:type_name -> google.protobuf.Timestamp
 	5,  // 2: ptah.console.v1.ListEnrollmentsResponse.enrollments:type_name -> ptah.console.v1.Enrollment
 	1,  // 3: ptah.console.v1.Enrollment.accounts:type_name -> ptah.console.v1.EnrollmentAccount
-	9,  // 4: ptah.console.v1.Enrollment.expires_at:type_name -> google.protobuf.Timestamp
+	17, // 4: ptah.console.v1.Enrollment.expires_at:type_name -> google.protobuf.Timestamp
 	6,  // 5: ptah.console.v1.Enrollment.completion:type_name -> ptah.console.v1.EnrollmentCompletion
-	9,  // 6: ptah.console.v1.EnrollmentCompletion.completed_at:type_name -> google.protobuf.Timestamp
-	0,  // 7: ptah.console.v1.ConnectionService.CreateEnrollment:input_type -> ptah.console.v1.CreateEnrollmentRequest
-	3,  // 8: ptah.console.v1.ConnectionService.ListEnrollments:input_type -> ptah.console.v1.ListEnrollmentsRequest
-	7,  // 9: ptah.console.v1.ConnectionService.ActivateEnrollment:input_type -> ptah.console.v1.ActivateEnrollmentRequest
-	2,  // 10: ptah.console.v1.ConnectionService.CreateEnrollment:output_type -> ptah.console.v1.CreateEnrollmentResponse
-	4,  // 11: ptah.console.v1.ConnectionService.ListEnrollments:output_type -> ptah.console.v1.ListEnrollmentsResponse
-	8,  // 12: ptah.console.v1.ConnectionService.ActivateEnrollment:output_type -> ptah.console.v1.ActivateEnrollmentResponse
-	10, // [10:13] is the sub-list for method output_type
-	7,  // [7:10] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	17, // 6: ptah.console.v1.EnrollmentCompletion.completed_at:type_name -> google.protobuf.Timestamp
+	17, // 7: ptah.console.v1.IssueChannelCredentialResponse.not_after:type_name -> google.protobuf.Timestamp
+	0,  // 8: ptah.console.v1.ConnectionService.CreateEnrollment:input_type -> ptah.console.v1.CreateEnrollmentRequest
+	3,  // 9: ptah.console.v1.ConnectionService.ListEnrollments:input_type -> ptah.console.v1.ListEnrollmentsRequest
+	7,  // 10: ptah.console.v1.ConnectionService.ActivateEnrollment:input_type -> ptah.console.v1.ActivateEnrollmentRequest
+	9,  // 11: ptah.console.v1.ConnectionService.SetConnectionEnabled:input_type -> ptah.console.v1.SetConnectionEnabledRequest
+	11, // 12: ptah.console.v1.ConnectionService.QuarantineConnection:input_type -> ptah.console.v1.QuarantineConnectionRequest
+	13, // 13: ptah.console.v1.ConnectionService.RemoveConnection:input_type -> ptah.console.v1.RemoveConnectionRequest
+	15, // 14: ptah.console.v1.ConnectionService.IssueChannelCredential:input_type -> ptah.console.v1.IssueChannelCredentialRequest
+	2,  // 15: ptah.console.v1.ConnectionService.CreateEnrollment:output_type -> ptah.console.v1.CreateEnrollmentResponse
+	4,  // 16: ptah.console.v1.ConnectionService.ListEnrollments:output_type -> ptah.console.v1.ListEnrollmentsResponse
+	8,  // 17: ptah.console.v1.ConnectionService.ActivateEnrollment:output_type -> ptah.console.v1.ActivateEnrollmentResponse
+	10, // 18: ptah.console.v1.ConnectionService.SetConnectionEnabled:output_type -> ptah.console.v1.SetConnectionEnabledResponse
+	12, // 19: ptah.console.v1.ConnectionService.QuarantineConnection:output_type -> ptah.console.v1.QuarantineConnectionResponse
+	14, // 20: ptah.console.v1.ConnectionService.RemoveConnection:output_type -> ptah.console.v1.RemoveConnectionResponse
+	16, // 21: ptah.console.v1.ConnectionService.IssueChannelCredential:output_type -> ptah.console.v1.IssueChannelCredentialResponse
+	15, // [15:22] is the sub-list for method output_type
+	8,  // [8:15] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_ptah_console_v1_connections_proto_init() }
@@ -670,7 +1125,7 @@ func file_ptah_console_v1_connections_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ptah_console_v1_connections_proto_rawDesc), len(file_ptah_console_v1_connections_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
