@@ -116,6 +116,8 @@ Open the public address and sign in.
 
 [Running a hosted console](../hosted/runbook.md) covers adding, resetting and
 disabling accounts, changing their roles, and rotating the certificate.
+[External clusters](../hosted/external-clusters.md) covers enrolling, rotating
+and removing the clusters the console reaches through an agent.
 
 ## Uninstall
 
