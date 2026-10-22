@@ -160,6 +160,73 @@ spec:
               Status is what the console's own identity last observed about the
               connection. Nothing else writes it.
             properties:
+              channel:
+                description: |-
+                  Channel is what the console accepts from the agent of an Agent
+                  connection. A CoLocated connection has none.
+                properties:
+                  credentials:
+                    description: |-
+                      Credentials are the credentials the console accepts: one, and a second
+                      during a rotation.
+                    items:
+                      description: ChannelCredential is one credential the console
+                        accepts, by its verifier.
+                      properties:
+                        firstUsedAt:
+                          description: FirstUsedAt is when the credential first authenticated
+                            a channel.
+                          format: date-time
+                          type: string
+                        issuedAt:
+                          description: IssuedAt is when the console issued the credential.
+                          format: date-time
+                          type: string
+                        notAfter:
+                          description: NotAfter is when the credential expires.
+                          format: date-time
+                          type: string
+                        retireAt:
+                          description: |-
+                            RetireAt ends the credential before NotAfter: a newer one has
+                            authenticated a channel, and this one is accepted until then, at most
+                            an hour later.
+                          format: date-time
+                          type: string
+                        verifier:
+                          description: Verifier is the lowercase hex SHA-256 of the
+                            credential.
+                          pattern: ^[0-9a-f]{64}$
+                          type: string
+                      required:
+                      - issuedAt
+                      - notAfter
+                      - verifier
+                      type: object
+                      x-kubernetes-validations:
+                      - message: a credential expires after it is issued
+                        rule: self.notAfter > self.issuedAt
+                      - message: a credential retires no later than it expires
+                        rule: '!has(self.retireAt) || self.retireAt <= self.notAfter'
+                    maxItems: 2
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - verifier
+                    x-kubernetes-list-type: map
+                  generation:
+                    description: |-
+                      Generation fences channels: an agent that binds its channel to another
+                      generation is refused, and raising it ends every channel opened under
+                      the old one.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                required:
+                - generation
+                type: object
+                x-kubernetes-validations:
+                - message: the channel generation never goes back
+                  rule: '!has(oldSelf.generation) || self.generation >= oldSelf.generation'
               conditions:
                 description: Conditions are the connection's verdicts, Connected among
                   them.

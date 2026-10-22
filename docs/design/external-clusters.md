@@ -102,6 +102,16 @@ reloads it and reconnects, and the console retires the old one only after a
 stream authenticated with the new one. The agent has no permission to write its
 own Secret.
 
+The verifiers are in the status of the connection's `ConsoleCluster`, at most
+two, which only the console's own identity may write: a connection
+administrator manages entries and cannot write their status. Each verifier
+carries when it was issued, when it expires, when it first opened a channel,
+and, once a newer one has, when it retires: an hour later or at its expiry,
+whichever comes first. The status also carries the channel generation, which
+starts at 1 and only rises. Raising it ends the open channel, and an agent still
+bound to the old generation is refused until its installation names the new
+one. The console holds one channel per connection; a newer one ends the older.
+
 ## Registry
 
 `ConsoleCluster` holds what decides trust: the connection UID, the target's API

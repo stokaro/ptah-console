@@ -84,6 +84,11 @@ succeeds, so an entry the person was not granted by name leaves no trace. An
 account may get this cluster's entry and list none; creating, changing and
 deleting entries takes the `connection-admin` role.
 
+An agent proves itself with a channel credential: 256 random bits that the
+console shows once and keeps only as a SHA-256 verifier in the entry's status.
+A refused credential, whether unknown, expired or retired, gets the same
+answer.
+
 At startup the console reads this cluster's entry and refuses to serve when
 its connection UID, profile, installation ID or namespace ceiling disagrees
 with the configuration it was given. CEL keeps those fields immutable, so
