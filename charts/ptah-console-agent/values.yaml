@@ -1,0 +1,74 @@
+# The agent opens a channel to a hosted console, outbound, and serves the
+# console's requests in this cluster as the Console accounts below. Nothing
+# listens: the chart renders no Service and no Ingress.
+
+image:
+  repository: ghcr.io/stokaro/ptah-console-agent
+  # Defaults to the chart's appVersion.
+  tag: ""
+  # sha256:... pins the image by content; recommended.
+  digest: ""
+  pullPolicy: IfNotPresent
+
+# Secrets the kubelet pulls the image with, by name: [{name: ghcr-pull}].
+imagePullSecrets: []
+
+# Required. The console's installation ID, so the usernames the agent acts as
+# are the console accounts' own: ptah-console:<installationID>:<account>.
+installationID: ""
+
+# Required. The registry entry this agent serves, as the console enrolled it.
+# A change to either is a new connection.
+connection:
+  uid: ""
+  generation: 1
+
+# Required. Where the console's agent listener is, and how the agent knows it.
+console:
+  # The https root of the listener, such as https://agents.console.example.com.
+  address: ""
+  # The name the console's certificate carries.
+  serverName: ""
+  # The console's own CA, in PEM. No other CA, public or private, is trusted
+  # for the console.
+  caBundle: ""
+
+# Required. The Secret that holds the channel credential. The chart only
+# names it; the agent may not read or write any other Secret.
+credential:
+  secretName: ""
+  key: credential
+
+# Required. The namespace ceiling: a request for any other namespace is
+# refused before any call.
+namespaces: []
+
+# Required. The allowlist: the Console accounts the agent acts for, by ID.
+# The agent reads a changed list without a restart, and the chart grants it
+# impersonation of exactly these accounts' usernames.
+accounts: []
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    memory: 128Mi
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# A NetworkPolicy that lets the agent reach the API server, cluster DNS and
+# the console, and nothing else, and lets nothing reach it.
+networkPolicy:
+  enabled: false
+  apiServer:
+    # The API server's addresses, such as the kubernetes Service's.
+    cidrs: []
+    ports: [443, 6443]
+  console:
+    # The addresses the console's listener resolves to.
+    cidrs: []
+    ports: [443]

@@ -1,8 +1,9 @@
 #!/bin/sh
-# Validates the chart's renders against the API schemas of every Kubernetes
-# minor the operator supports, read from the operator module go.mod requires.
-# The renders are the value files the chart tests use: the least an
-# installation gives, and everything the chart can render.
+# Validates the renders of both charts, the console's and the agent's,
+# against the API schemas of every Kubernetes minor the operator supports,
+# read from the operator module go.mod requires. The renders are the value
+# files the chart tests use: the least an installation gives, and everything
+# each chart can render.
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -23,6 +24,11 @@ renders=0
 for values in test/chart/testdata/*.values.yaml; do
 	name=$(basename "$values" .values.yaml)
 	helm template console charts/ptah-console --namespace ptah-console --values "$values" >"$work/renders/$name.yaml"
+	renders=$((renders + 1))
+done
+for values in test/chart/testdata/agent/*.values.yaml; do
+	name=$(basename "$values" .values.yaml)
+	helm template agent charts/ptah-console-agent --namespace ptah-console-agent --values "$values" >"$work/renders/agent-$name.yaml"
 	renders=$((renders + 1))
 done
 [ "$renders" -gt 0 ] || {

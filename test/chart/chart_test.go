@@ -241,7 +241,7 @@ func TestEachAccountGetsItsRolesInEveryNamespace(t *testing.T) {
 
 // The chart installs on the Kubernetes minors the operator supports, and
 // says so in the constraint Helm checks.
-func TestTheChartSupportsTheOperatorsKubernetesWindow(t *testing.T) {
+func TestTheChartsSupportTheOperatorsKubernetesWindow(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
 	dir, err := operatorDir()
@@ -258,14 +258,16 @@ func TestTheChartSupportsTheOperatorsKubernetesWindow(t *testing.T) {
 	_, err = fmt.Sscanf(last, "%d.%d", &lastMajor, &lastMinor)
 	c.Assert(err, qt.IsNil)
 
-	chart, err := os.ReadFile(filepath.Join(chartDir, "Chart.yaml"))
-	c.Assert(err, qt.IsNil)
-	var metadata struct {
-		KubeVersion string `json:"kubeVersion"`
-	}
-	c.Assert(yaml.Unmarshal(chart, &metadata), qt.IsNil)
+	for _, dir := range []string{chartDir, agentChartDir} {
+		chart, err := os.ReadFile(filepath.Join(dir, "Chart.yaml"))
+		c.Assert(err, qt.IsNil)
+		var metadata struct {
+			KubeVersion string `json:"kubeVersion"`
+		}
+		c.Assert(yaml.Unmarshal(chart, &metadata), qt.IsNil)
 
-	c.Assert(metadata.KubeVersion, qt.Equals, fmt.Sprintf(">=%s.0-0 <%d.%d.0-0", first, lastMajor, lastMinor+1))
+		c.Assert(metadata.KubeVersion, qt.Equals, fmt.Sprintf(">=%s.0-0 <%d.%d.0-0", first, lastMajor, lastMinor+1), qt.Commentf("%s", dir))
+	}
 }
 
 func TestEachRefusal(t *testing.T) {
