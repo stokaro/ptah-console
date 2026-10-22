@@ -105,4 +105,12 @@ ingress rule without peers would admit everyone.
 {{- fail "trustedProxies: needs networkPolicy.ingressFrom to name the proxies; without peers the policy admits every source" -}}
 {{- end -}}
 {{- end -}}
+{{- if .Values.agents.enabled -}}
+{{- if not .Values.registry.enabled -}}
+{{- fail "agents: serves the agents of the registry's connections; enable the registry" -}}
+{{- end -}}
+{{- if not .Values.agents.tls.secretName -}}
+{{- fail "agents: tls.secretName names the agent listener's certificate from the console's own CA" -}}
+{{- end -}}
+{{- end -}}
 {{- end -}}

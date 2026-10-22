@@ -56,10 +56,20 @@ spec:
             {{- if .Values.readOnly }}
             - --read-only
             {{- end }}
+            {{- if .Values.agents.enabled }}
+            - --agent-listen=:8444
+            - --agent-tls-cert-file=/etc/ptah-console/agent-tls/tls.crt
+            - --agent-tls-key-file=/etc/ptah-console/agent-tls/tls.key
+            {{- end }}
           ports:
             - name: {{ $portName }}
               containerPort: 8443
               protocol: TCP
+            {{- if .Values.agents.enabled }}
+            - name: agents
+              containerPort: 8444
+              protocol: TCP
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /healthz
@@ -93,6 +103,11 @@ spec:
               mountPath: /etc/ptah-console/tls
               readOnly: true
             {{- end }}
+            {{- if .Values.agents.enabled }}
+            - name: agent-tls
+              mountPath: /etc/ptah-console/agent-tls
+              readOnly: true
+            {{- end }}
       volumes:
         - name: configuration
           configMap:
@@ -107,6 +122,16 @@ spec:
         - name: tls
           secret:
             secretName: {{ .Values.tls.secretName }}
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+        {{- end }}
+        {{- if .Values.agents.enabled }}
+        - name: agent-tls
+          secret:
+            secretName: {{ .Values.agents.tls.secretName }}
             items:
               - key: tls.crt
                 path: tls.crt
