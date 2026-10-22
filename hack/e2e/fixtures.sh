@@ -40,41 +40,7 @@ say 'a PostgreSQL server for the databases this repository adds'
 [ -s "$OUT_DIR/postgres-password" ] ||
 	head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' >"$OUT_DIR/postgres-password"
 PASSWORD=$(cat "$OUT_DIR/postgres-password")
-admin -n "$NAMESPACE" create secret generic e2e-postgres --from-literal=password="$PASSWORD" \
-	--dry-run=client -o yaml | admin apply -f - >/dev/null
-jq -n --arg namespace "$NAMESPACE" --arg image "$E2E_POSTGRES_IMAGE" '
-  def labels: {"app.kubernetes.io/name": "e2e-postgres"};
-  {
-    apiVersion: "v1", kind: "List",
-    items: [
-      {
-        apiVersion: "apps/v1", kind: "Deployment",
-        metadata: {namespace: $namespace, name: "e2e-postgres"},
-        spec: {
-          replicas: 1,
-          selector: {matchLabels: labels},
-          template: {
-            metadata: {labels: labels},
-            spec: {
-              automountServiceAccountToken: false,
-              containers: [{
-                name: "postgres", image: $image, imagePullPolicy: "IfNotPresent",
-                env: [{name: "POSTGRES_PASSWORD", valueFrom: {secretKeyRef: {name: "e2e-postgres", key: "password"}}}],
-                ports: [{name: "postgresql", containerPort: 5432}],
-                readinessProbe: {exec: {command: ["pg_isready", "-h", "127.0.0.1", "-U", "postgres"]}, periodSeconds: 3}
-              }]
-            }
-          }
-        }
-      },
-      {
-        apiVersion: "v1", kind: "Service",
-        metadata: {namespace: $namespace, name: "e2e-postgres"},
-        spec: {selector: labels, ports: [{name: "postgresql", port: 5432, targetPort: "postgresql"}]}
-      }
-    ]
-  }' | admin apply -f - >/dev/null
-admin -n "$NAMESPACE" rollout status deployment/e2e-postgres --timeout=180s >/dev/null
+postgres_server admin "$PASSWORD"
 for database in inventory billing journal reports; do
 	postgres -c "DROP DATABASE IF EXISTS $database WITH (FORCE)" -c "CREATE DATABASE $database"
 	admin -n "$NAMESPACE" create secret generic "e2e-database-$database" \
