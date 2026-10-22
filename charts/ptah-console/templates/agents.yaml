@@ -1,0 +1,24 @@
+{{- if .Values.agents.enabled -}}
+# The agents' own Service: the agent port and nothing else, so what exposes
+# it to other clusters exposes no browser endpoint.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ptah-console.fullname" . }}-agents
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console.labels" . | nindent 4 }}
+  {{- with .Values.agents.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.agents.service.type }}
+  selector:
+    {{- include "ptah-console.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: agents
+      port: {{ .Values.agents.service.port }}
+      targetPort: agents
+      protocol: TCP
+{{- end }}

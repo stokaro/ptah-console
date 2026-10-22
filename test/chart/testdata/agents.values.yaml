@@ -1,0 +1,27 @@
+# The registry on, with the listener the agents of external clusters dial.
+installationID: prod-eu-1
+publicURL: https://console.example.com/
+namespaces: [storefront, billing]
+accounts:
+  - id: alex
+    login: alex@example.com
+    roles: [viewer, connection-admin]
+passwords:
+  secretName: ptah-console-passwords
+tls:
+  secretName: console-tls
+registry:
+  enabled: true
+agents:
+  enabled: true
+  tls:
+    secretName: console-agents-tls
+  service:
+    type: LoadBalancer
+    annotations: {service.beta.kubernetes.io/example: internal}
+networkPolicy:
+  enabled: true
+  apiServer:
+    cidrs: [10.96.0.1/32]
+  ingressFrom:
+    - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: ingress-nginx}}

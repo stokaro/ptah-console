@@ -19,10 +19,7 @@ import (
 	"github.com/stokaro/ptah-console/internal/registry"
 )
 
-const (
-	registryNS     = "ptah-console-envtest-registry"
-	thisConnection = "3f2c4b1e-8d0a-4c2e-9b7f-1a2b3c4d5e6f"
-)
+const thisConnection = "3f2c4b1e-8d0a-4c2e-9b7f-1a2b3c4d5e6f"
 
 // A console with the registry on starts only against this cluster's entry
 // as its configuration describes it, read with its own identity; told of
@@ -31,7 +28,9 @@ func TestTheConsoleStartsOnlyAgainstItsOwnEntry(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
 	ctx := t.Context()
-	c.Assert(plane.Admin.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: registryNS}}), qt.IsNil)
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{GenerateName: "registry-"}}
+	c.Assert(plane.Admin.Create(ctx, namespace), qt.IsNil)
+	registryNS := namespace.Name
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{Namespace: registryNS, Name: "housekeeping"},
 		Rules: []rbacv1.PolicyRule{{
@@ -52,18 +51,18 @@ func TestTheConsoleStartsOnlyAgainstItsOwnEntry(t *testing.T) {
 		},
 	}), qt.IsNil)
 
-	listened, err := runWithRegistry(t, thisConnection)
+	listened, err := runWithRegistry(t, registryNS, thisConnection)
 	c.Assert(err, qt.IsNil)
 	c.Assert(listened, qt.IsTrue)
 
-	listened, err = runWithRegistry(t, "0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d")
+	listened, err = runWithRegistry(t, registryNS, "0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d")
 	c.Assert(err, qt.ErrorIs, registry.ErrThisClusterDisagrees)
 	c.Assert(listened, qt.IsFalse)
 }
 
 // runWithRegistry runs a hosted console told that this cluster's entry has
 // connectionUID, stops it once it listens, and reports whether it did.
-func runWithRegistry(t *testing.T, connectionUID string) (bool, error) {
+func runWithRegistry(t *testing.T, registryNS, connectionUID string) (bool, error) {
 	t.Helper()
 	c := qt.New(t)
 	dir := t.TempDir()
