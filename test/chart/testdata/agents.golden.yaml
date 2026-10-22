@@ -418,6 +418,7 @@ spec:
       port: 443
       targetPort: agents
       protocol: TCP
+      nodePort: 31443
 
 ---
 # Source: ptah-console/templates/service.yaml
