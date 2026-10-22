@@ -12,8 +12,8 @@ and security contract it implements.
 - [Deployment and compatibility](deployment-and-compatibility.md): the binary,
   the chart, supported versions, and how an action is judged supported.
 - [Where the design and the contract differ](design-departures.md).
-- [External clusters](external-clusters.md): the phase 2 proposal, for review
-  before any of it is built.
+- [External clusters](external-clusters.md): the phase 2 design, reviewed on
+  2026-10-21 before any of it is built.
 
 ## The request path
 
