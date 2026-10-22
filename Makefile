@@ -29,7 +29,7 @@ ENVTEST_KUBERNETES_VERSION ?= 1.37.0
 ENVTEST_INDEX ?= https://raw.githubusercontent.com/kubernetes-sigs/controller-tools/1031496fc98a4f51010c3bdfdeb57b5d67bea7bd/envtest-releases.yaml
 ENVTEST_BIN_DIR ?=
 
-.PHONY: release-check chart-conform build build-linux image require-docker-context build-go test test-web-go vet fmt-check verify-go-mod check \
+.PHONY: release-check chart-conform build build-linux image image-agent require-docker-context build-go test test-web-go vet fmt-check verify-go-mod check \
 	web-storybook lint lint-golangci lint-qtlint lint-nolintguard lint-teststyle vulncheck \
 	web-install web-build web-lint web-test web-size web-check embed-smoke \
 	generate verify-generated buf-lint buf-breaking contract test-envtest verify \
@@ -57,6 +57,19 @@ image: require-docker-context build-linux
 	cp Dockerfile "$$context"/ && cp $(BIN)/linux_$(ARCH)/ptah-console "$$context/linux/$(ARCH)/" && \
 	docker build --platform linux/$(ARCH) --build-arg VERSION=$(VERSION) --build-arg REVISION=$(COMMIT) \
 		--tag $(IMAGE) "$$context"; \
+	status=$$?; rm -rf "$$context"; exit $$status
+
+# The agent's image, the same way, from Dockerfile.agent. The agent serves no
+# web app, so it is built without one.
+AGENT_IMAGE ?= ptah-console-agent:dev
+image-agent: require-docker-context
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) $(GO) build -trimpath -ldflags "$(LDFLAGS)" \
+		-o $(BIN)/linux_$(ARCH)/ptah-console-agent ./cmd/ptah-console-agent
+	@context=$$(mktemp -d); \
+	mkdir -p "$$context/linux/$(ARCH)" && \
+	cp Dockerfile.agent "$$context/Dockerfile" && cp $(BIN)/linux_$(ARCH)/ptah-console-agent "$$context/linux/$(ARCH)/" && \
+	docker build --platform linux/$(ARCH) --build-arg VERSION=$(VERSION) --build-arg REVISION=$(COMMIT) \
+		--tag $(AGENT_IMAGE) "$$context"; \
 	status=$$?; rm -rf "$$context"; exit $$status
 
 # Docker work names its context: never whichever one happens to be current.
@@ -204,8 +217,9 @@ e2e-up:
 # cluster's own account of what they decided.
 e2e: e2e-rows e2e-verify
 
+# E2E_ROWS names some of the row files, to run those alone.
 e2e-rows: build
-	cd web && npx playwright test -c e2e/playwright.config.ts
+	cd web && npx playwright test -c e2e/playwright.config.ts $(E2E_ROWS)
 
 e2e-verify:
 	./hack/e2e/verify.sh

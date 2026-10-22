@@ -34,6 +34,7 @@ import (
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/v1/consolev1connect"
 	"github.com/stokaro/ptah-console/internal/hosted"
 	"github.com/stokaro/ptah-console/internal/route"
+	"github.com/stokaro/ptah-console/test/freeze"
 )
 
 // The connections of the routing rows: this cluster, two external clusters
@@ -95,6 +96,10 @@ type routing struct {
 	browser   string
 	namespace string
 	b         *standIn
+	// ping, when set, is the console's agent ping; frozen, when set, carries
+	// cluster-a's agent through a proxy that start sets it to.
+	ping   time.Duration
+	frozen **freeze.Proxy
 }
 
 func arrangeRouting(t *testing.T) *routing {
@@ -213,7 +218,7 @@ registry:
 			Assets:      fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}},
 			Listening:   func(addr net.Addr) { browser <- addr },
 			AgentListen: "127.0.0.1:0", AgentTLSCertFile: certificates.certFile, AgentTLSKeyFile: certificates.keyFile,
-			AgentListening: func(addr net.Addr) { agents <- addr },
+			AgentListening: func(addr net.Addr) { agents <- addr }, AgentPing: r.ping,
 		})
 	}()
 	t.Cleanup(func() {
@@ -223,7 +228,12 @@ registry:
 	r.browser = (<-browser).String()
 	agentAddress := (<-agents).String()
 
-	runAgent(t, agentAddress, certificates, routeA, plane.Env.Config, "[alex, sam]", credentialA)
+	addressA := agentAddress
+	if r.frozen != nil {
+		*r.frozen = freeze.Start(t, agentAddress)
+		addressA = (*r.frozen).Addr()
+	}
+	runAgent(t, addressA, certificates, routeA, plane.Env.Config, "[alex, sam]", credentialA)
 	runAgent(t, agentAddress, certificates, routeB, &rest.Config{Host: "https://cluster-b.invalid", Transport: r.b, QPS: -1}, "[alex]", credentialB)
 	for _, key := range []client.ObjectKey{keyA, keyB} {
 		deadline := time.Now().Add(10 * time.Second)
@@ -393,4 +403,31 @@ func schemaFixture(namespace, name string) *operatorv1alpha1.PtahSchema {
 			},
 		},
 	}
+}
+
+// A frozen agent's channel ends once a ping goes unanswered, and a request
+// for its cluster is then refused at once as not connected, not sent into a
+// channel nothing reads. A live agent answers the pings and keeps its
+// channel.
+func TestAFrozenAgentIsDisconnected(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	r := arrangeRouting(t)
+	var proxy *freeze.Proxy
+	r.ping, r.frozen = 250*time.Millisecond, &proxy
+	r.start(t)
+	alex := r.signIn(t, "alex@example.com", "alex-secret")
+	scope := consolev1connect.NewScopeServiceClient(r.transport())
+	time.Sleep(8 * r.ping)
+	_, err := scope.ListNamespaces(to(t.Context(), alex, routeA), &consolev1.ListNamespacesRequest{})
+	c.Assert(err, qt.IsNil, qt.Commentf("the pings ended a live channel"))
+
+	proxy.Freeze()
+
+	eventually(t, "the console refusing the frozen agent's cluster as not connected", func() bool {
+		ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+		defer cancel()
+		_, err := scope.ListNamespaces(to(ctx, alex, routeA), &consolev1.ListNamespacesRequest{})
+		return connect.CodeOf(err) == connect.CodeUnavailable && strings.Contains(err.Error(), "the cluster's agent is not connected")
+	})
 }

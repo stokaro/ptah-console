@@ -21,6 +21,7 @@ import (
 	"connectrpc.com/connect/v2/connecthttp"
 	qt "github.com/frankban/quicktest"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -187,7 +188,7 @@ func (w *world) whoAmI() []*agentv1.Result {
 	w.t.Helper()
 	c := qt.New(w.t)
 	pending, err := w.hub.Send(w.t.Context(), w.uid, &agentv1.Request{
-		Envelope: &agentv1.Envelope{AccountId: "alex", Deadline: durationpb.New(10 * time.Second)},
+		Envelope: &agentv1.Envelope{AccountId: "alex", Deadline: durationpb.New(10 * time.Second), SentAt: timestamppb.Now()},
 		Action:   &agentv1.Request_WhoAmI{WhoAmI: &agentv1.WhoAmIRequest{}},
 	})
 	c.Assert(err, qt.IsNil)
@@ -349,7 +350,7 @@ func TestARequestOnADroppedChannelIsLost(t *testing.T) {
 	run := w.open(file(w.issue()), 1)
 	eventually(t, "the channel opening", func() bool { return w.hub.Connected(w.uid) })
 	watch := &agentv1.Request{
-		Envelope: &agentv1.Envelope{AccountId: "alex", Deadline: durationpb.New(30 * time.Second)},
+		Envelope: &agentv1.Envelope{AccountId: "alex", Deadline: durationpb.New(30 * time.Second), SentAt: timestamppb.Now()},
 		Action:   &agentv1.Request_Watch{Watch: &consolev1.SubscribeRequest{Namespaces: []string{"storefront"}}},
 	}
 	pending, err := w.hub.Send(t.Context(), w.uid, watch)

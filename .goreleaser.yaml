@@ -1,6 +1,7 @@
 # What a release of the console is: the binary for every supported client
 # platform with the web app in it, the multi-architecture image the chart
-# runs, the checksums and an SBOM for each archive. The chart and the
+# runs, the agent's image for the clusters a hosted console reaches through
+# it, the checksums and an SBOM for each archive. The chart and the
 # provenance attestations are made by .github/workflows/release.yml around
 # this, so one workflow says what a release publishes.
 #
@@ -31,6 +32,26 @@ builds:
       - arm64
     tags:
       - with_frontend
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w
+      - -X github.com/stokaro/ptah-console/internal/buildinfo.version=v{{ .Version }}
+      - -X github.com/stokaro/ptah-console/internal/buildinfo.commit={{ .FullCommit }}
+
+  # The agent runs only as its image, in a Linux cluster: no archive.
+  - id: ptah-console-agent
+    main: ./cmd/ptah-console-agent
+    binary: ptah-console-agent
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
     flags:
       - -trimpath
@@ -73,6 +94,21 @@ dockers_v2:
       - linux/amd64
       - linux/arm64
     dockerfile: Dockerfile
+    build_args:
+      VERSION: "{{ .Version }}"
+      REVISION: "{{ .FullCommit }}"
+    sbom: true
+  - id: ptah-console-agent
+    ids: [ptah-console-agent]
+    images:
+      - "{{ .Env.AGENT_IMAGE }}"
+      - "{{ .Env.AGENT_MIRROR_IMAGE }}"
+    tags:
+      - "{{ .Version }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    dockerfile: Dockerfile.agent
     build_args:
       VERSION: "{{ .Version }}"
       REVISION: "{{ .FullCommit }}"

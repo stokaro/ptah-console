@@ -11,6 +11,7 @@ import (
 	"slices"
 	"time"
 
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	consolev1alpha1 "github.com/stokaro/ptah-console/api/v1alpha1"
+	"github.com/stokaro/ptah-console/internal/auth/accounts"
 )
 
 // Errors a caller tells apart.
@@ -87,19 +89,19 @@ func Create(ctx context.Context, user, housekeeping client.Client, self Self, re
 	if err != nil {
 		return nil, err
 	}
-	accounts := make([]consolev1alpha1.EnrollmentAccount, 0, len(request.Accounts))
+	enrolled := make([]consolev1alpha1.EnrollmentAccount, 0, len(request.Accounts))
 	for _, account := range request.Accounts {
 		roles := make([]consolev1alpha1.EnrollmentRole, 0, len(account.Roles))
 		for _, role := range account.Roles {
 			roles = append(roles, consolev1alpha1.EnrollmentRole(role))
 		}
-		accounts = append(accounts, consolev1alpha1.EnrollmentAccount{ID: account.ID, Roles: roles})
+		enrolled = append(enrolled, consolev1alpha1.EnrollmentAccount{ID: account.ID, Roles: roles})
 	}
 	enrollment := &consolev1alpha1.ConsoleClusterEnrollment{
 		ObjectMeta: metav1.ObjectMeta{Namespace: self.Namespace, Name: request.ClusterName},
 		Spec: consolev1alpha1.ConsoleClusterEnrollmentSpec{
 			ClusterName: request.ClusterName, ConnectionUID: connection, InstallationID: self.InstallationID,
-			Namespaces: slices.Clone(request.Namespaces), Accounts: accounts, ApproverClusterRole: request.ApproverClusterRole,
+			Namespaces: slices.Clone(request.Namespaces), Accounts: enrolled, ApproverClusterRole: request.ApproverClusterRole,
 			ConsoleServerName: self.Agents.ServerName, ConsoleCASHA256: CASHA256(self.Agents.CABundle),
 		},
 	}
@@ -320,15 +322,27 @@ func Activate(ctx context.Context, user, housekeeping client.Client, namespace, 
 		},
 	}
 	if err := user.Create(ctx, entry); err != nil {
-		if apierrors.IsAlreadyExists(err) {
+		if !apierrors.IsAlreadyExists(err) {
+			return nil, err
+		}
+		// An activation that stopped part way left this enrollment's entry;
+		// any other entry of that name is another connection's.
+		existing := &consolev1alpha1.ConsoleCluster{}
+		if err := user.Get(ctx, client.ObjectKeyFromObject(entry), existing); err != nil {
+			return nil, err
+		}
+		if existing.Spec.ConnectionUID != pending.Spec.ConnectionUID {
 			return nil, ErrNameTaken
 		}
-		return nil, err
+		entry = existing
 	}
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		current := &consolev1alpha1.ConsoleCluster{}
 		if err := housekeeping.Get(ctx, client.ObjectKeyFromObject(entry), current); err != nil {
 			return err
+		}
+		if current.Status.Channel != nil {
+			return nil
 		}
 		current.Status.Channel = &consolev1alpha1.ChannelStatus{Generation: 1, Credentials: []consolev1alpha1.ChannelCredential{{
 			Verifier: completion.CredentialVerifier, IssuedAt: completion.CompletedAt,
@@ -339,9 +353,55 @@ func Activate(ctx context.Context, user, housekeeping client.Client, namespace, 
 	if err != nil {
 		return nil, fmt.Errorf("record the connection's channel credential: %w", err)
 	}
+	if err := grantAccounts(ctx, user, entry, pending.Spec.Accounts); err != nil {
+		return nil, fmt.Errorf("let the enrolled accounts see the connection: %w", err)
+	}
 	err = housekeeping.Delete(ctx, pending, client.Preconditions{UID: &pending.UID})
 	if client.IgnoreNotFound(err) != nil {
 		return nil, fmt.Errorf("remove the activated enrollment: %w", err)
 	}
 	return entry, nil
+}
+
+// GrantName is the Role and RoleBinding that let a connection's enrolled
+// accounts see it. The connection UID is in the name, so a name reused by a
+// new connection gets grants of its own, whatever the garbage collector has
+// not yet removed of the old one's.
+func GrantName(connectionUID string) string {
+	return "ptah-console-connection-" + connectionUID
+}
+
+// grantAccounts lets the enrolled accounts get the connection's entry, and
+// nothing else: the console shows a person only the entries that person may
+// get. The administrator's own client makes the grant, so RBAC decides who
+// may, and the entry owns it, so it goes with the entry.
+func grantAccounts(ctx context.Context, user client.Client, entry *consolev1alpha1.ConsoleCluster, enrolled []consolev1alpha1.EnrollmentAccount) error {
+	owner := metav1.OwnerReference{
+		APIVersion: consolev1alpha1.GroupVersion.String(), Kind: "ConsoleCluster", Name: entry.Name, UID: entry.UID,
+	}
+	named := metav1.ObjectMeta{
+		Namespace: entry.Namespace, Name: GrantName(entry.Spec.ConnectionUID), OwnerReferences: []metav1.OwnerReference{owner},
+	}
+	subjects := make([]rbacv1.Subject, 0, len(enrolled))
+	for _, account := range enrolled {
+		subjects = append(subjects, rbacv1.Subject{
+			APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind,
+			Name: accounts.UsernamePrefix + entry.Spec.InstallationID + ":" + account.ID,
+		})
+	}
+	for _, object := range []client.Object{
+		&rbacv1.Role{ObjectMeta: *named.DeepCopy(), Rules: []rbacv1.PolicyRule{{
+			APIGroups: []string{consolev1alpha1.GroupVersion.Group}, Resources: []string{"consoleclusters"},
+			ResourceNames: []string{entry.Name}, Verbs: []string{"get"},
+		}}},
+		&rbacv1.RoleBinding{
+			ObjectMeta: *named.DeepCopy(), Subjects: subjects,
+			RoleRef: rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "Role", Name: named.Name},
+		},
+	} {
+		if err := user.Create(ctx, object); err != nil && !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+	}
+	return nil
 }

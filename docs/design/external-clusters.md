@@ -104,7 +104,16 @@ behind.
 - At most 64 requests are in flight per connection and 8 per account; past
   that, the console answers "busy" without sending.
 - A request carries a deadline of at most 30 seconds, and the agent enforces
-  it on its own clock.
+  it on its own clock. It also carries when the console sent it, and the agent
+  acts on it only until that deadline, counted from then, plus 15 seconds for
+  the two clocks to disagree. A request that waited in a socket buffer while
+  the agent was stopped is refused when the agent reads it, never run late,
+  and one sent from a clock more than 15 seconds ahead is refused too.
+- Each end pings the other over HTTP/2 after 15 seconds without a frame and
+  closes the connection when no answer comes in 15 more. A frozen agent, or
+  one behind a path that drops packets, is disconnected within 30 seconds;
+  from then on the console refuses its cluster's requests at once instead of
+  sending them into a channel nothing reads.
 - A decision whose stream drops before its answer arrives is reported as
   unknown, exactly like a lost answer in phase 1: the console reads the decision
   back by its name once the channel returns, and never sends it again.

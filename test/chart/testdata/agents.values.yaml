@@ -32,6 +32,7 @@ agents:
     secretName: console-agents-tls
   service:
     type: LoadBalancer
+    nodePort: 31443
     annotations: {service.beta.kubernetes.io/example: internal}
 networkPolicy:
   enabled: true

@@ -13,6 +13,8 @@
 #   - reports' interrupted run was settled the same way, and then applied
 #   - inventory v2 was approved once, by the hosted approver's mapped
 #     username, and applied after the console was uninstalled
+#   - on the second cluster, inventory was approved twice, both times by the
+#     author account's mapped username through the agent
 set -eu
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
@@ -109,6 +111,21 @@ wait_condition ptahschema inventory InSync
 location=$(postgres -d inventory -c \
 	"SELECT count(*) FROM information_schema.columns WHERE table_name = 'items' AND column_name = 'location'")
 [ "$location" = 1 ] || fail 'inventory has no items.location column'
-[ -z "$(admin -n ptah-console get deployments -o name)" ] || fail 'the hosted console is still installed'
+# The two-cluster rows install the console again; without them it stays
+# uninstalled.
+if [ -z "${HOSTED_ADMIN:-}" ]; then
+	[ -z "$(admin -n ptah-console get deployments -o name)" ] || fail 'the hosted console is still installed'
+fi
+
+# The two-cluster rows: lab-2's own admission recorded every approval there
+# as the author account's username, once for each of inventory's two plans,
+# and the console's removal touched none of it.
+if [ -n "${TARGET_CONTEXT:-}" ]; then
+	target=$("$E2E_DIR/external.sh" approvers inventory)
+	[ "$target" = "$HOSTED_AUTHOR,$HOSTED_AUTHOR" ] ||
+		fail "lab-2's inventory approvals read '$target', not two by $HOSTED_AUTHOR"
+	"$E2E_DIR/external.sh" insync inventory
+	say "verified: lab-2 approved inventory twice, as $HOSTED_AUTHOR, and kept both after the connection was removed"
+fi
 
 say "verified: every decision was $APPROVER's or, for inventory, $HOSTED_APPROVER's, and each one did what the rows show"

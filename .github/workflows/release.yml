@@ -1,17 +1,17 @@
 name: Release
 
 # A release of the console: the binary for every supported client platform,
-# the multi-architecture image the chart runs, the chart as a release asset
-# and as an OCI artifact, checksums and SBOMs, and a build provenance
-# attestation for each of them, every one verified before the release is
-# published.
+# the multi-architecture image the chart runs, the agent's image and chart,
+# both charts as release assets and as OCI artifacts, checksums and SBOMs, and
+# a build provenance attestation for each of them, every one verified before
+# the release is published.
 #
 # A tag v* releases. Run on request, or by a pull request that changes how a
 # release is made, it is a dry run: the same build, attestations and checks,
 # with the image and the chart pushed to a registry inside the job and no
 # GitHub release. A dry run's version is the chart's.
 #
-# The image goes to GHCR and to its mirror on Docker Hub, which anyone can
+# Each image goes to GHCR and to its mirror on Docker Hub, which anyone can
 # pull without signing in. Both carry the same digest.
 
 on:
@@ -23,7 +23,9 @@ on:
       - .github/workflows/release.yml
       - .goreleaser.yaml
       - Dockerfile
+      - Dockerfile.agent
       - charts/ptah-console/Chart.yaml
+      - charts/ptah-console-agent/Chart.yaml
       - hack/releasecheck/**
       - internal/release/**
       - support/compatibility.json
@@ -84,7 +86,7 @@ jobs:
           if [[ "$DRY_RUN" == 1 ]]; then
             version="$(sed -n 's/^version: //p' charts/ptah-console/Chart.yaml)"
             registry=localhost:5000
-            mirror=localhost:5000/mirror/ptah-console
+            mirrors=localhost:5000/mirror
             go run ./hack/releasecheck -version "$version"
           else
             [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
@@ -93,13 +95,15 @@ jobs:
             }
             version="${GITHUB_REF_NAME#v}"
             registry=ghcr.io/stokaro
-            mirror=docker.io/stokaro/ptah-console
+            mirrors=docker.io/stokaro
             go run ./hack/releasecheck -version "$version" -release
           fi
           {
             printf 'version=%s\n' "$version"
             printf 'image=%s/ptah-console\n' "$registry"
-            printf 'mirror=%s\n' "$mirror"
+            printf 'mirror=%s/ptah-console\n' "$mirrors"
+            printf 'agent-image=%s/ptah-console-agent\n' "$registry"
+            printf 'agent-mirror=%s/ptah-console-agent\n' "$mirrors"
             printf 'charts=%s/charts\n' "$registry"
           } >> "$GITHUB_OUTPUT"
       - name: Set up QEMU for the arm64 image
@@ -139,38 +143,57 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IMAGE: ${{ steps.version.outputs.image }}
           MIRROR_IMAGE: ${{ steps.version.outputs.mirror }}
+          AGENT_IMAGE: ${{ steps.version.outputs.agent-image }}
+          AGENT_MIRROR_IMAGE: ${{ steps.version.outputs.agent-mirror }}
           GORELEASER_CURRENT_TAG: v${{ steps.version.outputs.version }}
-      - name: Read the image digest
+      - name: Read the image digests
         id: image
+        env:
+          IMAGE: ${{ steps.version.outputs.image }}
+          AGENT_IMAGE: ${{ steps.version.outputs.agent-image }}
         shell: bash
         run: |
           set -euo pipefail
-          digest="$(jq -er '[.[] | select(.extra.Digest != null and (.type | test("Docker"))) | .extra.Digest] | unique | if length == 1 then .[0] else error("expected one image digest, found \(length)") end' dist/artifacts.json)"
-          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          # The one digest every artifact goreleaser pushed under an image's
+          # name or its mirror's carries.
+          digest_of() {
+            jq -er --arg image "$1" '[.[] | select(.extra.Digest != null and (.type | test("Docker"))
+                and ((.name // "") | startswith($image + ":"))) | .extra.Digest] | unique
+              | if length == 1 then .[0] else error("expected one digest for \($image), found \(length)") end' dist/artifacts.json
+          }
+          digest="$(digest_of "$IMAGE")"
+          agent="$(digest_of "$AGENT_IMAGE")"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ && "$agent" =~ ^sha256:[0-9a-f]{64}$ && "$digest" != "$agent" ]]
           printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+          printf 'agent=%s\n' "$agent" >> "$GITHUB_OUTPUT"
       # The mirror is for people who pull without signing in, so it is read
       # without signing in, and its tag has to name the digest GHCR got.
-      - name: Check the mirror serves the same image
+      - name: Check the mirrors serve the same images
         env:
           MIRROR: ${{ steps.version.outputs.mirror }}
+          AGENT_MIRROR: ${{ steps.version.outputs.agent-mirror }}
           VERSION: ${{ steps.version.outputs.version }}
           DIGEST: ${{ steps.image.outputs.digest }}
+          AGENT_DIGEST: ${{ steps.image.outputs.agent }}
         shell: bash
         run: |
           set -euo pipefail
           accept='application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json'
-          repository="${MIRROR#*/}"
-          if [[ "$DRY_RUN" == 1 ]]; then
-            auth=()
-            manifests="http://${MIRROR%%/*}/v2/$repository/manifests"
-          else
-            token="$(curl -fsS "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$repository:pull" | jq -er .token)"
-            auth=(-H "Authorization: Bearer $token")
-            manifests="https://registry-1.docker.io/v2/$repository/manifests"
-          fi
-          served="$(curl -fsSI "${auth[@]}" -H "Accept: $accept" "$manifests/$VERSION" | tr -d '\r' | sed -n 's/^[Dd]ocker-[Cc]ontent-[Dd]igest: //p')"
-          printf '%s:%s serves %s\n' "$MIRROR" "$VERSION" "${served:-nothing}"
-          [[ "$served" == "$DIGEST" ]] || { echo "the mirror does not serve $DIGEST" >&2; exit 1; }
+          serves() {
+            local mirror=$1 digest=$2 repository="${1#*/}" auth=() manifests served token
+            if [[ "$DRY_RUN" == 1 ]]; then
+              manifests="http://${mirror%%/*}/v2/$repository/manifests"
+            else
+              token="$(curl -fsS "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$repository:pull" | jq -er .token)"
+              auth=(-H "Authorization: Bearer $token")
+              manifests="https://registry-1.docker.io/v2/$repository/manifests"
+            fi
+            served="$(curl -fsSI "${auth[@]}" -H "Accept: $accept" "$manifests/$VERSION" | tr -d '\r' | sed -n 's/^[Dd]ocker-[Cc]ontent-[Dd]igest: //p')"
+            printf '%s:%s serves %s\n' "$mirror" "$VERSION" "${served:-nothing}"
+            [[ "$served" == "$digest" ]] || { echo "the mirror does not serve $digest" >&2; exit 1; }
+          }
+          serves "$MIRROR" "$DIGEST"
+          serves "$AGENT_MIRROR" "$AGENT_DIGEST"
       - name: Package and push the chart
         id: chart
         env:
@@ -182,22 +205,31 @@ jobs:
           set -euo pipefail
           helm() { go tool -modfile=tools/chart/go.mod helm "$@"; }
           mkdir -p dist/chart
-          helm package charts/ptah-console --version "$VERSION" --app-version "$VERSION" --destination dist/chart
-          chart="dist/chart/ptah-console-$VERSION.tgz"
-          [[ -s "$chart" ]]
-          if [[ "$DRY_RUN" == 1 ]]; then
-            pushed="$(helm push "$chart" "oci://$CHARTS" --plain-http 2>&1)"
-          else
+          if [[ "$DRY_RUN" == 0 ]]; then
             printf '%s' "$GH_TOKEN" | helm registry login ghcr.io --username "$REGISTRY_USER" --password-stdin
-            pushed="$(helm push "$chart" "oci://$CHARTS" 2>&1)"
           fi
-          printf '%s\n' "$pushed"
-          digest="$(printf '%s\n' "$pushed" | sed -n 's/^Digest: //p')"
-          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-          {
-            printf 'file=%s\n' "$chart"
-            printf 'digest=%s\n' "$digest"
-          } >> "$GITHUB_OUTPUT"
+          # push packages one chart, pushes it, and records the file and the
+          # digest its registry gave it under the output named.
+          push() {
+            local name=$1 output=$2 chart pushed digest
+            helm package "charts/$name" --version "$VERSION" --app-version "$VERSION" --destination dist/chart
+            chart="dist/chart/$name-$VERSION.tgz"
+            [[ -s "$chart" ]]
+            if [[ "$DRY_RUN" == 1 ]]; then
+              pushed="$(helm push "$chart" "oci://$CHARTS" --plain-http 2>&1)"
+            else
+              pushed="$(helm push "$chart" "oci://$CHARTS" 2>&1)"
+            fi
+            printf '%s\n' "$pushed"
+            digest="$(printf '%s\n' "$pushed" | sed -n 's/^Digest: //p')"
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+            {
+              printf '%sfile=%s\n' "$output" "$chart"
+              printf '%sdigest=%s\n' "$output" "$digest"
+            } >> "$GITHUB_OUTPUT"
+          }
+          push ptah-console ""
+          push ptah-console-agent agent-
       - name: Attest the files
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
@@ -213,11 +245,23 @@ jobs:
           subject-name: ${{ steps.version.outputs.image }}
           subject-digest: ${{ steps.image.outputs.digest }}
           push-to-registry: ${{ env.DRY_RUN == '0' }}
+      - name: Attest the agent's image
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-name: ${{ steps.version.outputs.agent-image }}
+          subject-digest: ${{ steps.image.outputs.agent }}
+          push-to-registry: ${{ env.DRY_RUN == '0' }}
       - name: Attest the chart in its registry
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
           subject-name: ${{ steps.version.outputs.charts }}/ptah-console
           subject-digest: ${{ steps.chart.outputs.digest }}
+          push-to-registry: ${{ env.DRY_RUN == '0' }}
+      - name: Attest the agent's chart in its registry
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-name: ${{ steps.version.outputs.charts }}/ptah-console-agent
+          subject-digest: ${{ steps.chart.outputs.agent-digest }}
           push-to-registry: ${{ env.DRY_RUN == '0' }}
       # Each artifact is checked the way a person installing it would: the
       # attestation names this repository and this workflow.
@@ -226,8 +270,12 @@ jobs:
           IMAGE: ${{ steps.version.outputs.image }}
           MIRROR: ${{ steps.version.outputs.mirror }}
           IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          AGENT_IMAGE: ${{ steps.version.outputs.agent-image }}
+          AGENT_MIRROR: ${{ steps.version.outputs.agent-mirror }}
+          AGENT_DIGEST: ${{ steps.image.outputs.agent }}
           CHARTS: ${{ steps.version.outputs.charts }}
           CHART_DIGEST: ${{ steps.chart.outputs.digest }}
+          AGENT_CHART_DIGEST: ${{ steps.chart.outputs.agent-digest }}
         shell: bash
         run: |
           set -euo pipefail
@@ -241,21 +289,25 @@ jobs:
             verify "$file"
             checked=$((checked + 1))
           done
-          # Six archives, six SBOMs, the checksums and the chart.
-          [[ "$checked" == 14 ]] || { echo "verified $checked files, expected 14" >&2; exit 1; }
+          # Six archives, six SBOMs, the checksums and the two charts.
+          [[ "$checked" == 15 ]] || { echo "verified $checked files, expected 15" >&2; exit 1; }
           verify "oci://$IMAGE@$IMAGE_DIGEST"
           verify "oci://$MIRROR@$IMAGE_DIGEST"
+          verify "oci://$AGENT_IMAGE@$AGENT_DIGEST"
+          verify "oci://$AGENT_MIRROR@$AGENT_DIGEST"
           verify "oci://$CHARTS/ptah-console@$CHART_DIGEST"
+          verify "oci://$CHARTS/ptah-console-agent@$AGENT_CHART_DIGEST"
           (cd dist && sha256sum --check --strict SHA256SUMS)
       - name: Publish the release
         if: env.DRY_RUN == '0'
         env:
           VERSION: ${{ steps.version.outputs.version }}
           CHART: ${{ steps.chart.outputs.file }}
+          AGENT_CHART: ${{ steps.chart.outputs.agent-file }}
         shell: bash
         run: |
           set -euo pipefail
-          gh release upload "v$VERSION" "$CHART" --repo "$REPOSITORY"
+          gh release upload "v$VERSION" "$CHART" "$AGENT_CHART" --repo "$REPOSITORY"
           gh release edit "v$VERSION" --draft=false --repo "$REPOSITORY"
       - name: Keep the dry run's artifacts
         if: env.DRY_RUN == '1'

@@ -21,4 +21,7 @@ spec:
       port: {{ .Values.agents.service.port }}
       targetPort: agents
       protocol: TCP
+      {{- with .Values.agents.service.nodePort }}
+      nodePort: {{ . }}
+      {{- end }}
 {{- end }}

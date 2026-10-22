@@ -78,6 +78,9 @@ agents:
   service:
     type: ClusterIP
     port: 443
+    # With type NodePort or LoadBalancer, the node port to use instead of
+    # one the cluster picks.
+    nodePort: null
     annotations: {}
   # With networkPolicy.enabled, the peers that may reach the agent port.
   # Empty admits any source: agents come from other clusters.

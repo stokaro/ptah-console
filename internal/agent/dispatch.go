@@ -31,6 +31,11 @@ const (
 	MaxInFlight = 64
 	// MaxPerAccount is how many of them may be one account's.
 	MaxPerAccount = 8
+	// MaxClockSkew is how far the console's clock and the agent's may
+	// disagree. A request is acted on until its deadline, counted from when
+	// the console sent it, plus this; never later, however long it waited to
+	// be read.
+	MaxClockSkew = 15 * time.Second
 )
 
 const (
@@ -48,6 +53,7 @@ var requestID = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
 type Dispatcher struct {
 	factory *Factory
 	ceiling []string
+	now     func() time.Time
 	store   *session.Store
 	cookies session.Cookies
 	slots   chan struct{}
@@ -67,6 +73,9 @@ type Dispatcher struct {
 // NewDispatcher returns a dispatcher for the factory's connection. Decisions
 // are audited to auditLog.
 func NewDispatcher(factory *Factory, auditLog *audit.Logger, clock func() time.Time) *Dispatcher {
+	if clock == nil {
+		clock = time.Now
+	}
 	store := session.NewStore(session.Options{MaxConcurrency: MaxPerAccount, MaxSessions: maxAccounts})
 	cookies := session.Cookies{}
 	server := connect.NewServer(session.Interceptor(store, cookies))
@@ -80,7 +89,7 @@ func NewDispatcher(factory *Factory, auditLog *audit.Logger, clock func() time.T
 	consolev1connect.RegisterDiagnosticsServiceHandler(server, api.NewDiagnosticsService(factory, scope, nil))
 	client := connect.NewClient(connectinprocess.New(server))
 	return &Dispatcher{
-		factory: factory, ceiling: ceiling, store: store, cookies: cookies,
+		factory: factory, ceiling: ceiling, now: clock, store: store, cookies: cookies,
 		slots: make(chan struct{}, MaxInFlight), seen: newReplays(clock), tokens: make(map[string]string),
 		scope:       consolev1connect.NewScopeServiceClient(client),
 		schemas:     consolev1connect.NewSchemaServiceClient(client),
@@ -122,7 +131,7 @@ func (d *Dispatcher) Serve(ctx context.Context, request *agentv1.Request, send f
 	if err != nil {
 		return send(failure(id, connect.NewError(connect.CodeUnavailable, "the agent could not act for the account").WithCause(err)))
 	}
-	ctx, cancel := context.WithTimeout(ctx, request.GetEnvelope().GetDeadline().AsDuration())
+	ctx, cancel := context.WithDeadline(ctx, d.expiry(request.GetEnvelope()))
 	defer cancel()
 	ctx, info := connect.NewClientContext(ctx)
 	info.RequestHeader().Set("Cookie", d.cookies.Name()+"="+token)
@@ -139,8 +148,21 @@ func (d *Dispatcher) Serve(ctx context.Context, request *agentv1.Request, send f
 	return send(result)
 }
 
+// expiry is when a request stops being acted on: its deadline from now, and
+// never past its deadline from when the console sent it, with the clock skew
+// allowed.
+func (d *Dispatcher) expiry(envelope *agentv1.Envelope) time.Time {
+	deadline := envelope.GetDeadline().AsDuration()
+	fromNow, fromSent := d.now().Add(deadline), envelope.GetSentAt().AsTime().Add(deadline+MaxClockSkew)
+	if fromSent.Before(fromNow) {
+		return fromSent
+	}
+	return fromNow
+}
+
 // admit refuses a request before anything acts on it: no envelope, an
-// identifier seen before or not one, a deadline past the bound, an account
+// identifier seen before or not one, a deadline past the bound, a request the
+// console sent too long ago or from a clock too far ahead, an account
 // the allowlist does not name, an operation the agent does not serve, or a
 // namespace outside the ceiling.
 func (d *Dispatcher) admit(request *agentv1.Request) error {
@@ -158,6 +180,21 @@ func (d *Dispatcher) admit(request *agentv1.Request) error {
 	deadline := envelope.GetDeadline()
 	if deadline == nil || deadline.CheckValid() != nil || deadline.AsDuration() <= 0 || deadline.AsDuration() > MaxDeadline {
 		return connect.Errorf(connect.CodeInvalidArgument, "a request needs a deadline of at most %s", MaxDeadline)
+	}
+	sent := envelope.GetSentAt()
+	if sent == nil || sent.CheckValid() != nil {
+		return connect.NewError(connect.CodeInvalidArgument, "a request needs the time the console sent it")
+	}
+	now := d.now()
+	switch {
+	case sent.AsTime().After(now.Add(MaxClockSkew)):
+		return connect.Errorf(connect.CodeFailedPrecondition,
+			"the console sent this request %s ahead of this cluster's clock, more than the %s the clocks may disagree",
+			sent.AsTime().Sub(now).Round(time.Second), MaxClockSkew)
+	case !now.Before(d.expiry(envelope)):
+		return connect.Errorf(connect.CodeDeadlineExceeded,
+			"the console sent this request %s ago, past its deadline; it is not acted on late",
+			now.Sub(sent.AsTime()).Round(time.Second))
 	}
 	if !d.factory.Allowed(envelope.GetAccountId()) {
 		return connect.Errorf(connect.CodePermissionDenied, "account %q is not on this agent's allowlist", envelope.GetAccountId())

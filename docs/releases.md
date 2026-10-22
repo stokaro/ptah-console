@@ -11,7 +11,14 @@ A release of the console publishes:
   same digest at `docker.io/stokaro/ptah-console:<version>`, which anyone can
   pull without signing in;
 - the chart, as the release asset `ptah-console-<version>.tgz` and as the OCI
-  artifact `oci://ghcr.io/stokaro/charts/ptah-console`.
+  artifact `oci://ghcr.io/stokaro/charts/ptah-console`;
+- the agent a hosted console reaches other clusters through: the image
+  `ghcr.io/stokaro/ptah-console-agent:<version>` for `linux/amd64` and
+  `linux/arm64`, the same digest at
+  `docker.io/stokaro/ptah-console-agent:<version>`, and its chart, as the
+  release asset `ptah-console-agent-<version>.tgz` and as
+  `oci://ghcr.io/stokaro/charts/ptah-console-agent`. The agent is released
+  with the console and carries its version.
 
 Each of them carries a build provenance attestation from the release
 workflow, and the workflow verifies every one before it publishes the
@@ -39,14 +46,19 @@ gh attestation verify "oci://docker.io/stokaro/ptah-console:$version" \
   --repo "$repository" --signer-workflow "$workflow"
 gh attestation verify "oci://ghcr.io/stokaro/charts/ptah-console:$version" \
   --repo "$repository" --signer-workflow "$workflow"
+gh attestation verify "oci://ghcr.io/stokaro/ptah-console-agent:$version" \
+  --repo "$repository" --signer-workflow "$workflow"
+gh attestation verify "oci://ghcr.io/stokaro/charts/ptah-console-agent:$version" \
+  --repo "$repository" --signer-workflow "$workflow"
 ```
 
 Install the image by the digest you verified rather than by its tag.
 
 ## Making a release
 
-1. Set the version in `charts/ptah-console/Chart.yaml` (`version` and
-   `appVersion`) and add a row for it at the top of
+1. Set the version in `charts/ptah-console/Chart.yaml` and
+   `charts/ptah-console-agent/Chart.yaml` (`version` and `appVersion` of
+   both) and add a row for it at the top of
    `support/compatibility.json`, naming the released operator `go.mod`
    requires. `make release-check` holds them to each other.
 2. Merge, and let CI pass on that commit.

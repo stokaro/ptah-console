@@ -106,7 +106,7 @@ describe("The clusters of a hosted console", () => {
 
     const banner = await screen.findByText(/prod-ap-2 is not connected/)
     expect(banner).toHaveTextContent("last heard from it 14 min ago")
-    expect(banner).toHaveTextContent("decisions wait until its agent is back")
+    expect(banner).toHaveTextContent("no decision is sent to it until its agent is back")
   })
 
   it("offers the Admin role only to who may change the registry", async () => {

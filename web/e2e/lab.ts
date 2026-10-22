@@ -16,7 +16,7 @@ const run = promisify(execFile)
 export type Persona = "outsider" | "viewer" | "reviewer" | "author" | "lead" | "approver" | "diag"
 
 /** The hosted console's accounts; hosted.sh says what each may do. */
-export type Account = "author" | "approver"
+export type Account = "author" | "approver" | "admin" | "newcomer"
 
 /** One fact the environment scripts recorded, such as NAMESPACE or APPROVER. */
 export function fact(name: string): string {
@@ -27,6 +27,14 @@ export function fact(name: string): string {
     throw new Error(`the environment recorded no ${name}; run make e2e-up first`)
   }
   return line.slice(name.length + 1)
+}
+
+/**
+ * A file in the environment's own directory, which the workflow does not
+ * upload: an enrollment file holds a bootstrap secret.
+ */
+export function outPath(name: string): string {
+  return path.join(outDir, name)
 }
 
 /**
@@ -192,6 +200,9 @@ export const test = base.extend<{ lab: Lab }>({
           child.kill()
         }
         origin = fact("HOSTED_URL")
+        // A row may sign in as one account and then another: the earlier
+        // session would otherwise send the sign-in page on to the console.
+        await page.context().clearCookies()
         await page.goto(`${origin}/login`)
         const form = page.getByRole("form", { name: "Sign in" })
         await expect(form).toBeVisible({ timeout: 60_000 })
