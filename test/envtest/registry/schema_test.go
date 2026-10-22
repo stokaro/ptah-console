@@ -5,11 +5,14 @@ package registry_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	qt "github.com/frankban/quicktest"
 	corev1 "k8s.io/api/core/v1"
@@ -273,4 +276,100 @@ func TestPreferencesCannotMoveToAnotherConnection(t *testing.T) {
 	c.Assert(plane.Admin.Update(t.Context(), object), qt.IsNil)
 	object.Spec.ClusterRef.ConnectionUID = otherConnection
 	c.Assert(refusedWith(plane.Admin.Update(t.Context(), object), cause{"spec.clusterRef", "clusterRef is immutable"}), qt.IsNil)
+}
+
+// channelStatus is an agent entry's status with one credential, issued an
+// hour ago for ninety days.
+func channelStatus() consolev1alpha1.ConsoleClusterStatus {
+	issued := metav1.NewTime(time.Now().Add(-time.Hour).Truncate(time.Second))
+	return consolev1alpha1.ConsoleClusterStatus{Channel: &consolev1alpha1.ChannelStatus{
+		Generation: 1,
+		Credentials: []consolev1alpha1.ChannelCredential{{
+			Verifier: strings.Repeat("a", 64), IssuedAt: issued, NotAfter: metav1.NewTime(issued.Add(90 * 24 * time.Hour)),
+		}},
+	}}
+}
+
+// Each rule on the channel status refuses a write that breaks it, by field
+// and message, and the control is written.
+func TestTheChannelStatusRefusesWhatItExistsToRefuse(t *testing.T) {
+	t.Parallel()
+	namespace := newNamespace(t)
+	written := func(t *testing.T, name string, status consolev1alpha1.ConsoleClusterStatus) error {
+		t.Helper()
+		c := qt.New(t)
+		entry := agent(namespace)
+		entry.Name = name
+		entry.Spec.ConnectionUID = uuidFor(name)
+		c.Assert(plane.Admin.Create(t.Context(), entry), qt.IsNil)
+		entry.Status = status
+		return plane.Admin.Status().Update(t.Context(), entry)
+	}
+	qt.New(t).Assert(written(t, "control", channelStatus()), qt.IsNil)
+	tests := []struct {
+		name   string
+		mutate func(*consolev1alpha1.ChannelStatus)
+		want   []cause
+	}{
+		{"generation zero", func(s *consolev1alpha1.ChannelStatus) { s.Generation = 0 },
+			[]cause{{"status.channel.generation", "should be greater than or equal to 1"}}},
+		{"a credential that expires when it is issued", func(s *consolev1alpha1.ChannelStatus) {
+			s.Credentials[0].NotAfter = s.Credentials[0].IssuedAt
+		}, []cause{{"status.channel.credentials[0]", "a credential expires after it is issued"}}},
+		{"a credential that retires after it expires", func(s *consolev1alpha1.ChannelStatus) {
+			retire := metav1.NewTime(s.Credentials[0].NotAfter.Add(time.Hour))
+			s.Credentials[0].RetireAt = &retire
+		}, []cause{{"status.channel.credentials[0]", "a credential retires no later than it expires"}}},
+		{"a verifier that is not a SHA-256", func(s *consolev1alpha1.ChannelStatus) {
+			s.Credentials[0].Verifier = "sha256:" + strings.Repeat("a", 64)
+		}, []cause{{"status.channel.credentials[0].verifier", "should match"}}},
+		{"the same verifier twice", func(s *consolev1alpha1.ChannelStatus) {
+			s.Credentials = append(s.Credentials, s.Credentials[0])
+		}, []cause{{"status.channel.credentials[1]", "Duplicate value"}}},
+		{"a third credential", func(s *consolev1alpha1.ChannelStatus) {
+			for _, letter := range []string{"b", "c"} {
+				extra := s.Credentials[0]
+				extra.Verifier = strings.Repeat(letter, 64)
+				s.Credentials = append(s.Credentials, extra)
+			}
+		}, []cause{{"status.channel.credentials", "Too many"}}},
+	}
+	for index, row := range tests {
+		t.Run(row.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			status := channelStatus()
+			row.mutate(status.Channel)
+
+			err := written(t, fmt.Sprintf("row-%d", index), status)
+
+			c.Assert(refusedWith(err, row.want...), qt.IsNil)
+		})
+	}
+}
+
+// The generation that fences channels never goes back.
+func TestTheChannelGenerationNeverGoesBack(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	namespace := newNamespace(t)
+	entry := agent(namespace)
+	c.Assert(plane.Admin.Create(t.Context(), entry), qt.IsNil)
+	entry.Status = channelStatus()
+	entry.Status.Channel.Generation = 2
+	c.Assert(plane.Admin.Status().Update(t.Context(), entry), qt.IsNil)
+
+	entry.Status.Channel.Generation = 1
+	err := plane.Admin.Status().Update(t.Context(), entry)
+
+	c.Assert(refusedWith(err, cause{"status.channel", "the channel generation never goes back"}), qt.IsNil)
+	entry.Status.Channel.Generation = 3
+	c.Assert(plane.Admin.Status().Update(t.Context(), entry), qt.IsNil)
+}
+
+// uuidFor is a connection UID of its own for each row's entry.
+func uuidFor(name string) string {
+	sum := sha256.Sum256([]byte(name))
+	digest := hex.EncodeToString(sum[:])
+	return digest[0:8] + "-" + digest[8:12] + "-4" + digest[13:16] + "-8" + digest[17:20] + "-" + digest[20:32]
 }

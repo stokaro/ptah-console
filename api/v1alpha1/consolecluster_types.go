@@ -125,10 +125,17 @@ type AgentTrust struct {
 	ConsoleCASHA256 string `json:"consoleCASHA256"`
 }
 
-// ConditionConnected says whether the console can reach the cluster through
-// the connection, as last observed. It says nothing about any account's
-// rights there.
-const ConditionConnected = "Connected"
+// Conditions of a connection.
+const (
+	// ConditionConnected says whether the console can reach the cluster
+	// through the connection, as last observed. It says nothing about any
+	// account's rights there.
+	ConditionConnected = "Connected"
+	// ConditionRotationDue is True from 14 days before the channel
+	// credential in use expires, until a newer one has authenticated a
+	// channel.
+	ConditionRotationDue = "RotationDue"
+)
 
 // ConsoleClusterStatus is the bounded, machine-written account of a
 // connection.
@@ -146,6 +153,51 @@ type ConsoleClusterStatus struct {
 	// this connection.
 	// +optional
 	LastObservedAt *metav1.Time `json:"lastObservedAt,omitempty"`
+	// Channel is what the console accepts from the agent of an Agent
+	// connection. A CoLocated connection has none.
+	// +optional
+	Channel *ChannelStatus `json:"channel,omitempty"`
+}
+
+// ChannelStatus is the agent channel's fence and credentials. The console
+// keeps verifiers only: the SHA-256 of each credential, never the credential.
+//
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.generation) || self.generation >= oldSelf.generation",message="the channel generation never goes back"
+type ChannelStatus struct {
+	// Generation fences channels: an agent that binds its channel to another
+	// generation is refused, and raising it ends every channel opened under
+	// the old one.
+	// +kubebuilder:validation:Minimum=1
+	Generation int64 `json:"generation"`
+	// Credentials are the credentials the console accepts: one, and a second
+	// during a rotation.
+	// +optional
+	// +listType=map
+	// +listMapKey=verifier
+	// +kubebuilder:validation:MaxItems=2
+	Credentials []ChannelCredential `json:"credentials,omitempty"`
+}
+
+// ChannelCredential is one credential the console accepts, by its verifier.
+//
+// +kubebuilder:validation:XValidation:rule="self.notAfter > self.issuedAt",message="a credential expires after it is issued"
+// +kubebuilder:validation:XValidation:rule="!has(self.retireAt) || self.retireAt <= self.notAfter",message="a credential retires no later than it expires"
+type ChannelCredential struct {
+	// Verifier is the lowercase hex SHA-256 of the credential.
+	// +kubebuilder:validation:Pattern=`^[0-9a-f]{64}$`
+	Verifier string `json:"verifier"`
+	// IssuedAt is when the console issued the credential.
+	IssuedAt metav1.Time `json:"issuedAt"`
+	// NotAfter is when the credential expires.
+	NotAfter metav1.Time `json:"notAfter"`
+	// FirstUsedAt is when the credential first authenticated a channel.
+	// +optional
+	FirstUsedAt *metav1.Time `json:"firstUsedAt,omitempty"`
+	// RetireAt ends the credential before NotAfter: a newer one has
+	// authenticated a channel, and this one is accepted until then, at most
+	// an hour later.
+	// +optional
+	RetireAt *metav1.Time `json:"retireAt,omitempty"`
 }
 
 // ConsoleClusterList is a list of ConsoleCluster.
