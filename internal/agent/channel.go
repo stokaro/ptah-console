@@ -112,6 +112,10 @@ func Open(ctx context.Context, options ChannelOptions, dispatcher *Dispatcher) e
 		return err
 	}
 	defer func() { _ = stream.Close() }()
+	// A read or write blocked on the HTTP/2 stream does not end with its
+	// context; closing the stream ends it.
+	stop := context.AfterFunc(ctx, func() { _ = stream.Close() })
+	defer stop()
 
 	binding := &agentv1.Binding{
 		ConnectionUid: options.Config.Connection.UID, ConnectionGeneration: options.Config.Connection.Generation,
