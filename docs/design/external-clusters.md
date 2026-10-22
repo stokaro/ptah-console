@@ -81,6 +81,22 @@ The agent never reads Secrets or `PtahResultRecord` objects, never writes RBAC,
 and calls nothing but its own cluster's kube-apiserver. It is not a proxy: no
 URL, path or verb the console chose reaches the API server.
 
+## Routing
+
+A page names the cluster it shows by connection UID, in the `Ptah-Connection`
+header of every request; no header, or this cluster's UID, is served by the
+console as before. The console finds the entry with its own identity and
+reads it as the person, so a connection the person was not granted reads as
+one that does not exist. The session and the console's own information are
+the console's whichever cluster a page shows; every other procedure follows the
+header, and a test holds that list to the API.
+
+A live view of an external cluster is a sequence of the agent's watch
+windows. A change between two windows could pass unreported, so each window
+after the first opens by saying that anything it watches may have changed, and
+the page reads it again: an external cluster's view is at most one window
+behind.
+
 ## Bounds and failures
 
 - A frame is at most the plan size `pkg/planread` accepts plus its envelope;

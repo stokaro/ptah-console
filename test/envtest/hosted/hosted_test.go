@@ -34,7 +34,7 @@ import (
 var plane *envtestenv.Plane
 
 func TestMain(m *testing.M) {
-	os.Exit(envtestenv.Run(m, envtestenv.Options{RegistryCRDs: true}, &plane))
+	os.Exit(envtestenv.Run(m, envtestenv.Options{RegistryCRDs: true, OperatorCRDs: true}, &plane))
 }
 
 const (
