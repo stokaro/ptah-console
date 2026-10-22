@@ -13,6 +13,13 @@ service ConnectionService {
   // CreateEnrollment starts enrolling an external cluster. The answer holds
   // the enrollment file, with its single-use bootstrap secret, this once.
   rpc CreateEnrollment(CreateEnrollmentRequest) returns (CreateEnrollmentResponse) {}
+  // ListEnrollments lists the enrollments the person may read.
+  rpc ListEnrollments(ListEnrollmentsRequest) returns (ListEnrollmentsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // ActivateEnrollment makes a completed enrollment whose agent has
+  // connected a connection.
+  rpc ActivateEnrollment(ActivateEnrollmentRequest) returns (ActivateEnrollmentResponse) {}
 }
 
 message CreateEnrollmentRequest {
@@ -41,4 +48,41 @@ message CreateEnrollmentResponse {
   string fingerprint = 2;
   google.protobuf.Timestamp expires_at = 3;
   string connection_uid = 4;
+}
+
+message ListEnrollmentsRequest {}
+
+message ListEnrollmentsResponse {
+  repeated Enrollment enrollments = 1;
+}
+
+// Enrollment is a connection being enrolled, as the console recorded it.
+message Enrollment {
+  string cluster_name = 1;
+  string connection_uid = 2;
+  repeated string namespaces = 3;
+  repeated EnrollmentAccount accounts = 4;
+  string approver_cluster_role = 5;
+  string fingerprint = 6;
+  // ExpiresAt is when the bootstrap stops being accepted.
+  google.protobuf.Timestamp expires_at = 7;
+  // Completion is what the target's helper reported, once it has.
+  EnrollmentCompletion completion = 8;
+  // AgentConnected is whether the agent has its channel open.
+  bool agent_connected = 9;
+}
+
+// EnrollmentCompletion is what the target's helper reported.
+message EnrollmentCompletion {
+  string target_server = 1;
+  string target_ca_sha256 = 2;
+  google.protobuf.Timestamp completed_at = 3;
+}
+
+message ActivateEnrollmentRequest {
+  string cluster_name = 1;
+}
+
+message ActivateEnrollmentResponse {
+  string connection_uid = 1;
 }

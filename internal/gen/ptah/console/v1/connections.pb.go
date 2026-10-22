@@ -219,6 +219,347 @@ func (x *CreateEnrollmentResponse) GetConnectionUid() string {
 	return ""
 }
 
+type ListEnrollmentsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListEnrollmentsRequest) Reset() {
+	*x = ListEnrollmentsRequest{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListEnrollmentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListEnrollmentsRequest) ProtoMessage() {}
+
+func (x *ListEnrollmentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListEnrollmentsRequest.ProtoReflect.Descriptor instead.
+func (*ListEnrollmentsRequest) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{3}
+}
+
+type ListEnrollmentsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enrollments   []*Enrollment          `protobuf:"bytes,1,rep,name=enrollments,proto3" json:"enrollments,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListEnrollmentsResponse) Reset() {
+	*x = ListEnrollmentsResponse{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListEnrollmentsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListEnrollmentsResponse) ProtoMessage() {}
+
+func (x *ListEnrollmentsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListEnrollmentsResponse.ProtoReflect.Descriptor instead.
+func (*ListEnrollmentsResponse) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListEnrollmentsResponse) GetEnrollments() []*Enrollment {
+	if x != nil {
+		return x.Enrollments
+	}
+	return nil
+}
+
+// Enrollment is a connection being enrolled, as the console recorded it.
+type Enrollment struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	ClusterName         string                 `protobuf:"bytes,1,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	ConnectionUid       string                 `protobuf:"bytes,2,opt,name=connection_uid,json=connectionUid,proto3" json:"connection_uid,omitempty"`
+	Namespaces          []string               `protobuf:"bytes,3,rep,name=namespaces,proto3" json:"namespaces,omitempty"`
+	Accounts            []*EnrollmentAccount   `protobuf:"bytes,4,rep,name=accounts,proto3" json:"accounts,omitempty"`
+	ApproverClusterRole string                 `protobuf:"bytes,5,opt,name=approver_cluster_role,json=approverClusterRole,proto3" json:"approver_cluster_role,omitempty"`
+	Fingerprint         string                 `protobuf:"bytes,6,opt,name=fingerprint,proto3" json:"fingerprint,omitempty"`
+	// ExpiresAt is when the bootstrap stops being accepted.
+	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// Completion is what the target's helper reported, once it has.
+	Completion *EnrollmentCompletion `protobuf:"bytes,8,opt,name=completion,proto3" json:"completion,omitempty"`
+	// AgentConnected is whether the agent has its channel open.
+	AgentConnected bool `protobuf:"varint,9,opt,name=agent_connected,json=agentConnected,proto3" json:"agent_connected,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *Enrollment) Reset() {
+	*x = Enrollment{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Enrollment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Enrollment) ProtoMessage() {}
+
+func (x *Enrollment) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Enrollment.ProtoReflect.Descriptor instead.
+func (*Enrollment) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Enrollment) GetClusterName() string {
+	if x != nil {
+		return x.ClusterName
+	}
+	return ""
+}
+
+func (x *Enrollment) GetConnectionUid() string {
+	if x != nil {
+		return x.ConnectionUid
+	}
+	return ""
+}
+
+func (x *Enrollment) GetNamespaces() []string {
+	if x != nil {
+		return x.Namespaces
+	}
+	return nil
+}
+
+func (x *Enrollment) GetAccounts() []*EnrollmentAccount {
+	if x != nil {
+		return x.Accounts
+	}
+	return nil
+}
+
+func (x *Enrollment) GetApproverClusterRole() string {
+	if x != nil {
+		return x.ApproverClusterRole
+	}
+	return ""
+}
+
+func (x *Enrollment) GetFingerprint() string {
+	if x != nil {
+		return x.Fingerprint
+	}
+	return ""
+}
+
+func (x *Enrollment) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+func (x *Enrollment) GetCompletion() *EnrollmentCompletion {
+	if x != nil {
+		return x.Completion
+	}
+	return nil
+}
+
+func (x *Enrollment) GetAgentConnected() bool {
+	if x != nil {
+		return x.AgentConnected
+	}
+	return false
+}
+
+// EnrollmentCompletion is what the target's helper reported.
+type EnrollmentCompletion struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	TargetServer   string                 `protobuf:"bytes,1,opt,name=target_server,json=targetServer,proto3" json:"target_server,omitempty"`
+	TargetCaSha256 string                 `protobuf:"bytes,2,opt,name=target_ca_sha256,json=targetCaSha256,proto3" json:"target_ca_sha256,omitempty"`
+	CompletedAt    *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *EnrollmentCompletion) Reset() {
+	*x = EnrollmentCompletion{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnrollmentCompletion) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnrollmentCompletion) ProtoMessage() {}
+
+func (x *EnrollmentCompletion) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnrollmentCompletion.ProtoReflect.Descriptor instead.
+func (*EnrollmentCompletion) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *EnrollmentCompletion) GetTargetServer() string {
+	if x != nil {
+		return x.TargetServer
+	}
+	return ""
+}
+
+func (x *EnrollmentCompletion) GetTargetCaSha256() string {
+	if x != nil {
+		return x.TargetCaSha256
+	}
+	return ""
+}
+
+func (x *EnrollmentCompletion) GetCompletedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CompletedAt
+	}
+	return nil
+}
+
+type ActivateEnrollmentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClusterName   string                 `protobuf:"bytes,1,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ActivateEnrollmentRequest) Reset() {
+	*x = ActivateEnrollmentRequest{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ActivateEnrollmentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActivateEnrollmentRequest) ProtoMessage() {}
+
+func (x *ActivateEnrollmentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActivateEnrollmentRequest.ProtoReflect.Descriptor instead.
+func (*ActivateEnrollmentRequest) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ActivateEnrollmentRequest) GetClusterName() string {
+	if x != nil {
+		return x.ClusterName
+	}
+	return ""
+}
+
+type ActivateEnrollmentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ConnectionUid string                 `protobuf:"bytes,1,opt,name=connection_uid,json=connectionUid,proto3" json:"connection_uid,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ActivateEnrollmentResponse) Reset() {
+	*x = ActivateEnrollmentResponse{}
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ActivateEnrollmentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActivateEnrollmentResponse) ProtoMessage() {}
+
+func (x *ActivateEnrollmentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_connections_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActivateEnrollmentResponse.ProtoReflect.Descriptor instead.
+func (*ActivateEnrollmentResponse) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_connections_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ActivateEnrollmentResponse) GetConnectionUid() string {
+	if x != nil {
+		return x.ConnectionUid
+	}
+	return ""
+}
+
 var File_ptah_console_v1_connections_proto protoreflect.FileDescriptor
 
 const file_ptah_console_v1_connections_proto_rawDesc = "" +
@@ -239,9 +580,38 @@ const file_ptah_console_v1_connections_proto_rawDesc = "" +
 	"\vfingerprint\x18\x02 \x01(\tR\vfingerprint\x129\n" +
 	"\n" +
 	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12%\n" +
-	"\x0econnection_uid\x18\x04 \x01(\tR\rconnectionUid2~\n" +
+	"\x0econnection_uid\x18\x04 \x01(\tR\rconnectionUid\"\x18\n" +
+	"\x16ListEnrollmentsRequest\"X\n" +
+	"\x17ListEnrollmentsResponse\x12=\n" +
+	"\venrollments\x18\x01 \x03(\v2\x1b.ptah.console.v1.EnrollmentR\venrollments\"\xb7\x03\n" +
+	"\n" +
+	"Enrollment\x12!\n" +
+	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12%\n" +
+	"\x0econnection_uid\x18\x02 \x01(\tR\rconnectionUid\x12\x1e\n" +
+	"\n" +
+	"namespaces\x18\x03 \x03(\tR\n" +
+	"namespaces\x12>\n" +
+	"\baccounts\x18\x04 \x03(\v2\".ptah.console.v1.EnrollmentAccountR\baccounts\x122\n" +
+	"\x15approver_cluster_role\x18\x05 \x01(\tR\x13approverClusterRole\x12 \n" +
+	"\vfingerprint\x18\x06 \x01(\tR\vfingerprint\x129\n" +
+	"\n" +
+	"expires_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12E\n" +
+	"\n" +
+	"completion\x18\b \x01(\v2%.ptah.console.v1.EnrollmentCompletionR\n" +
+	"completion\x12'\n" +
+	"\x0fagent_connected\x18\t \x01(\bR\x0eagentConnected\"\xa4\x01\n" +
+	"\x14EnrollmentCompletion\x12#\n" +
+	"\rtarget_server\x18\x01 \x01(\tR\ftargetServer\x12(\n" +
+	"\x10target_ca_sha256\x18\x02 \x01(\tR\x0etargetCaSha256\x12=\n" +
+	"\fcompleted_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\">\n" +
+	"\x19ActivateEnrollmentRequest\x12!\n" +
+	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\"C\n" +
+	"\x1aActivateEnrollmentResponse\x12%\n" +
+	"\x0econnection_uid\x18\x01 \x01(\tR\rconnectionUid2\xda\x02\n" +
 	"\x11ConnectionService\x12i\n" +
-	"\x10CreateEnrollment\x12(.ptah.console.v1.CreateEnrollmentRequest\x1a).ptah.console.v1.CreateEnrollmentResponse\"\x00BHZFgithub.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1b\x06proto3"
+	"\x10CreateEnrollment\x12(.ptah.console.v1.CreateEnrollmentRequest\x1a).ptah.console.v1.CreateEnrollmentResponse\"\x00\x12i\n" +
+	"\x0fListEnrollments\x12'.ptah.console.v1.ListEnrollmentsRequest\x1a(.ptah.console.v1.ListEnrollmentsResponse\"\x03\x90\x02\x01\x12o\n" +
+	"\x12ActivateEnrollment\x12*.ptah.console.v1.ActivateEnrollmentRequest\x1a+.ptah.console.v1.ActivateEnrollmentResponse\"\x00BHZFgithub.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1b\x06proto3"
 
 var (
 	file_ptah_console_v1_connections_proto_rawDescOnce sync.Once
@@ -255,23 +625,38 @@ func file_ptah_console_v1_connections_proto_rawDescGZIP() []byte {
 	return file_ptah_console_v1_connections_proto_rawDescData
 }
 
-var file_ptah_console_v1_connections_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_ptah_console_v1_connections_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_ptah_console_v1_connections_proto_goTypes = []any{
-	(*CreateEnrollmentRequest)(nil),  // 0: ptah.console.v1.CreateEnrollmentRequest
-	(*EnrollmentAccount)(nil),        // 1: ptah.console.v1.EnrollmentAccount
-	(*CreateEnrollmentResponse)(nil), // 2: ptah.console.v1.CreateEnrollmentResponse
-	(*timestamppb.Timestamp)(nil),    // 3: google.protobuf.Timestamp
+	(*CreateEnrollmentRequest)(nil),    // 0: ptah.console.v1.CreateEnrollmentRequest
+	(*EnrollmentAccount)(nil),          // 1: ptah.console.v1.EnrollmentAccount
+	(*CreateEnrollmentResponse)(nil),   // 2: ptah.console.v1.CreateEnrollmentResponse
+	(*ListEnrollmentsRequest)(nil),     // 3: ptah.console.v1.ListEnrollmentsRequest
+	(*ListEnrollmentsResponse)(nil),    // 4: ptah.console.v1.ListEnrollmentsResponse
+	(*Enrollment)(nil),                 // 5: ptah.console.v1.Enrollment
+	(*EnrollmentCompletion)(nil),       // 6: ptah.console.v1.EnrollmentCompletion
+	(*ActivateEnrollmentRequest)(nil),  // 7: ptah.console.v1.ActivateEnrollmentRequest
+	(*ActivateEnrollmentResponse)(nil), // 8: ptah.console.v1.ActivateEnrollmentResponse
+	(*timestamppb.Timestamp)(nil),      // 9: google.protobuf.Timestamp
 }
 var file_ptah_console_v1_connections_proto_depIdxs = []int32{
-	1, // 0: ptah.console.v1.CreateEnrollmentRequest.accounts:type_name -> ptah.console.v1.EnrollmentAccount
-	3, // 1: ptah.console.v1.CreateEnrollmentResponse.expires_at:type_name -> google.protobuf.Timestamp
-	0, // 2: ptah.console.v1.ConnectionService.CreateEnrollment:input_type -> ptah.console.v1.CreateEnrollmentRequest
-	2, // 3: ptah.console.v1.ConnectionService.CreateEnrollment:output_type -> ptah.console.v1.CreateEnrollmentResponse
-	3, // [3:4] is the sub-list for method output_type
-	2, // [2:3] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	1,  // 0: ptah.console.v1.CreateEnrollmentRequest.accounts:type_name -> ptah.console.v1.EnrollmentAccount
+	9,  // 1: ptah.console.v1.CreateEnrollmentResponse.expires_at:type_name -> google.protobuf.Timestamp
+	5,  // 2: ptah.console.v1.ListEnrollmentsResponse.enrollments:type_name -> ptah.console.v1.Enrollment
+	1,  // 3: ptah.console.v1.Enrollment.accounts:type_name -> ptah.console.v1.EnrollmentAccount
+	9,  // 4: ptah.console.v1.Enrollment.expires_at:type_name -> google.protobuf.Timestamp
+	6,  // 5: ptah.console.v1.Enrollment.completion:type_name -> ptah.console.v1.EnrollmentCompletion
+	9,  // 6: ptah.console.v1.EnrollmentCompletion.completed_at:type_name -> google.protobuf.Timestamp
+	0,  // 7: ptah.console.v1.ConnectionService.CreateEnrollment:input_type -> ptah.console.v1.CreateEnrollmentRequest
+	3,  // 8: ptah.console.v1.ConnectionService.ListEnrollments:input_type -> ptah.console.v1.ListEnrollmentsRequest
+	7,  // 9: ptah.console.v1.ConnectionService.ActivateEnrollment:input_type -> ptah.console.v1.ActivateEnrollmentRequest
+	2,  // 10: ptah.console.v1.ConnectionService.CreateEnrollment:output_type -> ptah.console.v1.CreateEnrollmentResponse
+	4,  // 11: ptah.console.v1.ConnectionService.ListEnrollments:output_type -> ptah.console.v1.ListEnrollmentsResponse
+	8,  // 12: ptah.console.v1.ConnectionService.ActivateEnrollment:output_type -> ptah.console.v1.ActivateEnrollmentResponse
+	10, // [10:13] is the sub-list for method output_type
+	7,  // [7:10] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_ptah_console_v1_connections_proto_init() }
@@ -285,7 +670,7 @@ func file_ptah_console_v1_connections_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ptah_console_v1_connections_proto_rawDesc), len(file_ptah_console_v1_connections_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
