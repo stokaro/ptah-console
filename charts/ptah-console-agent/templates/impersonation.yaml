@@ -1,0 +1,30 @@
+# The agent's one grant: impersonate exactly the allowlisted accounts'
+# usernames. No groups, UIDs, extras or ServiceAccounts, and nothing else of
+# its own: no Secret, no RBAC object, no Ptah resource.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "ptah-console-agent.fullname" . }}-impersonate
+  labels:
+    {{- include "ptah-console-agent.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["users"]
+    verbs: ["impersonate"]
+    resourceNames:
+      {{- include "ptah-console-agent.usernames" . | nindent 6 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "ptah-console-agent.fullname" . }}-impersonate
+  labels:
+    {{- include "ptah-console-agent.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "ptah-console-agent.fullname" . }}-impersonate
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "ptah-console-agent.fullname" . }}
+    namespace: {{ .Release.Namespace }}

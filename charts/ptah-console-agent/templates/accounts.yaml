@@ -1,0 +1,15 @@
+# The allowlist. The agent reads it again when it changes, without a
+# restart, so the Deployment does not carry its checksum.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ptah-console-agent.fullname" . }}-accounts
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console-agent.labels" . | nindent 4 }}
+data:
+  accounts.yaml: |
+    apiVersion: console.ptah.run/v1alpha1
+    kind: AgentAccounts
+    accounts:
+      {{- toYaml .Values.accounts | nindent 6 }}

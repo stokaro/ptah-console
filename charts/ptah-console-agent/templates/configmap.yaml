@@ -1,0 +1,24 @@
+# What fixes the connection, and the console's CA. A change to either rolls
+# the agent: the Deployment carries their checksum.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ptah-console-agent.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console-agent.labels" . | nindent 4 }}
+data:
+  agent.yaml: |
+    apiVersion: console.ptah.run/v1alpha1
+    kind: AgentConfiguration
+    installationID: {{ .Values.installationID | quote }}
+    connection:
+      uid: {{ .Values.connection.uid | quote }}
+      generation: {{ .Values.connection.generation | int64 }}
+    console:
+      address: {{ .Values.console.address | quote }}
+      serverName: {{ .Values.console.serverName | quote }}
+    namespaces:
+      {{- toYaml .Values.namespaces | nindent 6 }}
+  console-ca.pem: |
+    {{- .Values.console.caBundle | trim | nindent 4 }}
