@@ -27,7 +27,11 @@ console:
 credential:
   secretName: ptah-console-agent-credential
 namespaces: [storefront, billing]
-accounts: [alex, sam]
+accounts:
+  - id: alex
+    roles: [viewer, approver]
+  - id: sam
+    roles: [viewer]
 ```
 
 `values.yaml` describes every value. The agent trusts only `caBundle` for the
@@ -46,6 +50,10 @@ same name is refused, and the handshake fails before the credential is sent.
   and writes no RBAC object.
 - A ConfigMap with the connection and the console's CA. A change to it rolls
   the agent.
+- In every namespace of `namespaces`, a Role for each role some account has
+  and a RoleBinding to its accounts, the same roles the console's chart grants
+  where the console runs. `approver` binds the operator chart's
+  `approverClusterRole` in this cluster.
 - A ConfigMap with the allowlist. The agent reads a changed list without a
   restart, and refuses a list that does not parse while keeping the one in
   force.
@@ -61,7 +69,8 @@ does not cover is refused by the API server.
 
 An empty account list, an account, namespace or installation ID that is not a
 DNS label (which keeps out `system:` names and usernames), the same account
-twice, a console address that is not the `https` root of a host, a CA that is
+twice, a role that is not one of the five, an administrator ClusterRole as the
+approver role, a console address that is not the `https` root of a host, a CA that is
 not PEM, a connection UID that is not a lowercase UUID, generation 0, no
 credential Secret, and a NetworkPolicy that does not name the API server and
 the console.

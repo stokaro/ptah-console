@@ -101,9 +101,32 @@ func TestTheAgentChartAndTheAgentAgree(t *testing.T) {
 		APIGroups: []string{""}, Resources: []string{"users"}, Verbs: []string{"impersonate"},
 		ResourceNames: []string{config.Username("alex"), config.Username("sam")},
 	}})
-	c.Assert(ofKind(all, "Role"), qt.HasLen, 0)
-	c.Assert(ofKind(all, "RoleBinding"), qt.HasLen, 0)
 	c.Assert(ofKind(all, "ClusterRoleBinding"), qt.HasLen, 1)
+}
+
+// Each account gets its roles in every namespace of the ceiling, and nowhere
+// else, as the console's chart grants them where the console runs.
+func TestEachAgentAccountGetsItsRolesInEveryNamespace(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	all := objects(t, mustRenderAgent(t, agentValues("full")))
+
+	bound := make(map[string][]string)
+	for _, object := range ofKind(all, "RoleBinding") {
+		binding := convert[rbacv1.RoleBinding](t, object)
+		for _, subject := range binding.Subjects {
+			key := binding.Namespace + " " + binding.RoleRef.Kind + "/" + binding.RoleRef.Name
+			bound[key] = append(bound[key], subject.Name)
+		}
+	}
+
+	c.Assert(bound, qt.DeepEquals, map[string][]string{
+		"storefront Role/agent-ptah-console-agent-viewer":             {"ptah-console:prod:alex", "ptah-console:prod:sam"},
+		"storefront ClusterRole/ptah-operator-ptah-operator-approver": {"ptah-console:prod:alex"},
+		"billing Role/agent-ptah-console-agent-viewer":                {"ptah-console:prod:alex", "ptah-console:prod:sam"},
+		"billing ClusterRole/ptah-operator-ptah-operator-approver":    {"ptah-console:prod:alex"},
+	})
+	c.Assert(ofKind(all, "Role"), qt.HasLen, 2)
 }
 
 // Nothing listens: no Service, no Ingress, no container port, and the
@@ -141,7 +164,7 @@ func TestOnlyTheConnectionRollsTheAgent(t *testing.T) {
 	}
 	base := template()
 
-	c.Assert(template(overlay(t, "accounts: [alex]")), qt.Equals, base)
+	c.Assert(template(overlay(t, "accounts: [{id: alex, roles: [viewer]}]")), qt.Equals, base)
 	c.Assert(template(overlay(t, "namespaces: [storefront]")), qt.Not(qt.Equals), base)
 	c.Assert(template(overlay(t, "connection: {uid: 0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d, generation: 2}")), qt.Not(qt.Equals), base)
 }
@@ -154,9 +177,14 @@ func TestEachAgentChartRefusal(t *testing.T) {
 		says    string
 	}{
 		{name: "no account", overlay: "accounts: []", says: `/accounts.*minItems`},
-		{name: "a system name as an account", overlay: "accounts: ['system:masters']", says: `/accounts/0.*does not match pattern`},
-		{name: "a username as an account", overlay: "accounts: ['ptah-console:prod:alex']", says: `/accounts/0.*does not match pattern`},
-		{name: "an account twice", overlay: "accounts: [alex, alex]", says: `/accounts.*items at 0 and 1 are equal`},
+		{name: "an account by name alone", overlay: "accounts: [alex]", says: `/accounts/0.*got string, want object`},
+		{name: "a system name as an account", overlay: "accounts: [{id: 'system:masters', roles: [viewer]}]", says: `/accounts/0/id.*does not match pattern`},
+		{name: "a username as an account", overlay: "accounts: [{id: 'ptah-console:prod:alex', roles: [viewer]}]", says: `/accounts/0/id.*does not match pattern`},
+		{name: "an account twice", overlay: "accounts: [{id: alex, roles: [viewer]}, {id: alex, roles: [approver]}]", says: `accounts: the id alex is given twice`},
+		{name: "an account with no role", overlay: "accounts: [{id: alex, roles: []}]", says: `/accounts/0/roles.*minItems`},
+		{name: "a wildcard role", overlay: "accounts: [{id: alex, roles: ['*']}]", says: `/accounts/0/roles/0.*value must be one of`},
+		{name: "connection administration in a target", overlay: "accounts: [{id: alex, roles: [connection-admin]}]", says: `/accounts/0/roles/0.*value must be one of`},
+		{name: "an administrator as the approver role", overlay: "approverClusterRole: cluster-admin", says: `/approverClusterRole.*'not' failed`},
 		{name: "a wildcard namespace", overlay: `namespaces: ["*"]`, says: `/namespaces/0.*does not match pattern`},
 		{name: "no namespace", overlay: "namespaces: []", says: `/namespaces.*minItems`},
 		{name: "a console over HTTP", overlay: "console: {address: 'http://agents.console.example.com'}", says: `/console/address.*does not match pattern`},

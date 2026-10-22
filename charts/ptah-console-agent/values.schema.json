@@ -149,9 +149,32 @@
       "type": "array",
       "minItems": 1,
       "maxItems": 256,
-      "uniqueItems": true,
       "items": {
-        "$ref": "#/definitions/label"
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "roles"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/definitions/label"
+          },
+          "roles": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "viewer",
+                "plan-reader",
+                "desired-state-author",
+                "diagnostic-reader",
+                "approver"
+              ]
+            }
+          }
+        }
       }
     },
     "resources": {
@@ -200,6 +223,13 @@
             }
           }
         }
+      }
+    },
+    "approverClusterRole": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "^(cluster-admin|admin|edit|system:.*)$"
       }
     }
   }
