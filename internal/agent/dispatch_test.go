@@ -11,6 +11,7 @@ import (
 
 	qt "github.com/frankban/quicktest"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"k8s.io/client-go/rest"
 
 	"github.com/stokaro/ptah-console/internal/agent"
@@ -103,7 +104,7 @@ func whoAmI(id, account string) *agentv1.Request {
 	return &agentv1.Request{
 		Envelope: &agentv1.Envelope{
 			RequestId: id, ConsoleInstance: "console-0", SessionGeneration: 1, AccountId: account,
-			Deadline: durationpb.New(5 * time.Second),
+			Deadline: durationpb.New(5 * time.Second), SentAt: timestamppb.Now(),
 		},
 		Action: &agentv1.Request_WhoAmI{WhoAmI: &agentv1.WhoAmIRequest{}},
 	}
@@ -165,6 +166,22 @@ func TestEachRefusalComesBeforeAnyCall(t *testing.T) {
 			request.Envelope.Deadline = durationpb.New(-time.Second)
 			return request
 		}(), code: "invalid_argument", says: "a request needs a deadline of at most 30s"},
+		{name: "no time it was sent", request: func() *agentv1.Request {
+			request := whoAmI("r1", "alex")
+			request.Envelope.SentAt = nil
+			return request
+		}(), code: "invalid_argument", says: "a request needs the time the console sent it"},
+		{name: "sent longer ago than its deadline and the clock skew", request: func() *agentv1.Request {
+			request := whoAmI("r1", "alex")
+			request.Envelope.SentAt = timestamppb.New(time.Now().Add(-5*time.Second - agent.MaxClockSkew - time.Minute))
+			return request
+		}(), code: "deadline_exceeded", says: "the console sent this request 1m20s ago, past its deadline; it is not acted on late"},
+		{name: "sent from a clock too far ahead", request: func() *agentv1.Request {
+			request := whoAmI("r1", "alex")
+			request.Envelope.SentAt = timestamppb.New(time.Now().Add(agent.MaxClockSkew + time.Minute))
+			return request
+		}(), code: "failed_precondition",
+			says: "the console sent this request 1m15s ahead of this cluster's clock, more than the 15s the clocks may disagree"},
 		{name: "an account the allowlist does not name", request: whoAmI("r1", "lee"),
 			code: "permission_denied", says: `account "lee" is not on this agent's allowlist`},
 		{name: "a username in place of an account", request: whoAmI("r1", "ptah-console:prod:alex"),
@@ -306,4 +323,26 @@ func TestTheConnectionHoldsItsBound(t *testing.T) {
 	c.Assert(code, qt.Equals, "resource_exhausted")
 	c.Assert(message, qt.Equals, "the agent has 64 requests in flight")
 	c.Assert(api.requests(), qt.HasLen, agent.MaxInFlight)
+}
+
+// A request read late is acted on only until its deadline from when the
+// console sent it, with the clock skew allowed, not for its whole deadline
+// from when the agent read it.
+func TestALateRequestRunsOnlyUntilItsDeadlineFromWhenItWasSent(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	api := &apiServer{hold: make(chan struct{})}
+	defer close(api.hold)
+	dispatcher, _ := newDispatcher(t, api)
+	request := whoAmI("late", "alex")
+	request.Envelope.Deadline = durationpb.New(agent.MaxDeadline)
+	request.Envelope.SentAt = timestamppb.New(time.Now().Add(-agent.MaxDeadline - agent.MaxClockSkew + 2*time.Second))
+	started := time.Now()
+
+	code, _ := failed(t, serve(t, dispatcher, request))
+
+	c.Assert(code, qt.Not(qt.Equals), "", qt.Commentf("the held request did not fail"))
+	c.Assert(time.Since(started) < agent.MaxDeadline/2, qt.IsTrue,
+		qt.Commentf("the request ran %s, its deadline from when the agent read it", time.Since(started)))
+	c.Assert(api.requests(), qt.HasLen, 1)
 }
