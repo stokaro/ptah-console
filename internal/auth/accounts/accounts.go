@@ -10,6 +10,7 @@ package accounts
 
 import (
 	"bytes"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -72,6 +73,20 @@ type Registry struct {
 	ThisCluster string `json:"thisCluster"`
 	// ConnectionUID is that entry's connection UID.
 	ConnectionUID string `json:"connectionUID"`
+	// Agents is where the agents of external clusters dial the console, as
+	// an enrollment file tells them. A console without it enrolls nothing.
+	Agents *RegistryAgents `json:"agents,omitempty"`
+}
+
+// RegistryAgents is the console's agent listener as agents see it.
+type RegistryAgents struct {
+	// Address is the https root agents dial.
+	Address string `json:"address"`
+	// ServerName is the name the listener's certificate carries.
+	ServerName string `json:"serverName"`
+	// CABundle is the console's own CA, in PEM, the only one agents trust
+	// for it.
+	CABundle string `json:"caBundle"`
 }
 
 // Proxies is TrustedProxies, parsed. A configuration ParseConfig accepted
@@ -224,7 +239,29 @@ func (r *Registry) problems() []string {
 	if !uuid.MatchString(r.ConnectionUID) {
 		problems = append(problems, "registry.connectionUID: is not a lowercase UUID")
 	}
+	if r.Agents != nil {
+		problems = append(problems, r.Agents.problems()...)
+	}
 	return problems
+}
+
+func (a *RegistryAgents) problems() []string {
+	var problems []string
+	if problem := publicURLProblem(a.Address); problem != "" {
+		problems = append(problems, "registry.agents.address: "+problem)
+	}
+	if len(a.ServerName) > 253 || !subdomain.MatchString(a.ServerName) {
+		problems = append(problems, "registry.agents.serverName: is not a DNS name")
+	}
+	if !holdsCertificate(a.CABundle) {
+		problems = append(problems, "registry.agents.caBundle: holds no PEM certificate")
+	}
+	return problems
+}
+
+// holdsCertificate reports whether bundle is PEM with a certificate in it.
+func holdsCertificate(bundle string) bool {
+	return x509.NewCertPool().AppendCertsFromPEM([]byte(bundle))
 }
 
 // proxyProblems refuses a network that cannot be read one way only, and one

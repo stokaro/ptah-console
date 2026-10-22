@@ -62,12 +62,17 @@ func TestTheRegistryGrantsAreSplit(t *testing.T) {
 		"console-ptah-console-registry-housekeeping": {
 			{APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterpreferences"}, Verbs: []string{"get", "list", "watch"}},
 			{APIGroups: []string{group}, Resources: []string{"consoleclusters/status"}, Verbs: []string{"update", "patch"}},
+			{APIGroups: []string{group}, Resources: []string{"consoleclusterenrollments"}, Verbs: []string{"get", "list", "watch", "delete"}},
+			{APIGroups: []string{group}, Resources: []string{"consoleclusterenrollments/status"}, Verbs: []string{"update", "patch"}},
 		},
 		"console-ptah-console-registry-this-cluster": {
 			{APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterpreferences"}, ResourceNames: []string{entry.Name}, Verbs: []string{"get"}},
 		},
 		"console-ptah-console-registry-admin": {
-			{APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterpreferences"}, Verbs: []string{"get", "list", "watch", "create", "update", "patch", "delete"}},
+			{
+				APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterpreferences", "consoleclusterenrollments"},
+				Verbs: []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+			},
 		},
 	})
 	subjects := make(map[string][]string)
@@ -141,4 +146,20 @@ func TestAgentsHaveAServiceOfTheirOwn(t *testing.T) {
 	agentsRule, _ := ingress[1].(map[string]any)
 	_, restricted := agentsRule["from"]
 	c.Assert(restricted, qt.IsFalse, qt.Commentf("agents come from other clusters; an empty agents.ingressFrom admits any source"))
+}
+
+// The configuration the chart writes with agents on is one the console
+// accepts, and tells it what an enrollment file gives agents.
+func TestTheConsoleAcceptsTheAgentsConfiguration(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	all := objects(t, mustRender(t, values("agents")))
+	text, _, _ := unstructured.NestedString(ofKind(all, "ConfigMap")[0].Object, "data", "configuration.yaml")
+
+	config, err := accounts.ParseConfig([]byte(text))
+
+	c.Assert(err, qt.IsNil)
+	c.Assert(config.Registry.Agents, qt.IsNotNil)
+	c.Assert(config.Registry.Agents.Address, qt.Equals, "https://agents.console.example.com")
+	c.Assert(config.Registry.Agents.CABundle, qt.Contains, "-----BEGIN CERTIFICATE-----")
 }

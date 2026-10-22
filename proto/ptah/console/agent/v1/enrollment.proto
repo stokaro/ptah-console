@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package ptah.console.agent.v1;
+
+option go_package = "github.com/stokaro/ptah-console/internal/gen/ptah/console/agent/v1;agentv1";
+
+// EnrollmentService completes an enrollment. The target administrator's
+// helper calls it on the console's agent listener, over TLS that trusts only
+// the console's own CA, with the enrollment's single-use bootstrap secret.
+service EnrollmentService {
+  // CompleteEnrollment reports the target the helper ran against and the
+  // verifier of the channel credential it made there. The same report sent
+  // again is accepted again; another is refused.
+  rpc CompleteEnrollment(CompleteEnrollmentRequest) returns (CompleteEnrollmentResponse) {}
+}
+
+message CompleteEnrollmentRequest {
+  string connection_uid = 1;
+  string bootstrap = 2;
+  // Fingerprint is the one the helper showed, from the enrollment file.
+  string fingerprint = 3;
+  // TargetServer is the target API server, as the helper's context names it.
+  string target_server = 4;
+  // TargetCaSha256 is the SHA-256 of the CA bundle the context trusts for it.
+  string target_ca_sha256 = 5;
+  // CredentialVerifier is the lowercase hex SHA-256 of the channel
+  // credential. The credential never leaves the target.
+  string credential_verifier = 6;
+}
+
+message CompleteEnrollmentResponse {
+  string cluster_name = 1;
+}

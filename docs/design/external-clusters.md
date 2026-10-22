@@ -109,6 +109,31 @@ behind.
   unknown, exactly like a lost answer in phase 1: the console reads the decision
   back by its name once the channel returns, and never sends it again.
 
+## Enrollment
+
+An installation administrator starts an enrollment in the console: the
+cluster's name, the namespace ceiling, and the accounts the agent will act
+for with their roles there. The console creates a `ConsoleClusterEnrollment`
+as that administrator, so RBAC decides who may, and records in its status the
+verifier of a 256-bit bootstrap secret valid for 10 minutes, and the
+enrollment's fingerprint. The administrator gets an enrollment file with the
+secret, once; the console keeps the verifier only. The console holds at most
+16 enrollments, and one cannot take the name of a connection or of another
+enrollment.
+
+On the target, the administrator's `ptah-console cluster enroll` reads the
+file with their own kubeconfig, shows the fingerprint the console showed,
+makes the channel credential there, writes it into the agent's Secret, and
+prints the exact Helm command that installs the agent with its RoleBindings.
+It then completes the enrollment on the console's agent listener, over TLS
+that trusts only the console's CA, with the bootstrap secret, the target's
+API server as the kubeconfig names it, and the credential's verifier. The
+credential never leaves the target. The secret completes one enrollment once:
+the same report sent again is taken again, so a helper that lost the answer
+can retry, and any other report is refused. An enrollment nobody completed
+within 10 minutes, or nobody activated within a day of completion, is
+removed.
+
 ## Credentials over time
 
 The credential expires; 90 days by default. The console warns from 14 days

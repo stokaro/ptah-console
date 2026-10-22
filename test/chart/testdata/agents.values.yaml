@@ -14,6 +14,20 @@ registry:
   enabled: true
 agents:
   enabled: true
+  address: https://agents.console.example.com
+  serverName: agents.console.example.com
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    MIIBkTCCATegAwIBAgIUWnJ3C7dsyDNF9oRlsVJfqqH3s20wCgYIKoZIzj0EAwIw
+    HTEbMBkGA1UEAwwSRXhhbXBsZSBDb25zb2xlIENBMCAXDTI2MTAyMjExMjUzOFoY
+    DzIxMjYwOTI4MTEyNTM4WjAdMRswGQYDVQQDDBJFeGFtcGxlIENvbnNvbGUgQ0Ew
+    WTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATFXWGP61hDf7EMjev0a5kD/D6UjoBC
+    7VrTqJ1Qqwxv7LLsMWin/aIrN/ibDyLjeg4XT+g7Noo7A47wKGBrRQvvo1MwUTAd
+    BgNVHQ4EFgQU4aSXTh4r/mexfmHsb6kfpVVOAX4wHwYDVR0jBBgwFoAU4aSXTh4r
+    /mexfmHsb6kfpVVOAX4wDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNIADBF
+    AiEAm6G476IDOEBhiMWV+zzZJaQjrIgcxJ40M/51tIsohfcCICm8+T/9Ov8a09GL
+    QGuN/ZwUmBV918D4PUTDlcrAHR16
+    -----END CERTIFICATE-----
   tls:
     secretName: console-agents-tls
   service:

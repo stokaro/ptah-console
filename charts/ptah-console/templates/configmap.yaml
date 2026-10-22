@@ -30,4 +30,11 @@ data:
       namespace: {{ .Release.Namespace | quote }}
       thisCluster: {{ include "ptah-console.thisClusterName" . | quote }}
       connectionUID: {{ include "ptah-console.thisClusterUID" . | quote }}
+      {{- if .Values.agents.enabled }}
+      agents:
+        address: {{ .Values.agents.address | quote }}
+        serverName: {{ .Values.agents.serverName | quote }}
+        caBundle: |
+          {{- .Values.agents.caBundle | trim | nindent 10 }}
+      {{- end }}
     {{- end }}
