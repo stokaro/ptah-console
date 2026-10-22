@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"math/rand/v2"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -38,6 +39,12 @@ const (
 	maxBackoff   = 30 * time.Second
 )
 
+// DefaultDialTimeout bounds the TCP connect and the TLS handshake of one
+// attempt to open the channel. Without it a connect sent while the console's
+// Service has no Pod behind it, which may drop it without a word, waits for
+// TCP to give up, two minutes on Linux, before the agent dials again.
+const DefaultDialTimeout = 10 * time.Second
+
 // DefaultCredentialCheck is how often an open channel reads its credential
 // file for a rotation.
 const DefaultCredentialCheck = 10 * time.Second
@@ -63,6 +70,9 @@ type ChannelOptions struct {
 	// Ping is how long the agent waits to hear from the console before it
 	// pings, and then for the answer; zero is wire.Ping.
 	Ping time.Duration
+	// DialTimeout bounds the TCP connect and the TLS handshake of one
+	// attempt; zero is DefaultDialTimeout.
+	DialTimeout time.Duration
 }
 
 // Run holds a channel open until ctx ends, opening it again after it drops.
@@ -111,7 +121,13 @@ func Open(ctx context.Context, options ChannelOptions, dispatcher *Dispatcher) e
 	ctx, cancelCause := context.WithCancelCause(ctx)
 	cancel := func() { cancelCause(nil) }
 	defer cancel()
+	dialTimeout := options.DialTimeout
+	if dialTimeout == 0 {
+		dialTimeout = DefaultDialTimeout
+	}
 	transport := &http.Transport{
+		DialContext:         (&net.Dialer{Timeout: dialTimeout, KeepAlive: 30 * time.Second}).DialContext,
+		TLSHandshakeTimeout: dialTimeout,
 		TLSClientConfig: &tls.Config{
 			RootCAs:    options.RootCAs,
 			ServerName: options.Config.Console.ServerName,
