@@ -76,6 +76,9 @@ type Options struct {
 	AgentTLSKeyFile  string
 	// AgentListening, when set, is told the address agents dial.
 	AgentListening func(net.Addr)
+	// AgentPing is how long the agent listener waits to hear from a channel
+	// before it pings, and then for the answer; zero is wire.Ping.
+	AgentPing time.Duration
 	// Now is the clock sign-in limits are kept by; nil is time.Now.
 	Now func() time.Time
 	// PerLogin and PerAddress override the sign-in limits; zero keeps
