@@ -9,9 +9,11 @@ import (
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connectinprocess"
 	qt "github.com/frankban/quicktest"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/discovery"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/stokaro/ptah-console/internal/api"
 	"github.com/stokaro/ptah-console/internal/auth/session"
@@ -74,6 +76,7 @@ func TestAMissingResourceIsNamed(t *testing.T) {
 	crd.SetKind("CustomResourceDefinition")
 	crd.SetName("ptahmigrationrunacknowledgments.operator.ptah.run")
 	c.Assert(plane.Admin.Delete(t.Context(), crd), qt.IsNil)
+	waitUntilGone(t, crd)
 	waitUntilNotServed(t, "ptahmigrationrunacknowledgments")
 
 	answer := operatorAPI(t)
@@ -83,20 +86,42 @@ func TestAMissingResourceIsNamed(t *testing.T) {
 	c.Assert(answer.GetProblem(), qt.Contains, "without every resource the console needs")
 }
 
-func waitUntilNotServed(t *testing.T, resource string) {
+// settle is how long the control plane gets to act on a deleted CRD. The
+// finalizer and discovery run asynchronously inside the API server, and
+// envtest starts one per package, all at once on a CI runner, so their pace
+// is the runner's: the bound is generous, and which step stalls is named.
+const settle = 3 * time.Minute
+
+// waitUntilGone waits for the CRD's own deletion: its finalizer has run.
+func waitUntilGone(t *testing.T, crd *unstructured.Unstructured) {
 	t.Helper()
-	client, err := discovery.NewDiscoveryClientForConfig(plane.Env.Config)
-	qt.New(t).Assert(err, qt.IsNil)
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), settle)
 	defer cancel()
 	for ctx.Err() == nil {
-		list, err := client.ServerResourcesForGroupVersion("operator.ptah.run/v1alpha1")
+		err := plane.Admin.Get(ctx, client.ObjectKeyFromObject(crd), crd.DeepCopy())
+		if apierrors.IsNotFound(err) {
+			return
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	t.Fatalf("the CRD %s was still not deleted after %s", crd.GetName(), settle)
+}
+
+// waitUntilNotServed waits for discovery to stop listing a deleted resource.
+func waitUntilNotServed(t *testing.T, resource string) {
+	t.Helper()
+	discoverer, err := discovery.NewDiscoveryClientForConfig(plane.Env.Config)
+	qt.New(t).Assert(err, qt.IsNil)
+	ctx, cancel := context.WithTimeout(t.Context(), settle)
+	defer cancel()
+	for ctx.Err() == nil {
+		list, err := discoverer.ServerResourcesForGroupVersion("operator.ptah.run/v1alpha1")
 		if err == nil && !served(list.APIResources, resource) {
 			return
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-	t.Fatalf("%s is still served", resource)
+	t.Fatalf("%s was deleted and was still served after %s", resource, settle)
 }
 
 func served(resources []metav1.APIResource, name string) bool {
