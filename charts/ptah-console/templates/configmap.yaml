@@ -25,3 +25,9 @@ data:
     {{- with .Values.trustedProxies }}
     trustedProxies: {{ toJson . }}
     {{- end }}
+    {{- if .Values.registry.enabled }}
+    registry:
+      namespace: {{ .Release.Namespace | quote }}
+      thisCluster: {{ include "ptah-console.thisClusterName" . | quote }}
+      connectionUID: {{ include "ptah-console.thisClusterUID" . | quote }}
+    {{- end }}

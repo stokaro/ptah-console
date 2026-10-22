@@ -1,0 +1,19 @@
+# The registry on: this cluster's entry, the console's housekeeping grant,
+# every account's read of this cluster's entry, and one connection
+# administrator.
+installationID: prod-eu-1
+publicURL: https://console.example.com/
+namespaces: [storefront, billing]
+accounts:
+  - id: alex
+    login: alex@example.com
+    roles: [viewer, connection-admin]
+  - id: sam
+    login: sam@example.com
+    roles: [viewer]
+passwords:
+  secretName: ptah-console-passwords
+tls:
+  secretName: console-tls
+registry:
+  enabled: true

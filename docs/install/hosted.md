@@ -128,3 +128,10 @@ This removes the console, its impersonation grant and the accounts'
 RoleBindings, and with the namespace the passwords and TLS Secrets. The
 operator is not affected: approvals already admitted stay admitted and are
 applied as before.
+
+Helm leaves the registry's CRDs in place. Removing them deletes every entry
+in every namespace, so do it only when no console uses them:
+
+```sh
+kubectl delete crd consoleclusters.console.ptah.run consoleclusterpreferences.console.ptah.run
+```

@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -32,6 +33,9 @@ type Options struct {
 	// OperatorCRDs installs the operator's CRDs from the module the console
 	// builds against.
 	OperatorCRDs bool
+	// RegistryCRDs installs the console's own registry CRDs, as the chart
+	// carries them.
+	RegistryCRDs bool
 }
 
 // Plane is a running control plane.
@@ -71,7 +75,10 @@ func Run(m *testing.M, options Options, plane **Plane) int {
 			fmt.Fprintln(os.Stderr, "envtest:", err)
 			return 1
 		}
-		env.CRDDirectoryPaths = []string{dir}
+		env.CRDDirectoryPaths = append(env.CRDDirectoryPaths, dir)
+	}
+	if options.RegistryCRDs {
+		env.CRDDirectoryPaths = append(env.CRDDirectoryPaths, registryCRDs())
 	}
 	config, err := env.Start()
 	if err != nil {
@@ -90,6 +97,13 @@ func Run(m *testing.M, options Options, plane **Plane) int {
 	}
 	*plane = &Plane{Env: env, Admin: admin}
 	return m.Run()
+}
+
+// registryCRDs is the chart's copy of the registry CRDs, the files the
+// generator writes and the chart installs.
+func registryCRDs() string {
+	_, file, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(file), "..", "..", "..", "charts", "ptah-console", "crds")
 }
 
 // operatorCRDs finds config/crd/bases in the operator module go.mod names.

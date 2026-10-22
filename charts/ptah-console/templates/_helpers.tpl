@@ -25,6 +25,21 @@ console from the same two values, and from nothing else. */}}
 {{- printf "ptah-console:%s:%s" .installationID .id -}}
 {{- end -}}
 
+{{/* The connection UID of this cluster's registry entry: a UUID derived from
+the installation and the namespace ceiling, so the same values give the same
+connection and a changed ceiling a new one. */}}
+{{- define "ptah-console.thisClusterUID" -}}
+{{- $digest := sha256sum (printf "ptah-console/this-cluster/%s/%s" .Values.installationID (join "," (sortAlpha .Values.namespaces))) -}}
+{{- printf "%s-%s-8%s-8%s-%s" (substr 0 8 $digest) (substr 8 12 $digest) (substr 13 16 $digest) (substr 17 20 $digest) (substr 20 32 $digest) -}}
+{{- end -}}
+
+{{/* The name of this cluster's registry entry. It carries the connection
+UID's first part, so Helm replaces the entry when the connection changes
+rather than editing a spec the API refuses to change. */}}
+{{- define "ptah-console.thisClusterName" -}}
+{{- printf "this-cluster-%s" (substr 0 8 (include "ptah-console.thisClusterUID" .)) -}}
+{{- end -}}
+
 {{/* The host of publicURL. */}}
 {{- define "ptah-console.host" -}}
 {{- .Values.publicURL | trimPrefix "https://" | trimSuffix "/" -}}
