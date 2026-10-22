@@ -88,6 +88,13 @@ func (a *apiServer) waitForRequests(t *testing.T, n int) {
 
 func newDispatcher(t *testing.T, api *apiServer) (*agent.Dispatcher, *agent.Factory) {
 	t.Helper()
+	return newDispatcherAt(t, api, nil)
+}
+
+// newDispatcherAt is a dispatcher whose clock is the one given; nil is the
+// real one.
+func newDispatcherAt(t *testing.T, api *apiServer, clock func() time.Time) (*agent.Dispatcher, *agent.Factory) {
+	t.Helper()
 	c := qt.New(t)
 	config, err := agent.ParseConfiguration([]byte(configuration))
 	c.Assert(err, qt.IsNil)
@@ -97,7 +104,7 @@ func newDispatcher(t *testing.T, api *apiServer) (*agent.Dispatcher, *agent.Fact
 	list, err := agent.ParseAccounts([]byte(allowlist))
 	c.Assert(err, qt.IsNil)
 	c.Assert(factory.Set(list), qt.IsNil)
-	return agent.NewDispatcher(factory, audit.New(io.Discard), nil), factory
+	return agent.NewDispatcher(factory, audit.New(io.Discard), clock), factory
 }
 
 func whoAmI(id, account string) *agentv1.Request {
@@ -141,6 +148,9 @@ func failed(t *testing.T, results []*agentv1.Result) (code, message string) {
 // API server.
 func TestEachRefusalComesBeforeAnyCall(t *testing.T) {
 	t.Parallel()
+	// The agent's clock stands still at now, so a row that dates a request
+	// relative to it says exactly how long ago, however slowly the test runs.
+	now := time.Now()
 	tests := []struct {
 		name    string
 		request *agentv1.Request
@@ -173,12 +183,12 @@ func TestEachRefusalComesBeforeAnyCall(t *testing.T) {
 		}(), code: "invalid_argument", says: "a request needs the time the console sent it"},
 		{name: "sent longer ago than its deadline and the clock skew", request: func() *agentv1.Request {
 			request := whoAmI("r1", "alex")
-			request.Envelope.SentAt = timestamppb.New(time.Now().Add(-5*time.Second - agent.MaxClockSkew - time.Minute))
+			request.Envelope.SentAt = timestamppb.New(now.Add(-5*time.Second - agent.MaxClockSkew - time.Minute))
 			return request
 		}(), code: "deadline_exceeded", says: "the console sent this request 1m20s ago, past its deadline; it is not acted on late"},
 		{name: "sent from a clock too far ahead", request: func() *agentv1.Request {
 			request := whoAmI("r1", "alex")
-			request.Envelope.SentAt = timestamppb.New(time.Now().Add(agent.MaxClockSkew + time.Minute))
+			request.Envelope.SentAt = timestamppb.New(now.Add(agent.MaxClockSkew + time.Minute))
 			return request
 		}(), code: "failed_precondition",
 			says: "the console sent this request 1m15s ahead of this cluster's clock, more than the 15s the clocks may disagree"},
@@ -206,7 +216,7 @@ func TestEachRefusalComesBeforeAnyCall(t *testing.T) {
 			t.Parallel()
 			c := qt.New(t)
 			api := &apiServer{}
-			dispatcher, _ := newDispatcher(t, api)
+			dispatcher, _ := newDispatcherAt(t, api, func() time.Time { return now })
 
 			code, message := failed(t, serve(t, dispatcher, test.request))
 
