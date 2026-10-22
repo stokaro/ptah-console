@@ -21,10 +21,11 @@ import (
 
 	agentv1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/agent/v1"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/agent/v1/agentv1connect"
+	"github.com/stokaro/ptah-console/internal/wire"
 )
 
 // Protocol is the version of the channel this agent speaks.
-const Protocol = 1
+const Protocol = wire.Protocol
 
 // MaxFrameBytes bounds one frame either way: the largest plan the operator
 // stores, as a plan response carries it, with room for the envelope. A larger

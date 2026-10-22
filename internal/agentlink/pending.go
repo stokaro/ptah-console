@@ -16,10 +16,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	consolev1alpha1 "github.com/stokaro/ptah-console/api/v1alpha1"
-	"github.com/stokaro/ptah-console/internal/agent"
 	"github.com/stokaro/ptah-console/internal/enrollment"
 	agentv1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/agent/v1"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/agent/v1/agentv1connect"
+	"github.com/stokaro/ptah-console/internal/wire"
 )
 
 // pendingEnrollment is the completed enrollment, still within its
@@ -52,8 +52,8 @@ func (h *Hub) servePending(ctx context.Context, stream agentv1connect.AgentServi
 	if err != nil {
 		return err
 	}
-	if first.GetHello().GetProtocol() != agent.Protocol {
-		return connect.Errorf(connect.CodeFailedPrecondition, "the agent has to open with a hello for protocol %d", agent.Protocol)
+	if first.GetHello().GetProtocol() != wire.Protocol {
+		return connect.Errorf(connect.CodeFailedPrecondition, "the agent has to open with a hello for protocol %d", wire.Protocol)
 	}
 	binding := &agentv1.Binding{ConnectionUid: pending.Spec.ConnectionUID, ConnectionGeneration: 1}
 	if !proto.Equal(first.GetBinding(), binding) {

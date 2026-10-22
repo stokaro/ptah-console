@@ -33,6 +33,21 @@ const (
 	// ConnectionServiceActivateEnrollmentProcedure is the procedure name of the ConnectionService's
 	// ActivateEnrollment RPC.
 	ConnectionServiceActivateEnrollmentProcedure = "/ptah.console.v1.ConnectionService/ActivateEnrollment"
+	// ConnectionServiceSetConnectionEnabledProcedure is the procedure name of the ConnectionService's
+	// SetConnectionEnabled RPC.
+	ConnectionServiceSetConnectionEnabledProcedure = "/ptah.console.v1.ConnectionService/SetConnectionEnabled"
+	// ConnectionServiceQuarantineConnectionProcedure is the procedure name of the ConnectionService's
+	// QuarantineConnection RPC.
+	ConnectionServiceQuarantineConnectionProcedure = "/ptah.console.v1.ConnectionService/QuarantineConnection"
+	// ConnectionServiceRemoveConnectionProcedure is the procedure name of the ConnectionService's
+	// RemoveConnection RPC.
+	ConnectionServiceRemoveConnectionProcedure = "/ptah.console.v1.ConnectionService/RemoveConnection"
+	// ConnectionServiceIssueChannelCredentialProcedure is the procedure name of the ConnectionService's
+	// IssueChannelCredential RPC.
+	ConnectionServiceIssueChannelCredentialProcedure = "/ptah.console.v1.ConnectionService/IssueChannelCredential"
+	// ConnectionServiceListConnectionsProcedure is the procedure name of the ConnectionService's
+	// ListConnections RPC.
+	ConnectionServiceListConnectionsProcedure = "/ptah.console.v1.ConnectionService/ListConnections"
 )
 
 var (
@@ -58,6 +73,42 @@ var (
 			Procedure:  ConnectionServiceActivateEnrollmentProcedure,
 		}
 	})
+	connectionServiceSetConnectionEnabledSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_ptah_console_v1_connections_proto.Services().ByName("ConnectionService").Methods().ByName("SetConnectionEnabled"),
+			Procedure:  ConnectionServiceSetConnectionEnabledProcedure,
+		}
+	})
+	connectionServiceQuarantineConnectionSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_ptah_console_v1_connections_proto.Services().ByName("ConnectionService").Methods().ByName("QuarantineConnection"),
+			Procedure:  ConnectionServiceQuarantineConnectionProcedure,
+		}
+	})
+	connectionServiceRemoveConnectionSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_ptah_console_v1_connections_proto.Services().ByName("ConnectionService").Methods().ByName("RemoveConnection"),
+			Procedure:  ConnectionServiceRemoveConnectionProcedure,
+		}
+	})
+	connectionServiceIssueChannelCredentialSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_ptah_console_v1_connections_proto.Services().ByName("ConnectionService").Methods().ByName("IssueChannelCredential"),
+			Procedure:  ConnectionServiceIssueChannelCredentialProcedure,
+		}
+	})
+	connectionServiceListConnectionsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType:       connect.StreamTypeUnary,
+			Schema:           v1.File_ptah_console_v1_connections_proto.Services().ByName("ConnectionService").Methods().ByName("ListConnections"),
+			Procedure:        ConnectionServiceListConnectionsProcedure,
+			IdempotencyLevel: connect.IdempotencyNoSideEffects,
+		}
+	})
 )
 
 // ConnectionServiceClient is a client for the ptah.console.v1.ConnectionService service.
@@ -70,6 +121,22 @@ type ConnectionServiceClient interface {
 	// ActivateEnrollment makes a completed enrollment whose agent has
 	// connected a connection.
 	ActivateEnrollment(context.Context, *v1.ActivateEnrollmentRequest) (*v1.ActivateEnrollmentResponse, error)
+	// SetConnectionEnabled turns a connection off for every page and every
+	// request, keeping its configuration, or on again.
+	SetConnectionEnabled(context.Context, *v1.SetConnectionEnabledRequest) (*v1.SetConnectionEnabledResponse, error)
+	// QuarantineConnection fences the connection's channel at its generation
+	// and drops its credentials. New credentials lift it.
+	QuarantineConnection(context.Context, *v1.QuarantineConnectionRequest) (*v1.QuarantineConnectionResponse, error)
+	// RemoveConnection revokes the connection, then removes it, and keeps a
+	// tombstone. The target's cleanup is left to its administrator.
+	RemoveConnection(context.Context, *v1.RemoveConnectionRequest) (*v1.RemoveConnectionResponse, error)
+	// IssueChannelCredential gives an agent connection a new channel
+	// credential, shown this once: a rotation's second credential, or the one
+	// that lifts a quarantine.
+	IssueChannelCredential(context.Context, *v1.IssueChannelCredentialRequest) (*v1.IssueChannelCredentialResponse, error)
+	// ListConnections lists the connections the person may see, with what the
+	// console last observed of each.
+	ListConnections(context.Context, *v1.ListConnectionsRequest) (*v1.ListConnectionsResponse, error)
 }
 
 // NewConnectionServiceClient constructs a client for the ptah.console.v1.ConnectionService service.
@@ -88,6 +155,22 @@ type ConnectionServiceHandler interface {
 	// ActivateEnrollment makes a completed enrollment whose agent has
 	// connected a connection.
 	ActivateEnrollment(context.Context, *v1.ActivateEnrollmentRequest) (*v1.ActivateEnrollmentResponse, error)
+	// SetConnectionEnabled turns a connection off for every page and every
+	// request, keeping its configuration, or on again.
+	SetConnectionEnabled(context.Context, *v1.SetConnectionEnabledRequest) (*v1.SetConnectionEnabledResponse, error)
+	// QuarantineConnection fences the connection's channel at its generation
+	// and drops its credentials. New credentials lift it.
+	QuarantineConnection(context.Context, *v1.QuarantineConnectionRequest) (*v1.QuarantineConnectionResponse, error)
+	// RemoveConnection revokes the connection, then removes it, and keeps a
+	// tombstone. The target's cleanup is left to its administrator.
+	RemoveConnection(context.Context, *v1.RemoveConnectionRequest) (*v1.RemoveConnectionResponse, error)
+	// IssueChannelCredential gives an agent connection a new channel
+	// credential, shown this once: a rotation's second credential, or the one
+	// that lifts a quarantine.
+	IssueChannelCredential(context.Context, *v1.IssueChannelCredentialRequest) (*v1.IssueChannelCredentialResponse, error)
+	// ListConnections lists the connections the person may see, with what the
+	// console last observed of each.
+	ListConnections(context.Context, *v1.ListConnectionsRequest) (*v1.ListConnectionsResponse, error)
 }
 
 // RegisterConnectionServiceHandler registers svc as the ptah.console.v1.ConnectionService
@@ -98,6 +181,11 @@ func RegisterConnectionServiceHandler(server *connect.Server, svc ConnectionServ
 		connect.Method{Spec: connectionServiceCreateEnrollmentSpec(), Handler: adapter.createEnrollment},
 		connect.Method{Spec: connectionServiceListEnrollmentsSpec(), Handler: adapter.listEnrollments},
 		connect.Method{Spec: connectionServiceActivateEnrollmentSpec(), Handler: adapter.activateEnrollment},
+		connect.Method{Spec: connectionServiceSetConnectionEnabledSpec(), Handler: adapter.setConnectionEnabled},
+		connect.Method{Spec: connectionServiceQuarantineConnectionSpec(), Handler: adapter.quarantineConnection},
+		connect.Method{Spec: connectionServiceRemoveConnectionSpec(), Handler: adapter.removeConnection},
+		connect.Method{Spec: connectionServiceIssueChannelCredentialSpec(), Handler: adapter.issueChannelCredential},
+		connect.Method{Spec: connectionServiceListConnectionsSpec(), Handler: adapter.listConnections},
 	)
 }
 
@@ -114,6 +202,26 @@ func (UnimplementedConnectionServiceHandler) ListEnrollments(context.Context, *v
 
 func (UnimplementedConnectionServiceHandler) ActivateEnrollment(context.Context, *v1.ActivateEnrollmentRequest) (*v1.ActivateEnrollmentResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.ConnectionService.ActivateEnrollment is not implemented")
+}
+
+func (UnimplementedConnectionServiceHandler) SetConnectionEnabled(context.Context, *v1.SetConnectionEnabledRequest) (*v1.SetConnectionEnabledResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.ConnectionService.SetConnectionEnabled is not implemented")
+}
+
+func (UnimplementedConnectionServiceHandler) QuarantineConnection(context.Context, *v1.QuarantineConnectionRequest) (*v1.QuarantineConnectionResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.ConnectionService.QuarantineConnection is not implemented")
+}
+
+func (UnimplementedConnectionServiceHandler) RemoveConnection(context.Context, *v1.RemoveConnectionRequest) (*v1.RemoveConnectionResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.ConnectionService.RemoveConnection is not implemented")
+}
+
+func (UnimplementedConnectionServiceHandler) IssueChannelCredential(context.Context, *v1.IssueChannelCredentialRequest) (*v1.IssueChannelCredentialResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.ConnectionService.IssueChannelCredential is not implemented")
+}
+
+func (UnimplementedConnectionServiceHandler) ListConnections(context.Context, *v1.ListConnectionsRequest) (*v1.ListConnectionsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.ConnectionService.ListConnections is not implemented")
 }
 
 type connectionServiceClient struct {
@@ -139,6 +247,46 @@ func (c *connectionServiceClient) ListEnrollments(ctx context.Context, req *v1.L
 func (c *connectionServiceClient) ActivateEnrollment(ctx context.Context, req *v1.ActivateEnrollmentRequest) (*v1.ActivateEnrollmentResponse, error) {
 	var res v1.ActivateEnrollmentResponse
 	if err := c.client.CallUnary(ctx, connectionServiceActivateEnrollmentSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *connectionServiceClient) SetConnectionEnabled(ctx context.Context, req *v1.SetConnectionEnabledRequest) (*v1.SetConnectionEnabledResponse, error) {
+	var res v1.SetConnectionEnabledResponse
+	if err := c.client.CallUnary(ctx, connectionServiceSetConnectionEnabledSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *connectionServiceClient) QuarantineConnection(ctx context.Context, req *v1.QuarantineConnectionRequest) (*v1.QuarantineConnectionResponse, error) {
+	var res v1.QuarantineConnectionResponse
+	if err := c.client.CallUnary(ctx, connectionServiceQuarantineConnectionSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *connectionServiceClient) RemoveConnection(ctx context.Context, req *v1.RemoveConnectionRequest) (*v1.RemoveConnectionResponse, error) {
+	var res v1.RemoveConnectionResponse
+	if err := c.client.CallUnary(ctx, connectionServiceRemoveConnectionSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *connectionServiceClient) IssueChannelCredential(ctx context.Context, req *v1.IssueChannelCredentialRequest) (*v1.IssueChannelCredentialResponse, error) {
+	var res v1.IssueChannelCredentialResponse
+	if err := c.client.CallUnary(ctx, connectionServiceIssueChannelCredentialSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *connectionServiceClient) ListConnections(ctx context.Context, req *v1.ListConnectionsRequest) (*v1.ListConnectionsResponse, error) {
+	var res v1.ListConnectionsResponse
+	if err := c.client.CallUnary(ctx, connectionServiceListConnectionsSpec(), req, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -176,6 +324,66 @@ func (h connectionServiceHandler) activateEnrollment(ctx context.Context, _ conn
 		return err
 	}
 	res, err := h.svc.ActivateEnrollment(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h connectionServiceHandler) setConnectionEnabled(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SetConnectionEnabledRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SetConnectionEnabled(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h connectionServiceHandler) quarantineConnection(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.QuarantineConnectionRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.QuarantineConnection(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h connectionServiceHandler) removeConnection(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RemoveConnectionRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RemoveConnection(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h connectionServiceHandler) issueChannelCredential(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.IssueChannelCredentialRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.IssueChannelCredential(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h connectionServiceHandler) listConnections(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListConnectionsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListConnections(ctx, &req)
 	if err != nil {
 		return err
 	}

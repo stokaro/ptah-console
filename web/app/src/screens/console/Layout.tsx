@@ -1,10 +1,11 @@
 import { Wordmark } from "@ptah/console-ui"
 import { Link, Outlet } from "@tanstack/react-router"
-import { useCallback, useState } from "react"
+import { Suspense, useCallback, useState } from "react"
 
 import { useResources, useScope, useSession } from "../../api/resources"
 import { BuildFooter } from "../../BuildFooter"
 import { Mode } from "../../gen/ptah/console/v1/info_pb"
+import { ClusterBanner, ClusterSwitcher } from "../clusters"
 import { LiveBanner, OperatorApiBanner, SessionChips, SignOut, ThemeSwitch } from "../Shell"
 import { Palette, usePaletteKeys } from "./Palette"
 
@@ -43,6 +44,9 @@ export function ConsoleLayout() {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-line bg-[color-mix(in_oklab,var(--bg)_85%,transparent)] px-4 py-3 backdrop-blur-[14px] md:px-6">
+          <Suspense fallback={null}>
+            <ClusterSwitcher />
+          </Suspense>
           <SessionChips />
           <NamespacesChip />
           <span className="flex-auto" />
@@ -58,6 +62,7 @@ export function ConsoleLayout() {
           <ThemeSwitch />
         </header>
         <main className="mx-auto box-border flex w-full max-w-[1400px] flex-1 flex-col gap-4 px-4 pt-[22px] pb-[72px] md:px-6">
+          <ClusterBanner />
           <OperatorApiBanner />
           <LiveBanner />
           <Outlet />

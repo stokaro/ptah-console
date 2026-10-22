@@ -215,6 +215,14 @@ func TestTheHelperCompletesAndResumes(t *testing.T) {
 	c.Assert(helper(true).Enroll(t.Context()), qt.IsNil, qt.Commentf("a second run of the same enrollment did not resume"))
 	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKeyFromObject(secret), secret), qt.IsNil)
 	c.Assert(string(secret.Data["credential"]), qt.Equals, credential)
+
+	// Unenroll removes the Secret enroll made, and only for its connection.
+	err = enrollment.Unenroll(t.Context(), plane.Admin, agentNamespace, "ptah-console-agent", "00000000-0000-4000-8000-000000000000")
+	c.Assert(err, qt.ErrorIs, enrollment.ErrNotThisConnection)
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKeyFromObject(secret), secret), qt.IsNil)
+	c.Assert(enrollment.Unenroll(t.Context(), plane.Admin, agentNamespace, "ptah-console-agent", file.Identity.ConnectionUID), qt.IsNil)
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKeyFromObject(secret), secret), qt.Satisfies, apierrors.IsNotFound)
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKey{Name: agentNamespace}, &corev1.Namespace{}), qt.IsNil, qt.Commentf("unenroll removed the namespace"))
 }
 
 // The whole enrollment: the console issues it, the helper completes it, the

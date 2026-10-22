@@ -20,6 +20,24 @@ service ConnectionService {
   // ActivateEnrollment makes a completed enrollment whose agent has
   // connected a connection.
   rpc ActivateEnrollment(ActivateEnrollmentRequest) returns (ActivateEnrollmentResponse) {}
+  // SetConnectionEnabled turns a connection off for every page and every
+  // request, keeping its configuration, or on again.
+  rpc SetConnectionEnabled(SetConnectionEnabledRequest) returns (SetConnectionEnabledResponse) {}
+  // QuarantineConnection fences the connection's channel at its generation
+  // and drops its credentials. New credentials lift it.
+  rpc QuarantineConnection(QuarantineConnectionRequest) returns (QuarantineConnectionResponse) {}
+  // RemoveConnection revokes the connection, then removes it, and keeps a
+  // tombstone. The target's cleanup is left to its administrator.
+  rpc RemoveConnection(RemoveConnectionRequest) returns (RemoveConnectionResponse) {}
+  // IssueChannelCredential gives an agent connection a new channel
+  // credential, shown this once: a rotation's second credential, or the one
+  // that lifts a quarantine.
+  rpc IssueChannelCredential(IssueChannelCredentialRequest) returns (IssueChannelCredentialResponse) {}
+  // ListConnections lists the connections the person may see, with what the
+  // console last observed of each.
+  rpc ListConnections(ListConnectionsRequest) returns (ListConnectionsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
 }
 
 message CreateEnrollmentRequest {
@@ -85,4 +103,104 @@ message ActivateEnrollmentRequest {
 
 message ActivateEnrollmentResponse {
   string connection_uid = 1;
+}
+
+message SetConnectionEnabledRequest {
+  string cluster_name = 1;
+  bool enabled = 2;
+}
+
+message SetConnectionEnabledResponse {}
+
+message QuarantineConnectionRequest {
+  string cluster_name = 1;
+  string reason = 2;
+}
+
+message QuarantineConnectionResponse {
+  // Generation is the fenced generation; new credentials come after it.
+  int64 generation = 1;
+}
+
+message RemoveConnectionRequest {
+  string cluster_name = 1;
+  string reason = 2;
+}
+
+message RemoveConnectionResponse {
+  string connection_uid = 1;
+  // CleanupPending is true: the console cannot see the target clean up.
+  bool cleanup_pending = 2;
+  // CleanupSteps are what the target's administrator runs there.
+  repeated string cleanup_steps = 3;
+}
+
+message IssueChannelCredentialRequest {
+  string cluster_name = 1;
+}
+
+message IssueChannelCredentialResponse {
+  // Credential goes into the agent's Secret. The console keeps only its
+  // verifier.
+  string credential = 1;
+  // Generation is the one the agent's installation names.
+  int64 generation = 2;
+  google.protobuf.Timestamp not_after = 3;
+}
+
+message ListConnectionsRequest {}
+
+message ListConnectionsResponse {
+  repeated Connection connections = 1;
+  // Manage is whether the person may change the registry: enroll, disable,
+  // quarantine and remove connections.
+  bool manage = 2;
+  // ThisCluster is the connection UID of the cluster the console runs in.
+  string this_cluster = 3;
+}
+
+// ConnectionProfile is how the console reaches a cluster.
+enum ConnectionProfile {
+  CONNECTION_PROFILE_UNSPECIFIED = 0;
+  // The cluster the console runs in.
+  CONNECTION_PROFILE_CO_LOCATED = 1;
+  // A cluster reached through its agent.
+  CONNECTION_PROFILE_AGENT = 2;
+}
+
+// ChannelState is the agent channel, as the console last observed it.
+enum ChannelState {
+  CHANNEL_STATE_UNSPECIFIED = 0;
+  // The cluster the console runs in has no channel.
+  CHANNEL_STATE_IN_CLUSTER = 1;
+  CHANNEL_STATE_CONNECTED = 2;
+  // The agent connected before and is not connected now.
+  CHANNEL_STATE_DISCONNECTED = 3;
+  // No agent has connected since the connection was made.
+  CHANNEL_STATE_NEVER_CONNECTED = 4;
+  // The connection is fenced: no channel is accepted.
+  CHANNEL_STATE_QUARANTINED = 5;
+}
+
+message Connection {
+  string name = 1;
+  string connection_uid = 2;
+  ConnectionProfile profile = 3;
+  // Namespaces is the ceiling the console reaches there.
+  repeated string namespaces = 4;
+  // GitOps is true when the entry is applied from a repository, which the
+  // console reads and changes nothing of.
+  bool gitops = 5;
+  // DisplayName is the preference, empty when none is set.
+  string display_name = 6;
+  bool enabled = 7;
+  ChannelState channel = 8;
+  google.protobuf.Timestamp last_observed_at = 9;
+  int64 generation = 10;
+  // CredentialExpiresAt is when the channel credential in use expires.
+  google.protobuf.Timestamp credential_expires_at = 11;
+  bool rotation_due = 12;
+  // TargetServer is the target API server as enrolled; it identifies the
+  // cluster to a person, and the console never dials it.
+  string target_server = 13;
 }

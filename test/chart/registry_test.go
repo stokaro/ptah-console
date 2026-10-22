@@ -64,6 +64,7 @@ func TestTheRegistryGrantsAreSplit(t *testing.T) {
 			{APIGroups: []string{group}, Resources: []string{"consoleclusters/status"}, Verbs: []string{"update", "patch"}},
 			{APIGroups: []string{group}, Resources: []string{"consoleclusterenrollments"}, Verbs: []string{"get", "list", "watch", "delete"}},
 			{APIGroups: []string{group}, Resources: []string{"consoleclusterenrollments/status"}, Verbs: []string{"update", "patch"}},
+			{APIGroups: []string{group}, Resources: []string{"consoleclusterrevocations"}, Verbs: []string{"get", "list", "watch", "create"}},
 		},
 		"console-ptah-console-registry-this-cluster": {
 			{APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterpreferences"}, ResourceNames: []string{entry.Name}, Verbs: []string{"get"}},
@@ -73,6 +74,7 @@ func TestTheRegistryGrantsAreSplit(t *testing.T) {
 				APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterpreferences", "consoleclusterenrollments"},
 				Verbs: []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 			},
+			{APIGroups: []string{group}, Resources: []string{"consoleclusterrevocations"}, Verbs: []string{"get", "list", "watch"}},
 		},
 	})
 	subjects := make(map[string][]string)

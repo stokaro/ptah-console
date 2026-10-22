@@ -37,6 +37,14 @@ const (
 	connectionAnnotation  = "console.ptah.run/connection-uid"
 )
 
+// TrustDisclosure is what the target's administrator accepts by installing
+// the agent, in the words the console's enrollment screen uses too.
+const TrustDisclosure = "The agent acts in this cluster as each Console account you allow, with the Kubernetes rights\n" +
+	"those usernames have here. A compromised console can make requests as those accounts. A\n" +
+	"compromised agent can use those accounts' rights in this cluster. Keep the allowlist short and\n" +
+	"the bound roles to Ptah's resources, and remove the agent's impersonation binding to cut it off\n" +
+	"at once, whatever the console says."
+
 // Helper is one run of the target administrator's helper.
 type Helper struct {
 	File *File
@@ -197,6 +205,7 @@ func (h *Helper) summary(server, caSHA256, username string) string {
 		fmt.Fprintf(&b, "                  %s: %s in every namespace above\n", account.ID, strings.Join(account.Roles, ", "))
 	}
 	fmt.Fprintf(&b, "  Approver role   %s\n", identity.ApproverClusterRole)
+	fmt.Fprintf(&b, "\n%s\n", TrustDisclosure)
 	return b.String()
 }
 
@@ -299,3 +308,28 @@ func (h *Helper) writeValues() error {
 
 // schemaKind is how the helper asks whether the operator is installed.
 var schemaKind = operatorv1alpha1.GroupVersion.WithKind("PtahSchema")
+
+// ErrNotThisConnection is a credential Secret enroll did not make for the
+// connection named.
+var ErrNotThisConnection = errors.New("enrollment: the Secret is not the credential enroll made for that connection; it was left alone")
+
+// Unenroll removes what enroll made on the target that Helm does not own:
+// the agent's credential Secret, and only when it is the named connection's.
+// It removes nothing else; the Helm release goes with helm uninstall.
+func Unenroll(ctx context.Context, admin client.Client, namespace, release, connectionUID string) error {
+	secret := &corev1.Secret{}
+	key := client.ObjectKey{Namespace: namespace, Name: release + "-credential"}
+	if err := admin.Get(ctx, key, secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("enrollment: read Secret %s: %w", key, err)
+	}
+	if secret.Annotations[connectionAnnotation] != connectionUID {
+		return fmt.Errorf("%w: %s", ErrNotThisConnection, key)
+	}
+	if err := admin.Delete(ctx, secret, client.Preconditions{UID: &secret.UID}); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("enrollment: remove Secret %s: %w", key, err)
+	}
+	return nil
+}

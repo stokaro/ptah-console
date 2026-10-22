@@ -95,7 +95,9 @@ func endOf(credential *consolev1alpha1.ChannelCredential) time.Time {
 // Issue gives an Agent connection a new credential, valid for validity from
 // now, and returns it. The console keeps only its verifier; the credential is
 // shown once, to be written into the agent's Secret. A connection that has
-// none yet starts at generation 1.
+// none yet starts past any generation a quarantine fences, and a quarantined
+// one moves past the fence with this credential alone, which lifts the
+// quarantine once the agent runs with it. A removed connection gets none.
 func Issue(ctx context.Context, housekeeping client.Client, key client.ObjectKey, now time.Time, validity time.Duration) (string, error) {
 	credential, err := newCredential()
 	if err != nil {
@@ -109,8 +111,20 @@ func Issue(ctx context.Context, housekeeping client.Client, key client.ObjectKey
 		if entry.Spec.Profile != consolev1alpha1.ProfileAgent {
 			return fmt.Errorf("agentlink: %s is a %s connection; only an agent has a channel", key, entry.Spec.Profile)
 		}
-		if entry.Status.Channel == nil {
-			entry.Status.Channel = &consolev1alpha1.ChannelStatus{Generation: 1}
+		fence, err := FenceOf(ctx, housekeeping, key.Namespace, entry.Spec.ConnectionUID)
+		if err != nil {
+			return err
+		}
+		switch {
+		case fence.Removed:
+			return ErrRemoved
+		case entry.Status.Channel == nil:
+			entry.Status.Channel = &consolev1alpha1.ChannelStatus{Generation: fence.Through + 1}
+		case fence.Fences(entry.Status.Channel.Generation):
+			// Lifting a quarantine: new credentials at a generation past the
+			// fence, and none of the old ones.
+			entry.Status.Channel.Generation = fence.Through + 1
+			entry.Status.Channel.Credentials = nil
 		}
 		if len(entry.Status.Channel.Credentials) >= 2 {
 			return ErrRotationInProgress
@@ -155,9 +169,9 @@ func Tend(ctx context.Context, housekeeping client.Client, key client.ObjectKey,
 	})
 }
 
-// inUse is the credential that last authenticated a channel, or the only
+// InUse is the credential that last authenticated a channel, or the only
 // one when none has.
-func inUse(entry *consolev1alpha1.ConsoleCluster) *consolev1alpha1.ChannelCredential {
+func InUse(entry *consolev1alpha1.ConsoleCluster) *consolev1alpha1.ChannelCredential {
 	var current *consolev1alpha1.ChannelCredential
 	for index := range entry.Status.Channel.Credentials {
 		credential := &entry.Status.Channel.Credentials[index]
@@ -176,7 +190,7 @@ func inUse(entry *consolev1alpha1.ConsoleCluster) *consolev1alpha1.ChannelCreden
 // expiring is the CredentialExpiring condition at now.
 func expiring(entry *consolev1alpha1.ConsoleCluster, now time.Time) metav1.Condition {
 	condition := metav1.Condition{Type: consolev1alpha1.ConditionRotationDue, ObservedGeneration: entry.Generation}
-	current := inUse(entry)
+	current := InUse(entry)
 	switch {
 	case current == nil:
 		condition.Status, condition.Reason = metav1.ConditionUnknown, "NoCredentialInUse"
