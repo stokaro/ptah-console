@@ -116,6 +116,17 @@ helm upgrade ptah-console-agent oci://ghcr.io/stokaro/charts/ptah-console-agent 
 The agent reads a changed allowlist without a restart. Removing an account
 ends its requests at once; adding one takes effect on its next request.
 
+The console shows a connection to the accounts its enrollment named: on
+activation it binds their usernames to a Role that may get that connection's
+entry and nothing else. An account added to the allowlist later needs the same
+binding before the connection appears for it; an installation administrator
+makes it:
+
+```sh
+kubectl --namespace <the console's namespace> create rolebinding <name> \
+  --role ptah-console-connection-<the connection UID> --user ptah-console:<installationID>:<account>
+```
+
 ## Upgrade the agent
 
 Upgrade the release to the chart version of the console:

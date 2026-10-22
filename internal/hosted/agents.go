@@ -21,6 +21,7 @@ import (
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/agent/v1/agentv1connect"
 	"github.com/stokaro/ptah-console/internal/kube"
 	"github.com/stokaro/ptah-console/internal/server"
+	"github.com/stokaro/ptah-console/internal/wire"
 )
 
 // tendInterval is how often the console tends its agents' credentials.
@@ -78,6 +79,11 @@ func (o Options) listenForAgents(kubeConfig *rest.Config, config *accounts.Confi
 	// The channel is a bidirectional stream, which HTTP/1.1 cannot carry.
 	httpServer.Protocols = new(http.Protocols)
 	httpServer.Protocols.SetHTTP2(true)
+	ping := o.AgentPing
+	if ping == 0 {
+		ping = wire.Ping
+	}
+	httpServer.HTTP2 = &http.HTTP2Config{SendPingTimeout: ping, PingTimeout: ping}
 	listener, err := net.Listen("tcp", o.AgentListen)
 	if err != nil {
 		return nil, fmt.Errorf("listen for agents on %s: %w", o.AgentListen, err)

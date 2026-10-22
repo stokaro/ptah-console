@@ -322,6 +322,8 @@ func TestEachRefusal(t *testing.T) {
 			says: `agents: serves the agents of the registry's connections; enable the registry`},
 		{name: "agents without their certificate", overlay: "registry: {enabled: true}\nagents: {enabled: true}",
 			says: `agents: tls.secretName names the agent listener's certificate`},
+		{name: "a node port on a ClusterIP Service", overlay: "agents: {service: {nodePort: 31443}}",
+			says: `/agents/service/nodePort.*got number, want null`},
 		{name: "agents without what an enrollment tells them",
 			overlay: "registry: {enabled: true}\nagents: {enabled: true, tls: {secretName: agents-tls}, address: 'https://agents.example.com'}",
 			says:    `agents: address, serverName and caBundle are what an enrollment file tells agents`},

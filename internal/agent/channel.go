@@ -60,6 +60,9 @@ type ChannelOptions struct {
 	// CredentialCheck is how often the credential is read again while a
 	// channel is open; zero means DefaultCredentialCheck.
 	CredentialCheck time.Duration
+	// Ping is how long the agent waits to hear from the console before it
+	// pings, and then for the answer; zero is wire.Ping.
+	Ping time.Duration
 }
 
 // Run holds a channel open until ctx ends, opening it again after it drops.
@@ -118,6 +121,11 @@ func Open(ctx context.Context, options ChannelOptions, dispatcher *Dispatcher) e
 	}
 	transport.Protocols = new(http.Protocols)
 	transport.Protocols.SetHTTP2(true)
+	ping := options.Ping
+	if ping == 0 {
+		ping = wire.Ping
+	}
+	transport.HTTP2 = &http.HTTP2Config{SendPingTimeout: ping, PingTimeout: ping}
 	defer transport.CloseIdleConnections()
 	client := agentv1connect.NewAgentServiceClient(connect.NewClient(connecthttp.NewTransport(
 		&http.Client{Transport: transport}, options.Config.Console.Address,

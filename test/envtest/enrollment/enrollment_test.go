@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -53,10 +54,13 @@ func newRegistry(t *testing.T) *registry {
 	group := consolev1alpha1.GroupVersion.Group
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{Namespace: namespace.Name, Name: "connection-admin"},
-		Rules: []rbacv1.PolicyRule{{
-			APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterenrollments"},
-			Verbs: []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-		}},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterenrollments"},
+				Verbs: []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+			},
+			{APIGroups: []string{rbacv1.GroupName}, Resources: []string{"roles", "rolebindings"}, Verbs: []string{"create"}},
+		},
 	}
 	c.Assert(plane.Admin.Create(t.Context(), role), qt.IsNil)
 	c.Assert(plane.Admin.Create(t.Context(), &rbacv1.RoleBinding{
@@ -254,4 +258,68 @@ func TestExpiredEnrollmentsAreRemoved(t *testing.T) {
 	c.Assert(names(), qt.DeepEquals, []string{"completed"})
 	c.Assert(enrollment.Tend(t.Context(), plane.Admin, r.self.Namespace, issued.Add(enrollment.ActivationWindow)), qt.IsNil)
 	c.Assert(names(), qt.HasLen, 0)
+}
+
+// connected completes an enrollment of alex and sam and records its agent
+// connected, as the helper and the agent listener would.
+func (r *registry) connected(t *testing.T, name string, now time.Time) *consolev1alpha1.ConsoleClusterEnrollment {
+	t.Helper()
+	c := qt.New(t)
+	enrolled := request(name)
+	enrolled.Accounts = append(enrolled.Accounts, enrollment.Account{ID: "sam", Roles: []string{"viewer"}})
+	file, err := enrollment.Create(t.Context(), r.admin, plane.Admin, r.self, enrolled, now)
+	c.Assert(err, qt.IsNil)
+	_, err = enrollment.Complete(t.Context(), plane.Admin, r.self.Namespace, report(file, "credential-"+name), now)
+	c.Assert(err, qt.IsNil)
+	pending := r.enrollment(t, name)
+	meta.SetStatusCondition(&pending.Status.Conditions, metav1.Condition{
+		Type: consolev1alpha1.ConditionAgentConnected, Status: metav1.ConditionTrue, Reason: "Connected", Message: "the agent opened its channel",
+	})
+	c.Assert(plane.Admin.Status().Update(t.Context(), pending), qt.IsNil)
+	return pending
+}
+
+// entryOf is the registry entry an activation of pending creates, under
+// another connection UID when one is given.
+func entryOf(pending *consolev1alpha1.ConsoleClusterEnrollment, connectionUID string) *consolev1alpha1.ConsoleCluster {
+	return &consolev1alpha1.ConsoleCluster{
+		ObjectMeta: metav1.ObjectMeta{Namespace: pending.Namespace, Name: pending.Spec.ClusterName},
+		Spec: consolev1alpha1.ConsoleClusterSpec{
+			ConnectionUID: connectionUID, Profile: consolev1alpha1.ProfileAgent, InstallationID: pending.Spec.InstallationID,
+			Namespaces: pending.Spec.Namespaces, ConfigurationOwner: consolev1alpha1.OwnerConsole,
+			Agent: &consolev1alpha1.AgentTrust{
+				TargetServer: pending.Status.Completion.TargetServer, TargetCASHA256: pending.Status.Completion.TargetCASHA256,
+				ConsoleServerName: pending.Spec.ConsoleServerName, ConsoleCASHA256: pending.Spec.ConsoleCASHA256,
+			},
+		},
+	}
+}
+
+// An activation that stopped after it created the entry is finished by the
+// next one: the channel credential is recorded and the enrolled accounts may
+// get the entry. An entry of the same name for another connection is not
+// taken over.
+func TestAnActivationThatStoppedPartWayResumes(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	r := newRegistry(t)
+	now := time.Now().Truncate(time.Second)
+	pending := r.connected(t, "prod-ap-2", now)
+	c.Assert(r.admin.Create(t.Context(), entryOf(pending, pending.Spec.ConnectionUID)), qt.IsNil)
+	other := r.connected(t, "prod-ap-3", now)
+	c.Assert(r.admin.Create(t.Context(), entryOf(other, "0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d")), qt.IsNil)
+
+	entry, err := enrollment.Activate(t.Context(), r.admin, plane.Admin, r.self.Namespace, "prod-ap-2", now, 90*24*time.Hour)
+
+	c.Assert(err, qt.IsNil)
+	stored := &consolev1alpha1.ConsoleCluster{}
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKeyFromObject(entry), stored), qt.IsNil)
+	c.Assert(stored.Status.Channel.Credentials[0].Verifier, qt.Equals, enrollment.Verifier("credential-prod-ap-2"))
+	c.Assert(as(t, "ptah-console:prod:sam").Get(t.Context(), client.ObjectKeyFromObject(entry), &consolev1alpha1.ConsoleCluster{}), qt.IsNil,
+		qt.Commentf("an enrolled account may not get the entry"))
+	kim := as(t, "ptah-console:prod:kim")
+	c.Assert(apierrors.IsForbidden(kim.Get(t.Context(), client.ObjectKeyFromObject(entry), &consolev1alpha1.ConsoleCluster{})), qt.IsTrue,
+		qt.Commentf("an account the enrollment did not name may get the entry"))
+	_, err = enrollment.Activate(t.Context(), r.admin, plane.Admin, r.self.Namespace, "prod-ap-3", now, 90*24*time.Hour)
+	c.Assert(err, qt.ErrorIs, enrollment.ErrNameTaken)
 }

@@ -17,6 +17,7 @@ import (
 	"connectrpc.com/connect/v2/connecthttp"
 	qt "github.com/frankban/quicktest"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -113,7 +114,7 @@ func newDispatcher(t *testing.T) *agent.Dispatcher {
 
 func request(id, account string) *agentv1.Request {
 	return &agentv1.Request{
-		Envelope: &agentv1.Envelope{RequestId: id, AccountId: account, Deadline: durationpb.New(10 * time.Second)},
+		Envelope: &agentv1.Envelope{RequestId: id, AccountId: account, Deadline: durationpb.New(10 * time.Second), SentAt: timestamppb.Now()},
 		Action:   &agentv1.Request_WhoAmI{WhoAmI: &agentv1.WhoAmIRequest{}},
 	}
 }

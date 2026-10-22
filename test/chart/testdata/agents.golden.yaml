@@ -216,6 +216,12 @@ rules:
   - apiGroups: ["console.ptah.run"]
     resources: ["consoleclusterrevocations"]
     verbs: ["get", "list", "watch"]
+  # Activating a connection lets its enrolled accounts get its entry, with a
+  # Role and a RoleBinding the entry owns. The API server refuses a grant of
+  # anything the administrator does not hold here.
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["create"]
 
 ---
 # Source: ptah-console/templates/roles.yaml
@@ -412,6 +418,7 @@ spec:
       port: 443
       targetPort: agents
       protocol: TCP
+      nodePort: 31443
 
 ---
 # Source: ptah-console/templates/service.yaml

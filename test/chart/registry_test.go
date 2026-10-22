@@ -75,6 +75,7 @@ func TestTheRegistryGrantsAreSplit(t *testing.T) {
 				Verbs: []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 			},
 			{APIGroups: []string{group}, Resources: []string{"consoleclusterrevocations"}, Verbs: []string{"get", "list", "watch"}},
+			{APIGroups: []string{rbacv1.GroupName}, Resources: []string{"roles", "rolebindings"}, Verbs: []string{"create"}},
 		},
 	})
 	subjects := make(map[string][]string)

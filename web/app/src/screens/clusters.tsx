@@ -47,7 +47,7 @@ export function ClusterBanner() {
     ? `${name} is disabled. Its configuration is kept; nothing is read from it or sent to it.`
     : connection.channel === ChannelState.QUARANTINED
       ? `${name} is quarantined. Nothing is read from it or sent to it.`
-      : `${name} is not connected. ${since} Nothing here is current, and decisions wait until its agent is back.`
+      : `${name} is not connected. ${since} Nothing here is current, and no decision is sent to it until its agent is back.`
   return (
     <p
       role="status"

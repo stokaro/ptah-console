@@ -3,6 +3,7 @@ syntax = "proto3";
 package ptah.console.agent.v1;
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
 import "ptah/console/v1/decisions.proto";
 import "ptah/console/v1/diagnostics.proto";
 import "ptah/console/v1/resources.proto";
@@ -67,6 +68,11 @@ message Envelope {
   string account_id = 4;
   // Deadline bounds the request on the agent's clock: at most 30 seconds.
   google.protobuf.Duration deadline = 5;
+  // SentAt is when the console sent the request, on its clock. The agent
+  // does not act on a request whose deadline, counted from then, passed more
+  // than the clock skew it allows ago: a request that waited in a buffer
+  // while the agent was stopped is refused, never run late.
+  google.protobuf.Timestamp sent_at = 6;
 }
 
 // Request is one operation, as the person it names.
