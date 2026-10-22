@@ -1,6 +1,7 @@
 // Package release holds a release's inputs to each other: the compatibility
-// record in support/compatibility.json, the chart's version, the operator
-// module go.mod requires, and the operator's Kubernetes support window.
+// record in support/compatibility.json, the two charts' versions, the
+// operator module go.mod requires, and the operator's Kubernetes support
+// window.
 //
 // The record's first row describes the tree it is in. CI checks that row on
 // every change, so the record cannot drift from what the console is built
@@ -41,6 +42,9 @@ type Inputs struct {
 	Record []byte
 	// ChartVersion and ChartAppVersion are Chart.yaml's.
 	ChartVersion, ChartAppVersion string
+	// AgentChartVersion and AgentChartAppVersion are the agent chart's,
+	// which is released with the console under the same version.
+	AgentChartVersion, AgentChartAppVersion string
 	// Operator is the operator module version go.mod requires.
 	Operator string
 	// Kubernetes are the minors of the operator's support window, oldest
@@ -97,10 +101,22 @@ func Check(inputs Inputs) error {
 		}
 	}
 
-	current := record.Releases[0]
+	checkCurrent(record.Releases[0], inputs, add)
+	if len(problems) > 0 {
+		return errors.New("support/compatibility.json:\n  - " + strings.Join(problems, "\n  - "))
+	}
+	return nil
+}
+
+// checkCurrent holds the record's first row to the tree it is in.
+func checkCurrent(current Row, inputs Inputs, add func(format string, args ...any)) {
 	if current.Console != inputs.ChartVersion || current.Console != inputs.ChartAppVersion {
 		add("releases[0] is console %s, and the chart is version %s with appVersion %s; they name one version",
 			current.Console, inputs.ChartVersion, inputs.ChartAppVersion)
+	}
+	if current.Console != inputs.AgentChartVersion || current.Console != inputs.AgentChartAppVersion {
+		add("releases[0] is console %s, and the agent chart is version %s with appVersion %s; the agent is released with the console",
+			current.Console, inputs.AgentChartVersion, inputs.AgentChartAppVersion)
 	}
 	if current.Operator != inputs.Operator {
 		add("releases[0] names operator %s, and go.mod requires %s", current.Operator, inputs.Operator)
@@ -115,8 +131,4 @@ func Check(inputs Inputs) error {
 	if inputs.Release && !releaseTag.MatchString(current.Operator) {
 		add("releases[0] names operator %s, which is not a release; a release names a released operator", current.Operator)
 	}
-	if len(problems) > 0 {
-		return errors.New("support/compatibility.json:\n  - " + strings.Join(problems, "\n  - "))
-	}
-	return nil
 }

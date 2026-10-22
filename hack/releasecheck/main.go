@@ -1,5 +1,5 @@
 // Command releasecheck holds support/compatibility.json to the tree it is in:
-// the chart's version, the operator module go.mod requires, and that
+// the two charts' versions, the operator module go.mod requires, and that
 // operator's Kubernetes support window.
 //
 //	go run ./hack/releasecheck                          the record matches this tree
@@ -36,16 +36,13 @@ func run(version string, isRelease bool) error {
 	if err != nil {
 		return err
 	}
-	chartFile, err := os.ReadFile("charts/ptah-console/Chart.yaml")
+	chart, err := readChart("charts/ptah-console/Chart.yaml")
 	if err != nil {
 		return err
 	}
-	var chart struct {
-		Version    string `json:"version"`
-		AppVersion string `json:"appVersion"`
-	}
-	if err := yaml.Unmarshal(chartFile, &chart); err != nil {
-		return fmt.Errorf("Chart.yaml: %w", err)
+	agentChart, err := readChart("charts/ptah-console-agent/Chart.yaml")
+	if err != nil {
+		return err
 	}
 	operator, err := operatorModule()
 	if err != nil {
@@ -70,11 +67,30 @@ func run(version string, isRelease bool) error {
 	return release.Check(release.Inputs{
 		Record:       record,
 		ChartVersion: chart.Version, ChartAppVersion: chart.AppVersion,
+		AgentChartVersion: agentChart.Version, AgentChartAppVersion: agentChart.AppVersion,
 		Operator:   operator.Version,
 		Kubernetes: minors,
 		Version:    version,
 		Release:    isRelease,
 	})
+}
+
+// chart is what a Chart.yaml says of its version.
+type chart struct {
+	Version    string `json:"version"`
+	AppVersion string `json:"appVersion"`
+}
+
+func readChart(path string) (chart, error) {
+	var read chart
+	data, err := os.ReadFile(path) // #nosec G304 -- one of the repository's two charts.
+	if err != nil {
+		return read, err
+	}
+	if err := yaml.Unmarshal(data, &read); err != nil {
+		return read, fmt.Errorf("%s: %w", path, err)
+	}
+	return read, nil
 }
 
 // operatorModule is the operator module go.mod requires, downloaded first:
