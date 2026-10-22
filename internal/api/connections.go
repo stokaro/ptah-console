@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,6 +21,7 @@ import (
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/v1/consolev1connect"
 	"github.com/stokaro/ptah-console/internal/kube"
+	"github.com/stokaro/ptah-console/internal/registry"
 )
 
 // ConnectionService serves ConnectionService.
@@ -40,6 +42,10 @@ type ConnectionService struct {
 	// Ended is told the connection UID of each connection quarantined or
 	// removed, so its open channel ends.
 	Ended func(connectionUID string)
+	// Connected reports whether a connection's channel is open now.
+	Connected func(connectionUID string) bool
+	// ThisCluster is the connection UID of the cluster the console runs in.
+	ThisCluster string
 }
 
 // NewConnectionService returns the ConnectionService of a console that
@@ -330,4 +336,94 @@ func revocationError(err error) error {
 	default:
 		return enrollmentError(err)
 	}
+}
+
+// ListConnections lists the connections the person may get, read as the
+// person, with what the console's own identity last observed of each.
+func (s *ConnectionService) ListConnections(ctx context.Context, _ *consolev1.ListConnectionsRequest) (*consolev1.ListConnectionsResponse, error) {
+	user, _, err := actor(ctx, s.factory)
+	if err != nil {
+		return nil, err
+	}
+	entries, err := registry.Visible(ctx, s.housekeeping, user, s.self.Namespace)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, "the console could not read its registry").WithCause(err)
+	}
+	preferences := &consolev1alpha1.ConsoleClusterPreferencesList{}
+	if err := s.housekeeping.List(ctx, preferences, client.InNamespace(s.self.Namespace)); err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, "the console could not read the connections' preferences").WithCause(err)
+	}
+	now := s.now()
+	response := &consolev1.ListConnectionsResponse{ThisCluster: s.ThisCluster}
+	for index := range entries {
+		connection, err := s.describe(ctx, &entries[index], preferences.Items, now)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeUnavailable, "the console could not read its revocations").WithCause(err)
+		}
+		response.Connections = append(response.Connections, connection)
+	}
+	response.Manage = may(ctx, user, s.self.Namespace, "create", "consoleclusterenrollments")
+	return response, nil
+}
+
+// describe is one entry as the person sees it.
+func (s *ConnectionService) describe(ctx context.Context, entry *consolev1alpha1.ConsoleCluster,
+	preferences []consolev1alpha1.ConsoleClusterPreferences, now time.Time,
+) (*consolev1.Connection, error) {
+	connection := &consolev1.Connection{
+		Name: entry.Name, ConnectionUid: entry.Spec.ConnectionUID, Namespaces: entry.Spec.Namespaces,
+		Gitops: entry.Spec.ConfigurationOwner == consolev1alpha1.OwnerGitOps, Enabled: true,
+	}
+	for _, item := range preferences {
+		if item.Spec.ClusterRef.ConnectionUID != entry.Spec.ConnectionUID {
+			continue
+		}
+		connection.DisplayName = item.Spec.DisplayName
+		connection.Enabled = item.Spec.Enabled == nil || *item.Spec.Enabled
+	}
+	if entry.Status.LastObservedAt != nil {
+		connection.LastObservedAt = timestamppb.New(entry.Status.LastObservedAt.Time)
+	}
+	if entry.Spec.Profile == consolev1alpha1.ProfileCoLocated {
+		connection.Profile, connection.Channel = consolev1.ConnectionProfile_CONNECTION_PROFILE_CO_LOCATED, consolev1.ChannelState_CHANNEL_STATE_IN_CLUSTER
+		return connection, nil
+	}
+	connection.Profile = consolev1.ConnectionProfile_CONNECTION_PROFILE_AGENT
+	if entry.Spec.Agent != nil {
+		connection.TargetServer = entry.Spec.Agent.TargetServer
+	}
+	fence, err := agentlink.FenceOf(ctx, s.housekeeping, s.self.Namespace, entry.Spec.ConnectionUID)
+	if err != nil {
+		return nil, err
+	}
+	channel := entry.Status.Channel
+	if channel != nil {
+		connection.Generation = channel.Generation
+		if inUse := agentlink.InUse(entry); inUse != nil {
+			connection.CredentialExpiresAt = timestamppb.New(inUse.NotAfter.Time)
+			connection.RotationDue = !now.Before(inUse.NotAfter.Add(-agentlink.ExpiryWarning))
+		}
+	}
+	switch {
+	case channel != nil && fence.Fences(channel.Generation), fence.Removed:
+		connection.Channel = consolev1.ChannelState_CHANNEL_STATE_QUARANTINED
+	case s.Connected != nil && s.Connected(entry.Spec.ConnectionUID):
+		connection.Channel = consolev1.ChannelState_CHANNEL_STATE_CONNECTED
+	case entry.Status.LastObservedAt != nil:
+		connection.Channel = consolev1.ChannelState_CHANNEL_STATE_DISCONNECTED
+	default:
+		connection.Channel = consolev1.ChannelState_CHANNEL_STATE_NEVER_CONNECTED
+	}
+	return connection, nil
+}
+
+// may asks the API server whether the person may do verb on resource of the
+// registry. An error reads as no.
+func may(ctx context.Context, user client.Client, namespace, verb, resource string) bool {
+	review := &authorizationv1.SelfSubjectAccessReview{Spec: authorizationv1.SelfSubjectAccessReviewSpec{
+		ResourceAttributes: &authorizationv1.ResourceAttributes{
+			Group: consolev1alpha1.GroupVersion.Group, Resource: resource, Verb: verb, Namespace: namespace,
+		},
+	}}
+	return user.Create(ctx, review) == nil && review.Status.Allowed
 }

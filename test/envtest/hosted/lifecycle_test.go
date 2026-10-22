@@ -252,3 +252,41 @@ namespaces: [storefront]
 
 // routeHash is any SHA-256, for trust fields nothing checks here.
 const routeHash = "1111111111111111111111111111111111111111111111111111111111111111"
+
+// A person sees the connections they may get, each with what the console
+// observed of it, and whether they may change the registry.
+func TestConnectionsShowWhatTheConsoleObserved(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	r := arrangeRouting(t)
+	grantEnrollments(t, r.namespace)
+	r.start(t)
+	connections := consolev1connect.NewConnectionServiceClient(r.transport())
+
+	alex, err := connections.ListConnections(to(t.Context(), r.signIn(t, "alex@example.com", "alex-secret"), ""), &consolev1.ListConnectionsRequest{})
+	c.Assert(err, qt.IsNil)
+	sam, err := connections.ListConnections(to(t.Context(), r.signIn(t, "sam@example.com", "sam-secret"), ""), &consolev1.ListConnectionsRequest{})
+	c.Assert(err, qt.IsNil)
+
+	states := func(response *consolev1.ListConnectionsResponse) map[string]consolev1.ChannelState {
+		out := make(map[string]consolev1.ChannelState)
+		for _, connection := range response.GetConnections() {
+			out[connection.GetName()] = connection.GetChannel()
+		}
+		return out
+	}
+	c.Assert(states(alex), qt.DeepEquals, map[string]consolev1.ChannelState{
+		"this-cluster":   consolev1.ChannelState_CHANNEL_STATE_IN_CLUSTER,
+		"cluster-a":      consolev1.ChannelState_CHANNEL_STATE_CONNECTED,
+		"cluster-b":      consolev1.ChannelState_CHANNEL_STATE_CONNECTED,
+		"cluster-hidden": consolev1.ChannelState_CHANNEL_STATE_NEVER_CONNECTED,
+	}, qt.Commentf("an administrator sees every connection"))
+	c.Assert(states(sam), qt.DeepEquals, map[string]consolev1.ChannelState{
+		"this-cluster": consolev1.ChannelState_CHANNEL_STATE_IN_CLUSTER,
+		"cluster-a":    consolev1.ChannelState_CHANNEL_STATE_CONNECTED,
+		"cluster-b":    consolev1.ChannelState_CHANNEL_STATE_CONNECTED,
+	}, qt.Commentf("cluster-hidden is not sam's to see"))
+	c.Assert(alex.GetThisCluster(), qt.Equals, routeThis)
+	c.Assert(alex.GetManage(), qt.IsTrue)
+	c.Assert(sam.GetManage(), qt.IsFalse)
+}

@@ -2,17 +2,17 @@
 // @generated from file ptah/console/v1/connections.proto (package ptah.console.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { Message } from "@bufbuild/protobuf";
+import type { Message, UnknownEnum } from "@bufbuild/protobuf";
 
 /**
  * Describes the file ptah/console/v1/connections.proto.
  */
 export const file_ptah_console_v1_connections: GenFile = /*@__PURE__*/
-  fileDesc("CiFwdGFoL2NvbnNvbGUvdjEvY29ubmVjdGlvbnMucHJvdG8SD3B0YWguY29uc29sZS52MSKYAQoXQ3JlYXRlRW5yb2xsbWVudFJlcXVlc3QSFAoMY2x1c3Rlcl9uYW1lGAEgASgJEhIKCm5hbWVzcGFjZXMYAiADKAkSNAoIYWNjb3VudHMYAyADKAsyIi5wdGFoLmNvbnNvbGUudjEuRW5yb2xsbWVudEFjY291bnQSHQoVYXBwcm92ZXJfY2x1c3Rlcl9yb2xlGAQgASgJIi4KEUVucm9sbG1lbnRBY2NvdW50EgoKAmlkGAEgASgJEg0KBXJvbGVzGAIgAygJIpABChhDcmVhdGVFbnJvbGxtZW50UmVzcG9uc2USFwoPZW5yb2xsbWVudF9maWxlGAEgASgMEhMKC2ZpbmdlcnByaW50GAIgASgJEi4KCmV4cGlyZXNfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDmNvbm5lY3Rpb25fdWlkGAQgASgJIhgKFkxpc3RFbnJvbGxtZW50c1JlcXVlc3QiSwoXTGlzdEVucm9sbG1lbnRzUmVzcG9uc2USMAoLZW5yb2xsbWVudHMYASADKAsyGy5wdGFoLmNvbnNvbGUudjEuRW5yb2xsbWVudCK8AgoKRW5yb2xsbWVudBIUCgxjbHVzdGVyX25hbWUYASABKAkSFgoOY29ubmVjdGlvbl91aWQYAiABKAkSEgoKbmFtZXNwYWNlcxgDIAMoCRI0CghhY2NvdW50cxgEIAMoCzIiLnB0YWguY29uc29sZS52MS5FbnJvbGxtZW50QWNjb3VudBIdChVhcHByb3Zlcl9jbHVzdGVyX3JvbGUYBSABKAkSEwoLZmluZ2VycHJpbnQYBiABKAkSLgoKZXhwaXJlc19hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASOQoKY29tcGxldGlvbhgIIAEoCzIlLnB0YWguY29uc29sZS52MS5FbnJvbGxtZW50Q29tcGxldGlvbhIXCg9hZ2VudF9jb25uZWN0ZWQYCSABKAgieQoURW5yb2xsbWVudENvbXBsZXRpb24SFQoNdGFyZ2V0X3NlcnZlchgBIAEoCRIYChB0YXJnZXRfY2Ffc2hhMjU2GAIgASgJEjAKDGNvbXBsZXRlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiMQoZQWN0aXZhdGVFbnJvbGxtZW50UmVxdWVzdBIUCgxjbHVzdGVyX25hbWUYASABKAkiNAoaQWN0aXZhdGVFbnJvbGxtZW50UmVzcG9uc2USFgoOY29ubmVjdGlvbl91aWQYASABKAkiRAobU2V0Q29ubmVjdGlvbkVuYWJsZWRSZXF1ZXN0EhQKDGNsdXN0ZXJfbmFtZRgBIAEoCRIPCgdlbmFibGVkGAIgASgIIh4KHFNldENvbm5lY3Rpb25FbmFibGVkUmVzcG9uc2UiQwobUXVhcmFudGluZUNvbm5lY3Rpb25SZXF1ZXN0EhQKDGNsdXN0ZXJfbmFtZRgBIAEoCRIOCgZyZWFzb24YAiABKAkiMgocUXVhcmFudGluZUNvbm5lY3Rpb25SZXNwb25zZRISCgpnZW5lcmF0aW9uGAEgASgDIj8KF1JlbW92ZUNvbm5lY3Rpb25SZXF1ZXN0EhQKDGNsdXN0ZXJfbmFtZRgBIAEoCRIOCgZyZWFzb24YAiABKAkiYgoYUmVtb3ZlQ29ubmVjdGlvblJlc3BvbnNlEhYKDmNvbm5lY3Rpb25fdWlkGAEgASgJEhcKD2NsZWFudXBfcGVuZGluZxgCIAEoCBIVCg1jbGVhbnVwX3N0ZXBzGAMgAygJIjUKHUlzc3VlQ2hhbm5lbENyZWRlbnRpYWxSZXF1ZXN0EhQKDGNsdXN0ZXJfbmFtZRgBIAEoCSJ3Ch5Jc3N1ZUNoYW5uZWxDcmVkZW50aWFsUmVzcG9uc2USEgoKY3JlZGVudGlhbBgBIAEoCRISCgpnZW5lcmF0aW9uGAIgASgDEi0KCW5vdF9hZnRlchgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAypAYKEUNvbm5lY3Rpb25TZXJ2aWNlEmcKEENyZWF0ZUVucm9sbG1lbnQSKC5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlRW5yb2xsbWVudFJlcXVlc3QaKS5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlRW5yb2xsbWVudFJlc3BvbnNlEmkKD0xpc3RFbnJvbGxtZW50cxInLnB0YWguY29uc29sZS52MS5MaXN0RW5yb2xsbWVudHNSZXF1ZXN0GigucHRhaC5jb25zb2xlLnYxLkxpc3RFbnJvbGxtZW50c1Jlc3BvbnNlIgOQAgESbQoSQWN0aXZhdGVFbnJvbGxtZW50EioucHRhaC5jb25zb2xlLnYxLkFjdGl2YXRlRW5yb2xsbWVudFJlcXVlc3QaKy5wdGFoLmNvbnNvbGUudjEuQWN0aXZhdGVFbnJvbGxtZW50UmVzcG9uc2UScwoUU2V0Q29ubmVjdGlvbkVuYWJsZWQSLC5wdGFoLmNvbnNvbGUudjEuU2V0Q29ubmVjdGlvbkVuYWJsZWRSZXF1ZXN0Gi0ucHRhaC5jb25zb2xlLnYxLlNldENvbm5lY3Rpb25FbmFibGVkUmVzcG9uc2UScwoUUXVhcmFudGluZUNvbm5lY3Rpb24SLC5wdGFoLmNvbnNvbGUudjEuUXVhcmFudGluZUNvbm5lY3Rpb25SZXF1ZXN0Gi0ucHRhaC5jb25zb2xlLnYxLlF1YXJhbnRpbmVDb25uZWN0aW9uUmVzcG9uc2USZwoQUmVtb3ZlQ29ubmVjdGlvbhIoLnB0YWguY29uc29sZS52MS5SZW1vdmVDb25uZWN0aW9uUmVxdWVzdBopLnB0YWguY29uc29sZS52MS5SZW1vdmVDb25uZWN0aW9uUmVzcG9uc2USeQoWSXNzdWVDaGFubmVsQ3JlZGVudGlhbBIuLnB0YWguY29uc29sZS52MS5Jc3N1ZUNoYW5uZWxDcmVkZW50aWFsUmVxdWVzdBovLnB0YWguY29uc29sZS52MS5Jc3N1ZUNoYW5uZWxDcmVkZW50aWFsUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9zdG9rYXJvL3B0YWgtY29uc29sZS9pbnRlcm5hbC9nZW4vcHRhaC9jb25zb2xlL3YxO2NvbnNvbGV2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("CiFwdGFoL2NvbnNvbGUvdjEvY29ubmVjdGlvbnMucHJvdG8SD3B0YWguY29uc29sZS52MSKYAQoXQ3JlYXRlRW5yb2xsbWVudFJlcXVlc3QSFAoMY2x1c3Rlcl9uYW1lGAEgASgJEhIKCm5hbWVzcGFjZXMYAiADKAkSNAoIYWNjb3VudHMYAyADKAsyIi5wdGFoLmNvbnNvbGUudjEuRW5yb2xsbWVudEFjY291bnQSHQoVYXBwcm92ZXJfY2x1c3Rlcl9yb2xlGAQgASgJIi4KEUVucm9sbG1lbnRBY2NvdW50EgoKAmlkGAEgASgJEg0KBXJvbGVzGAIgAygJIpABChhDcmVhdGVFbnJvbGxtZW50UmVzcG9uc2USFwoPZW5yb2xsbWVudF9maWxlGAEgASgMEhMKC2ZpbmdlcnByaW50GAIgASgJEi4KCmV4cGlyZXNfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDmNvbm5lY3Rpb25fdWlkGAQgASgJIhgKFkxpc3RFbnJvbGxtZW50c1JlcXVlc3QiSwoXTGlzdEVucm9sbG1lbnRzUmVzcG9uc2USMAoLZW5yb2xsbWVudHMYASADKAsyGy5wdGFoLmNvbnNvbGUudjEuRW5yb2xsbWVudCK8AgoKRW5yb2xsbWVudBIUCgxjbHVzdGVyX25hbWUYASABKAkSFgoOY29ubmVjdGlvbl91aWQYAiABKAkSEgoKbmFtZXNwYWNlcxgDIAMoCRI0CghhY2NvdW50cxgEIAMoCzIiLnB0YWguY29uc29sZS52MS5FbnJvbGxtZW50QWNjb3VudBIdChVhcHByb3Zlcl9jbHVzdGVyX3JvbGUYBSABKAkSEwoLZmluZ2VycHJpbnQYBiABKAkSLgoKZXhwaXJlc19hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASOQoKY29tcGxldGlvbhgIIAEoCzIlLnB0YWguY29uc29sZS52MS5FbnJvbGxtZW50Q29tcGxldGlvbhIXCg9hZ2VudF9jb25uZWN0ZWQYCSABKAgieQoURW5yb2xsbWVudENvbXBsZXRpb24SFQoNdGFyZ2V0X3NlcnZlchgBIAEoCRIYChB0YXJnZXRfY2Ffc2hhMjU2GAIgASgJEjAKDGNvbXBsZXRlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiMQoZQWN0aXZhdGVFbnJvbGxtZW50UmVxdWVzdBIUCgxjbHVzdGVyX25hbWUYASABKAkiNAoaQWN0aXZhdGVFbnJvbGxtZW50UmVzcG9uc2USFgoOY29ubmVjdGlvbl91aWQYASABKAkiRAobU2V0Q29ubmVjdGlvbkVuYWJsZWRSZXF1ZXN0EhQKDGNsdXN0ZXJfbmFtZRgBIAEoCRIPCgdlbmFibGVkGAIgASgIIh4KHFNldENvbm5lY3Rpb25FbmFibGVkUmVzcG9uc2UiQwobUXVhcmFudGluZUNvbm5lY3Rpb25SZXF1ZXN0EhQKDGNsdXN0ZXJfbmFtZRgBIAEoCRIOCgZyZWFzb24YAiABKAkiMgocUXVhcmFudGluZUNvbm5lY3Rpb25SZXNwb25zZRISCgpnZW5lcmF0aW9uGAEgASgDIj8KF1JlbW92ZUNvbm5lY3Rpb25SZXF1ZXN0EhQKDGNsdXN0ZXJfbmFtZRgBIAEoCRIOCgZyZWFzb24YAiABKAkiYgoYUmVtb3ZlQ29ubmVjdGlvblJlc3BvbnNlEhYKDmNvbm5lY3Rpb25fdWlkGAEgASgJEhcKD2NsZWFudXBfcGVuZGluZxgCIAEoCBIVCg1jbGVhbnVwX3N0ZXBzGAMgAygJIjUKHUlzc3VlQ2hhbm5lbENyZWRlbnRpYWxSZXF1ZXN0EhQKDGNsdXN0ZXJfbmFtZRgBIAEoCSJ3Ch5Jc3N1ZUNoYW5uZWxDcmVkZW50aWFsUmVzcG9uc2USEgoKY3JlZGVudGlhbBgBIAEoCRISCgpnZW5lcmF0aW9uGAIgASgDEi0KCW5vdF9hZnRlchgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiGAoWTGlzdENvbm5lY3Rpb25zUmVxdWVzdCJxChdMaXN0Q29ubmVjdGlvbnNSZXNwb25zZRIwCgtjb25uZWN0aW9ucxgBIAMoCzIbLnB0YWguY29uc29sZS52MS5Db25uZWN0aW9uEg4KBm1hbmFnZRgCIAEoCBIUCgx0aGlzX2NsdXN0ZXIYAyABKAkilAMKCkNvbm5lY3Rpb24SDAoEbmFtZRgBIAEoCRIWCg5jb25uZWN0aW9uX3VpZBgCIAEoCRIzCgdwcm9maWxlGAMgASgOMiIucHRhaC5jb25zb2xlLnYxLkNvbm5lY3Rpb25Qcm9maWxlEhIKCm5hbWVzcGFjZXMYBCADKAkSDgoGZ2l0b3BzGAUgASgIEhQKDGRpc3BsYXlfbmFtZRgGIAEoCRIPCgdlbmFibGVkGAcgASgIEi4KB2NoYW5uZWwYCCABKA4yHS5wdGFoLmNvbnNvbGUudjEuQ2hhbm5lbFN0YXRlEjQKEGxhc3Rfb2JzZXJ2ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCmdlbmVyYXRpb24YCiABKAMSOQoVY3JlZGVudGlhbF9leHBpcmVzX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIUCgxyb3RhdGlvbl9kdWUYDCABKAgSFQoNdGFyZ2V0X3NlcnZlchgNIAEoCSp4ChFDb25uZWN0aW9uUHJvZmlsZRIiCh5DT05ORUNUSU9OX1BST0ZJTEVfVU5TUEVDSUZJRUQQABIhCh1DT05ORUNUSU9OX1BST0ZJTEVfQ09fTE9DQVRFRBABEhwKGENPTk5FQ1RJT05fUFJPRklMRV9BR0VOVBACKsoBCgxDaGFubmVsU3RhdGUSHQoZQ0hBTk5FTF9TVEFURV9VTlNQRUNJRklFRBAAEhwKGENIQU5ORUxfU1RBVEVfSU5fQ0xVU1RFUhABEhsKF0NIQU5ORUxfU1RBVEVfQ09OTkVDVEVEEAISHgoaQ0hBTk5FTF9TVEFURV9ESVNDT05ORUNURUQQAxIhCh1DSEFOTkVMX1NUQVRFX05FVkVSX0NPTk5FQ1RFRBAEEh0KGUNIQU5ORUxfU1RBVEVfUVVBUkFOVElORUQQBTKPBwoRQ29ubmVjdGlvblNlcnZpY2USZwoQQ3JlYXRlRW5yb2xsbWVudBIoLnB0YWguY29uc29sZS52MS5DcmVhdGVFbnJvbGxtZW50UmVxdWVzdBopLnB0YWguY29uc29sZS52MS5DcmVhdGVFbnJvbGxtZW50UmVzcG9uc2USaQoPTGlzdEVucm9sbG1lbnRzEicucHRhaC5jb25zb2xlLnYxLkxpc3RFbnJvbGxtZW50c1JlcXVlc3QaKC5wdGFoLmNvbnNvbGUudjEuTGlzdEVucm9sbG1lbnRzUmVzcG9uc2UiA5ACARJtChJBY3RpdmF0ZUVucm9sbG1lbnQSKi5wdGFoLmNvbnNvbGUudjEuQWN0aXZhdGVFbnJvbGxtZW50UmVxdWVzdBorLnB0YWguY29uc29sZS52MS5BY3RpdmF0ZUVucm9sbG1lbnRSZXNwb25zZRJzChRTZXRDb25uZWN0aW9uRW5hYmxlZBIsLnB0YWguY29uc29sZS52MS5TZXRDb25uZWN0aW9uRW5hYmxlZFJlcXVlc3QaLS5wdGFoLmNvbnNvbGUudjEuU2V0Q29ubmVjdGlvbkVuYWJsZWRSZXNwb25zZRJzChRRdWFyYW50aW5lQ29ubmVjdGlvbhIsLnB0YWguY29uc29sZS52MS5RdWFyYW50aW5lQ29ubmVjdGlvblJlcXVlc3QaLS5wdGFoLmNvbnNvbGUudjEuUXVhcmFudGluZUNvbm5lY3Rpb25SZXNwb25zZRJnChBSZW1vdmVDb25uZWN0aW9uEigucHRhaC5jb25zb2xlLnYxLlJlbW92ZUNvbm5lY3Rpb25SZXF1ZXN0GikucHRhaC5jb25zb2xlLnYxLlJlbW92ZUNvbm5lY3Rpb25SZXNwb25zZRJ5ChZJc3N1ZUNoYW5uZWxDcmVkZW50aWFsEi4ucHRhaC5jb25zb2xlLnYxLklzc3VlQ2hhbm5lbENyZWRlbnRpYWxSZXF1ZXN0Gi8ucHRhaC5jb25zb2xlLnYxLklzc3VlQ2hhbm5lbENyZWRlbnRpYWxSZXNwb25zZRJpCg9MaXN0Q29ubmVjdGlvbnMSJy5wdGFoLmNvbnNvbGUudjEuTGlzdENvbm5lY3Rpb25zUmVxdWVzdBooLnB0YWguY29uc29sZS52MS5MaXN0Q29ubmVjdGlvbnNSZXNwb25zZSIDkAIBQkhaRmdpdGh1Yi5jb20vc3Rva2Fyby9wdGFoLWNvbnNvbGUvaW50ZXJuYWwvZ2VuL3B0YWgvY29uc29sZS92MTtjb25zb2xldjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message ptah.console.v1.CreateEnrollmentRequest
@@ -452,6 +452,237 @@ export const IssueChannelCredentialResponseSchema: GenMessage<IssueChannelCreden
   messageDesc(file_ptah_console_v1_connections, 16);
 
 /**
+ * @generated from message ptah.console.v1.ListConnectionsRequest
+ */
+export type ListConnectionsRequest = Message<"ptah.console.v1.ListConnectionsRequest"> & {
+};
+
+/**
+ * Describes the message ptah.console.v1.ListConnectionsRequest.
+ * Use `create(ListConnectionsRequestSchema)` to create a new message.
+ */
+export const ListConnectionsRequestSchema: GenMessage<ListConnectionsRequest> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 17);
+
+/**
+ * @generated from message ptah.console.v1.ListConnectionsResponse
+ */
+export type ListConnectionsResponse = Message<"ptah.console.v1.ListConnectionsResponse"> & {
+  /**
+   * @generated from field: repeated ptah.console.v1.Connection connections = 1;
+   */
+  connections: Connection[];
+
+  /**
+   * Manage is whether the person may change the registry: enroll, disable,
+   * quarantine and remove connections.
+   *
+   * @generated from field: bool manage = 2;
+   */
+  manage: boolean;
+
+  /**
+   * ThisCluster is the connection UID of the cluster the console runs in.
+   *
+   * @generated from field: string this_cluster = 3;
+   */
+  thisCluster: string;
+};
+
+/**
+ * Describes the message ptah.console.v1.ListConnectionsResponse.
+ * Use `create(ListConnectionsResponseSchema)` to create a new message.
+ */
+export const ListConnectionsResponseSchema: GenMessage<ListConnectionsResponse> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 18);
+
+/**
+ * @generated from message ptah.console.v1.Connection
+ */
+export type Connection = Message<"ptah.console.v1.Connection"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string connection_uid = 2;
+   */
+  connectionUid: string;
+
+  /**
+   * @generated from field: ptah.console.v1.ConnectionProfile profile = 3;
+   */
+  profile: ConnectionProfile;
+
+  /**
+   * Namespaces is the ceiling the console reaches there.
+   *
+   * @generated from field: repeated string namespaces = 4;
+   */
+  namespaces: string[];
+
+  /**
+   * GitOps is true when the entry is applied from a repository, which the
+   * console reads and changes nothing of.
+   *
+   * @generated from field: bool gitops = 5;
+   */
+  gitops: boolean;
+
+  /**
+   * DisplayName is the preference, empty when none is set.
+   *
+   * @generated from field: string display_name = 6;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: bool enabled = 7;
+   */
+  enabled: boolean;
+
+  /**
+   * @generated from field: ptah.console.v1.ChannelState channel = 8;
+   */
+  channel: ChannelState;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_observed_at = 9;
+   */
+  lastObservedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: int64 generation = 10;
+   */
+  generation: bigint;
+
+  /**
+   * CredentialExpiresAt is when the channel credential in use expires.
+   *
+   * @generated from field: google.protobuf.Timestamp credential_expires_at = 11;
+   */
+  credentialExpiresAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: bool rotation_due = 12;
+   */
+  rotationDue: boolean;
+
+  /**
+   * TargetServer is the target API server as enrolled; it identifies the
+   * cluster to a person, and the console never dials it.
+   *
+   * @generated from field: string target_server = 13;
+   */
+  targetServer: string;
+};
+
+/**
+ * Describes the message ptah.console.v1.Connection.
+ * Use `create(ConnectionSchema)` to create a new message.
+ */
+export const ConnectionSchema: GenMessage<Connection> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_connections, 19);
+
+/**
+ * ConnectionProfile is how the console reaches a cluster.
+ *
+ * @generated from enum ptah.console.v1.ConnectionProfile
+ */
+export const ConnectionProfile = {
+  /**
+   * @generated from enum value: CONNECTION_PROFILE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED: 0,
+
+  /**
+   * The cluster the console runs in.
+   *
+   * @generated from enum value: CONNECTION_PROFILE_CO_LOCATED = 1;
+   */
+  CO_LOCATED: 1,
+
+  /**
+   * A cluster reached through its agent.
+   *
+   * @generated from enum value: CONNECTION_PROFILE_AGENT = 2;
+   */
+  AGENT: 2,
+} as const;
+
+/**
+ * ConnectionProfile is how the console reaches a cluster.
+ *
+ * @generated from enum ptah.console.v1.ConnectionProfile
+ */
+export type ConnectionProfile = (typeof ConnectionProfile)[keyof typeof ConnectionProfile] | UnknownEnum;
+
+/**
+ * Describes the enum ptah.console.v1.ConnectionProfile.
+ */
+export const ConnectionProfileSchema: GenEnum<ConnectionProfile> = /*@__PURE__*/
+  enumDesc(file_ptah_console_v1_connections, 0);
+
+/**
+ * ChannelState is the agent channel, as the console last observed it.
+ *
+ * @generated from enum ptah.console.v1.ChannelState
+ */
+export const ChannelState = {
+  /**
+   * @generated from enum value: CHANNEL_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED: 0,
+
+  /**
+   * The cluster the console runs in has no channel.
+   *
+   * @generated from enum value: CHANNEL_STATE_IN_CLUSTER = 1;
+   */
+  IN_CLUSTER: 1,
+
+  /**
+   * @generated from enum value: CHANNEL_STATE_CONNECTED = 2;
+   */
+  CONNECTED: 2,
+
+  /**
+   * The agent connected before and is not connected now.
+   *
+   * @generated from enum value: CHANNEL_STATE_DISCONNECTED = 3;
+   */
+  DISCONNECTED: 3,
+
+  /**
+   * No agent has connected since the connection was made.
+   *
+   * @generated from enum value: CHANNEL_STATE_NEVER_CONNECTED = 4;
+   */
+  NEVER_CONNECTED: 4,
+
+  /**
+   * The connection is fenced: no channel is accepted.
+   *
+   * @generated from enum value: CHANNEL_STATE_QUARANTINED = 5;
+   */
+  QUARANTINED: 5,
+} as const;
+
+/**
+ * ChannelState is the agent channel, as the console last observed it.
+ *
+ * @generated from enum ptah.console.v1.ChannelState
+ */
+export type ChannelState = (typeof ChannelState)[keyof typeof ChannelState] | UnknownEnum;
+
+/**
+ * Describes the enum ptah.console.v1.ChannelState.
+ */
+export const ChannelStateSchema: GenEnum<ChannelState> = /*@__PURE__*/
+  enumDesc(file_ptah_console_v1_connections, 1);
+
+/**
  * ConnectionService changes the registry of the clusters the console
  * reaches. The API server decides who may: a request runs as the person, and
  * only installation administrators are granted the registry's kinds.
@@ -535,6 +766,17 @@ export const ConnectionService: GenService<{
     methodKind: "unary";
     input: typeof IssueChannelCredentialRequestSchema;
     output: typeof IssueChannelCredentialResponseSchema;
+  },
+  /**
+   * ListConnections lists the connections the person may see, with what the
+   * console last observed of each.
+   *
+   * @generated from rpc ptah.console.v1.ConnectionService.ListConnections
+   */
+  listConnections: {
+    methodKind: "unary";
+    input: typeof ListConnectionsRequestSchema;
+    output: typeof ListConnectionsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_ptah_console_v1_connections, 0);

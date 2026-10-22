@@ -45,6 +45,9 @@ const (
 	// ConnectionServiceIssueChannelCredentialProcedure is the procedure name of the ConnectionService's
 	// IssueChannelCredential RPC.
 	ConnectionServiceIssueChannelCredentialProcedure = "/ptah.console.v1.ConnectionService/IssueChannelCredential"
+	// ConnectionServiceListConnectionsProcedure is the procedure name of the ConnectionService's
+	// ListConnections RPC.
+	ConnectionServiceListConnectionsProcedure = "/ptah.console.v1.ConnectionService/ListConnections"
 )
 
 var (
@@ -98,6 +101,14 @@ var (
 			Procedure:  ConnectionServiceIssueChannelCredentialProcedure,
 		}
 	})
+	connectionServiceListConnectionsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType:       connect.StreamTypeUnary,
+			Schema:           v1.File_ptah_console_v1_connections_proto.Services().ByName("ConnectionService").Methods().ByName("ListConnections"),
+			Procedure:        ConnectionServiceListConnectionsProcedure,
+			IdempotencyLevel: connect.IdempotencyNoSideEffects,
+		}
+	})
 )
 
 // ConnectionServiceClient is a client for the ptah.console.v1.ConnectionService service.
@@ -123,6 +134,9 @@ type ConnectionServiceClient interface {
 	// credential, shown this once: a rotation's second credential, or the one
 	// that lifts a quarantine.
 	IssueChannelCredential(context.Context, *v1.IssueChannelCredentialRequest) (*v1.IssueChannelCredentialResponse, error)
+	// ListConnections lists the connections the person may see, with what the
+	// console last observed of each.
+	ListConnections(context.Context, *v1.ListConnectionsRequest) (*v1.ListConnectionsResponse, error)
 }
 
 // NewConnectionServiceClient constructs a client for the ptah.console.v1.ConnectionService service.
@@ -154,6 +168,9 @@ type ConnectionServiceHandler interface {
 	// credential, shown this once: a rotation's second credential, or the one
 	// that lifts a quarantine.
 	IssueChannelCredential(context.Context, *v1.IssueChannelCredentialRequest) (*v1.IssueChannelCredentialResponse, error)
+	// ListConnections lists the connections the person may see, with what the
+	// console last observed of each.
+	ListConnections(context.Context, *v1.ListConnectionsRequest) (*v1.ListConnectionsResponse, error)
 }
 
 // RegisterConnectionServiceHandler registers svc as the ptah.console.v1.ConnectionService
@@ -168,6 +185,7 @@ func RegisterConnectionServiceHandler(server *connect.Server, svc ConnectionServ
 		connect.Method{Spec: connectionServiceQuarantineConnectionSpec(), Handler: adapter.quarantineConnection},
 		connect.Method{Spec: connectionServiceRemoveConnectionSpec(), Handler: adapter.removeConnection},
 		connect.Method{Spec: connectionServiceIssueChannelCredentialSpec(), Handler: adapter.issueChannelCredential},
+		connect.Method{Spec: connectionServiceListConnectionsSpec(), Handler: adapter.listConnections},
 	)
 }
 
@@ -200,6 +218,10 @@ func (UnimplementedConnectionServiceHandler) RemoveConnection(context.Context, *
 
 func (UnimplementedConnectionServiceHandler) IssueChannelCredential(context.Context, *v1.IssueChannelCredentialRequest) (*v1.IssueChannelCredentialResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.ConnectionService.IssueChannelCredential is not implemented")
+}
+
+func (UnimplementedConnectionServiceHandler) ListConnections(context.Context, *v1.ListConnectionsRequest) (*v1.ListConnectionsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.ConnectionService.ListConnections is not implemented")
 }
 
 type connectionServiceClient struct {
@@ -257,6 +279,14 @@ func (c *connectionServiceClient) RemoveConnection(ctx context.Context, req *v1.
 func (c *connectionServiceClient) IssueChannelCredential(ctx context.Context, req *v1.IssueChannelCredentialRequest) (*v1.IssueChannelCredentialResponse, error) {
 	var res v1.IssueChannelCredentialResponse
 	if err := c.client.CallUnary(ctx, connectionServiceIssueChannelCredentialSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *connectionServiceClient) ListConnections(ctx context.Context, req *v1.ListConnectionsRequest) (*v1.ListConnectionsResponse, error) {
+	var res v1.ListConnectionsResponse
+	if err := c.client.CallUnary(ctx, connectionServiceListConnectionsSpec(), req, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -342,6 +372,18 @@ func (h connectionServiceHandler) issueChannelCredential(ctx context.Context, _ 
 		return err
 	}
 	res, err := h.svc.IssueChannelCredential(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h connectionServiceHandler) listConnections(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListConnectionsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListConnections(ctx, &req)
 	if err != nil {
 		return err
 	}

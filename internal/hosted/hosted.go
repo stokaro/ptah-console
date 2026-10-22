@@ -254,6 +254,8 @@ func (o Options) browser(config *accounts.Config, passwords *accounts.Passwords,
 		connections.Validity = agentlink.DefaultValidity
 		connections.Activated = agents.hub.EndPending
 		connections.Ended = agents.hub.End
+		connections.Connected = agents.hub.Connected
+		connections.ThisCluster = config.Registry.ConnectionUID
 	}
 	handler, err := server.New(server.Options{
 		Mode:         consolev1.Mode_MODE_HOSTED,

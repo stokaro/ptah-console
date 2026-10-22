@@ -52,7 +52,7 @@ func TestEveryClusterProcedureFollowsTheConnection(t *testing.T) {
 	for _, procedure := range cluster {
 		c.Assert(route.Routed(procedure), qt.IsTrue, qt.Commentf("%s", procedure))
 	}
-	c.Assert(own, qt.HasLen, 12)
+	c.Assert(own, qt.HasLen, 13)
 	for _, procedure := range own {
 		c.Assert(route.Routed(procedure), qt.IsFalse, qt.Commentf("%s", procedure))
 	}

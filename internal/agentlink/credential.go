@@ -169,9 +169,9 @@ func Tend(ctx context.Context, housekeeping client.Client, key client.ObjectKey,
 	})
 }
 
-// inUse is the credential that last authenticated a channel, or the only
+// InUse is the credential that last authenticated a channel, or the only
 // one when none has.
-func inUse(entry *consolev1alpha1.ConsoleCluster) *consolev1alpha1.ChannelCredential {
+func InUse(entry *consolev1alpha1.ConsoleCluster) *consolev1alpha1.ChannelCredential {
 	var current *consolev1alpha1.ChannelCredential
 	for index := range entry.Status.Channel.Credentials {
 		credential := &entry.Status.Channel.Credentials[index]
@@ -190,7 +190,7 @@ func inUse(entry *consolev1alpha1.ConsoleCluster) *consolev1alpha1.ChannelCreden
 // expiring is the CredentialExpiring condition at now.
 func expiring(entry *consolev1alpha1.ConsoleCluster, now time.Time) metav1.Condition {
 	condition := metav1.Condition{Type: consolev1alpha1.ConditionRotationDue, ObservedGeneration: entry.Generation}
-	current := inUse(entry)
+	current := InUse(entry)
 	switch {
 	case current == nil:
 		condition.Status, condition.Reason = metav1.ConditionUnknown, "NoCredentialInUse"
