@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ptah-console-agent.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ptah-console-agent.labels" . | nindent 4 }}
+spec:
+  # One channel per connection: a rollout replaces the agent whole.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "ptah-console-agent.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ptah-console-agent.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/configuration: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "ptah-console-agent.fullname" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent
+          image: {{ include "ptah-console-agent.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --config=/etc/ptah-console-agent/configuration/agent.yaml
+            - --console-ca=/etc/ptah-console-agent/configuration/console-ca.pem
+            - --accounts=/etc/ptah-console-agent/accounts/accounts.yaml
+            - --credential=/etc/ptah-console-agent/credential/{{ .Values.credential.key }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: configuration
+              mountPath: /etc/ptah-console-agent/configuration
+              readOnly: true
+            # Mounted whole, not by subPath, so a changed allowlist and a
+            # rotated credential reach the running agent.
+            - name: accounts
+              mountPath: /etc/ptah-console-agent/accounts
+              readOnly: true
+            - name: credential
+              mountPath: /etc/ptah-console-agent/credential
+              readOnly: true
+      volumes:
+        - name: configuration
+          configMap:
+            name: {{ include "ptah-console-agent.fullname" . }}
+        - name: accounts
+          configMap:
+            name: {{ include "ptah-console-agent.fullname" . }}-accounts
+        - name: credential
+          secret:
+            secretName: {{ .Values.credential.secretName }}
+            items:
+              - key: {{ .Values.credential.key }}
+                path: {{ .Values.credential.key }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,261 @@
+---
+# Source: ptah-console-agent/templates/networkpolicy.yaml
+# Nothing reaches the agent. It reaches the API server, cluster DNS to find
+# the console, and the console's listener, and nothing else.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-ptah-console-agent
+  namespace: ptah-console-agent
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ptah-console-agent
+      app.kubernetes.io/instance: agent
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.96.0.1/32
+        - ipBlock:
+            cidr: 172.18.0.0/16
+      ports:
+        - port: 443
+          protocol: TCP
+        - port: 6443
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: 203.0.113.10/32
+      ports:
+        - port: 443
+          protocol: TCP
+
+---
+# Source: ptah-console-agent/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agent-ptah-console-agent
+  namespace: ptah-console-agent
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+
+---
+# Source: ptah-console-agent/templates/accounts.yaml
+# The allowlist. The agent reads it again when it changes, without a
+# restart, so the Deployment does not carry its checksum.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-ptah-console-agent-accounts
+  namespace: ptah-console-agent
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+data:
+  accounts.yaml: |
+    apiVersion: console.ptah.run/v1alpha1
+    kind: AgentAccounts
+    accounts:
+      - alex
+      - sam
+
+---
+# Source: ptah-console-agent/templates/configmap.yaml
+# What fixes the connection, and the console's CA. A change to either rolls
+# the agent: the Deployment carries their checksum.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-ptah-console-agent
+  namespace: ptah-console-agent
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+data:
+  agent.yaml: |
+    apiVersion: console.ptah.run/v1alpha1
+    kind: AgentConfiguration
+    installationID: "prod"
+    connection:
+      uid: "0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d"
+      generation: 1
+    console:
+      address: "https://agents.console.example.com"
+      serverName: "agents.console.example.com"
+    namespaces:
+      - storefront
+      - billing
+  console-ca.pem: |
+    -----BEGIN CERTIFICATE-----
+    MIIBkTCCATegAwIBAgIUWnJ3C7dsyDNF9oRlsVJfqqH3s20wCgYIKoZIzj0EAwIw
+    HTEbMBkGA1UEAwwSRXhhbXBsZSBDb25zb2xlIENBMCAXDTI2MTAyMjExMjUzOFoY
+    DzIxMjYwOTI4MTEyNTM4WjAdMRswGQYDVQQDDBJFeGFtcGxlIENvbnNvbGUgQ0Ew
+    WTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATFXWGP61hDf7EMjev0a5kD/D6UjoBC
+    7VrTqJ1Qqwxv7LLsMWin/aIrN/ibDyLjeg4XT+g7Noo7A47wKGBrRQvvo1MwUTAd
+    BgNVHQ4EFgQU4aSXTh4r/mexfmHsb6kfpVVOAX4wHwYDVR0jBBgwFoAU4aSXTh4r
+    /mexfmHsb6kfpVVOAX4wDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNIADBF
+    AiEAm6G476IDOEBhiMWV+zzZJaQjrIgcxJ40M/51tIsohfcCICm8+T/9Ov8a09GL
+    QGuN/ZwUmBV918D4PUTDlcrAHR16
+    -----END CERTIFICATE-----
+
+---
+# Source: ptah-console-agent/templates/impersonation.yaml
+# The agent's one grant: impersonate exactly the allowlisted accounts'
+# usernames. No groups, UIDs, extras or ServiceAccounts, and nothing else of
+# its own: no Secret, no RBAC object, no Ptah resource.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: agent-ptah-console-agent-impersonate
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+rules:
+  - apiGroups: [""]
+    resources: ["users"]
+    verbs: ["impersonate"]
+    resourceNames:
+      - ptah-console:prod:alex
+      - ptah-console:prod:sam
+
+---
+# Source: ptah-console-agent/templates/impersonation.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: agent-ptah-console-agent-impersonate
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: agent-ptah-console-agent-impersonate
+subjects:
+  - kind: ServiceAccount
+    name: agent-ptah-console-agent
+    namespace: ptah-console-agent
+
+---
+# Source: ptah-console-agent/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-ptah-console-agent
+  namespace: ptah-console-agent
+  labels:
+    app.kubernetes.io/name: ptah-console-agent
+    app.kubernetes.io/instance: agent
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-agent-0.1.0
+spec:
+  # One channel per connection: a rollout replaces the agent whole.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ptah-console-agent
+      app.kubernetes.io/instance: agent
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ptah-console-agent
+        app.kubernetes.io/instance: agent
+      annotations:
+        checksum/configuration: 592b2471e8be394a8ee847a70750eae2aece13242643e745de257f3b17ce5769
+        example.com/team: databases
+    spec:
+      serviceAccountName: agent-ptah-console-agent
+      imagePullSecrets:
+        - name: ghcr-pull
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent
+          image: ghcr.io/stokaro/ptah-console-agent:0.1.0@sha256:f68968558f0634c1e388f2be3f8d9d0f7c5916631abe16c5bae55d21e8e909c0
+          imagePullPolicy: IfNotPresent
+          args:
+            - --config=/etc/ptah-console-agent/configuration/agent.yaml
+            - --console-ca=/etc/ptah-console-agent/configuration/console-ca.pem
+            - --accounts=/etc/ptah-console-agent/accounts/accounts.yaml
+            - --credential=/etc/ptah-console-agent/credential/credential
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          volumeMounts:
+            - name: configuration
+              mountPath: /etc/ptah-console-agent/configuration
+              readOnly: true
+            # Mounted whole, not by subPath, so a changed allowlist and a
+            # rotated credential reach the running agent.
+            - name: accounts
+              mountPath: /etc/ptah-console-agent/accounts
+              readOnly: true
+            - name: credential
+              mountPath: /etc/ptah-console-agent/credential
+              readOnly: true
+      volumes:
+        - name: configuration
+          configMap:
+            name: agent-ptah-console-agent
+        - name: accounts
+          configMap:
+            name: agent-ptah-console-agent-accounts
+        - name: credential
+          secret:
+            secretName: ptah-console-agent-credential
+            items:
+              - key: credential
+                path: credential
