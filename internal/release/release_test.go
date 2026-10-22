@@ -20,6 +20,7 @@ func inputs(change func(*release.Inputs)) release.Inputs {
 	in := release.Inputs{
 		Record:       []byte(record),
 		ChartVersion: "0.1.0", ChartAppVersion: "0.1.0",
+		AgentChartVersion: "0.1.0", AgentChartAppVersion: "0.1.0",
 		Operator:   "v0.2.5",
 		Kubernetes: []string{"1.35", "1.36", "1.37"},
 		Version:    "0.1.0",
@@ -95,6 +96,10 @@ func TestEachDisagreement(t *testing.T) {
 			says: `(?s).*releases\[0\] is console 0.1.0, and the chart is version 0.2.0 with appVersion 0.1.0; they name one version.*`},
 		{name: "a chart whose appVersion differs", change: func(in *release.Inputs) { in.ChartAppVersion = "0.0.9" },
 			says: `(?s).*the chart is version 0.1.0 with appVersion 0.0.9.*`},
+		{name: "an agent chart of another version", change: func(in *release.Inputs) { in.AgentChartVersion = "0.2.0" },
+			says: `(?s).*the agent chart is version 0.2.0 with appVersion 0.1.0; the agent is released with the console.*`},
+		{name: "an agent chart whose appVersion differs", change: func(in *release.Inputs) { in.AgentChartAppVersion = "0.0.9" },
+			says: `(?s).*the agent chart is version 0.1.0 with appVersion 0.0.9.*`},
 		{name: "another operator in go.mod", change: func(in *release.Inputs) { in.Operator = "v0.2.6" },
 			says: `(?s).*releases\[0\] names operator v0.2.5, and go.mod requires v0.2.6.*`},
 		{name: "another Kubernetes window", change: func(in *release.Inputs) { in.Kubernetes = []string{"1.36", "1.37", "1.38"} },
