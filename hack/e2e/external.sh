@@ -400,9 +400,12 @@ misuse)
 	address=$(fact_of AGENTS_ADDRESS)
 	authority=${address#https://}
 	name=$(fact_of AGENTS_SERVER_NAME)
-	# As a bearer on the browser's API, where only a session cookie counts.
+	# As a bearer on the browser's API, where only a session cookie counts. The
+	# request is otherwise a valid Connect call, so the refusal is about the
+	# credential and nothing else.
 	printf 'console api: %s\n' "$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
 		--header "Authorization: Bearer $(cat "$file")" --header 'Content-Type: application/json' \
+		--header 'Connect-Protocol-Version: 1' \
 		--data '{}' "$(fact_of HOSTED_URL)/api/ptah.console.v1.ScopeService/ListNamespaces")"
 	# On the agents' listener, which serves the channel and the enrollment
 	# and nothing a person uses.

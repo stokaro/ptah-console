@@ -214,6 +214,24 @@ test("an account the agent was never told of reaches nothing on the target", asy
   )
 
   await lab.signInHosted("author")
+  // The newcomer's account rolled the console out; the agent opens its
+  // channel to the new Pod in its own time, and until it has, every request
+  // is refused as not connected rather than for its namespace.
+  await expect
+    .poll(
+      async () =>
+        (
+          await call(
+            page,
+            lab.origin(),
+            "SchemaService/ListSchemas",
+            { namespaces: [fact("NAMESPACE")] },
+            uidOf(enrollmentFile)
+          )
+        ).status,
+      { timeout: 120_000, intervals: [2_000] }
+    )
+    .toBe(200)
   const outside = await call(
     page,
     lab.origin(),
@@ -225,14 +243,6 @@ test("an account the agent was never told of reaches nothing on the target", asy
   expect(outside.body.message).toContain(
     'namespace "kube-system" is outside what this agent serves'
   )
-  const inside = await call(
-    page,
-    lab.origin(),
-    "SchemaService/ListSchemas",
-    { namespaces: [fact("NAMESPACE")] },
-    uidOf(enrollmentFile)
-  )
-  expect(inside.status).toBe(200)
   await lab.caption("Even Avery is refused outside the namespaces lab-2's administrator granted.")
 })
 
