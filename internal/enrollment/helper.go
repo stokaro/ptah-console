@@ -37,6 +37,14 @@ const (
 	connectionAnnotation  = "console.ptah.run/connection-uid"
 )
 
+// TrustDisclosure is what the target's administrator accepts by installing
+// the agent, in the words the console's enrollment screen uses too.
+const TrustDisclosure = "The agent acts in this cluster as each Console account you allow, with the Kubernetes rights\n" +
+	"those usernames have here. A compromised console can make requests as those accounts. A\n" +
+	"compromised agent can use those accounts' rights in this cluster. Keep the allowlist short and\n" +
+	"the bound roles to Ptah's resources, and remove the agent's impersonation binding to cut it off\n" +
+	"at once, whatever the console says."
+
 // Helper is one run of the target administrator's helper.
 type Helper struct {
 	File *File
@@ -197,6 +205,7 @@ func (h *Helper) summary(server, caSHA256, username string) string {
 		fmt.Fprintf(&b, "                  %s: %s in every namespace above\n", account.ID, strings.Join(account.Roles, ", "))
 	}
 	fmt.Fprintf(&b, "  Approver role   %s\n", identity.ApproverClusterRole)
+	fmt.Fprintf(&b, "\n%s\n", TrustDisclosure)
 	return b.String()
 }
 

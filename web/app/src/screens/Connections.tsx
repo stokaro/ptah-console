@@ -35,6 +35,10 @@ import { ScopeService } from "../gen/ptah/console/v1/resources_pb"
 import { summarize } from "../model/connection"
 import { BackButton, Hero, Loading, ReadError, useNow } from "./common"
 
+/** What the target's administrator accepts, in the words the design and the guide use. */
+export const trustDisclosure =
+  "The agent acts in this cluster as each Console account the target administrator allows, with the Kubernetes rights those usernames have here. A compromised console can make requests as those accounts. A compromised agent can use those accounts' rights in this cluster. Keep the allowlist short and the bound roles to Ptah's resources, and remove the agent's impersonation binding to cut it off at once, whatever the console says."
+
 /** The roles an enrollment grants on the target, as the agent's chart names them. */
 export const enrollmentRoles = [
   "viewer",
@@ -600,6 +604,9 @@ export function AddCluster() {
         </>
       ) : (
         <form onSubmit={submit} className="flex flex-col gap-4">
+          <Card label="What the target trusts">
+            <p className="m-0 text-sm text-fg">{trustDisclosure}</p>
+          </Card>
           <Card label="The connection">
             <label className="flex flex-col gap-1 text-sm">
               Name

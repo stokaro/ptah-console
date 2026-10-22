@@ -208,6 +208,9 @@ describe("The Admin role", () => {
     })
     const { container } = renderConsole("/connections/new", hosted(fixture))
 
+    expect(
+      await screen.findByText(/A compromised agent can use those accounts' rights/)
+    ).toBeInTheDocument()
     await user.type(await screen.findByLabelText("Name"), "payments-eu")
     await user.type(
       screen.getByLabelText("Namespaces it covers, separated by commas"),
