@@ -198,6 +198,16 @@ function PendingEnrollment({ enrollment, now }: { enrollment: Enrollment; now: D
         {enrollment.clusterName}
       </span>
       <span className="text-[13px] text-fg2">{state.text}</span>
+      <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-[13px]">
+        <dt className="text-mute">Namespaces</dt>
+        <dd className="m-0 font-mono">{enrollment.namespaces.join(", ")}</dd>
+        <dt className="text-mute">Grants</dt>
+        <dd className="m-0 font-mono">
+          {enrollment.accounts
+            .map((account) => `${account.id}: ${account.roles.join(", ")}`)
+            .join("; ")}
+        </dd>
+      </dl>
       <Fingerprint value={enrollment.fingerprint} />
       {enrollment.completion ? (
         <span className="font-mono text-xs text-mute">

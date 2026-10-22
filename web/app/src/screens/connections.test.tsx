@@ -246,6 +246,8 @@ describe("The Admin role", () => {
           connectionUid: "4e3d2c1b-0a9f-4e8d-bc7b-6a5f4e3d2c1b",
           fingerprint: "sha256:7f3a91c20bd4e86f00000000000000000000000000000000000000000000abcd",
           agentConnected: true,
+          namespaces: ["payments", "ledger"],
+          accounts: [{ id: "alex", roles: ["viewer", "approver"] }],
           completion: {
             targetServer: "https://api.payments-eu.example.com:6443",
             targetCaSha256: "sha256:1111111111111111111111",
@@ -262,6 +264,8 @@ describe("The Admin role", () => {
     renderConsole("/connections", hosted(fixture))
 
     expect(await screen.findByText(/Waiting for the helper on the target/)).toBeInTheDocument()
+    expect(screen.getByText("alex: viewer, approver")).toBeInTheDocument()
+    expect(screen.getByText("payments, ledger")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Activate staging" })).toBeNull()
     await user.click(await screen.findByRole("button", { name: "Activate payments-eu" }))
 
