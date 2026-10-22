@@ -52,6 +52,11 @@ func newServe(stdout io.Writer) *cobra.Command {
 	flags.BoolVar(&options.TLSTerminatedUpstream, "tls-terminated-upstream", false,
 		"serve plain HTTP, because a proxy in front of the console terminates TLS")
 	flags.BoolVar(&options.ReadOnly, "read-only", false, "refuse every change the console could send, whatever an account may do")
+	flags.StringVar(&options.AgentListen, "agent-listen", "",
+		"serve the agents of the registry's external clusters on this address, apart from the browser's")
+	flags.StringVar(&options.AgentTLSCertFile, "agent-tls-cert-file", "",
+		"the agent listener's certificate, from the console's own CA, read again when it changes")
+	flags.StringVar(&options.AgentTLSKeyFile, "agent-tls-key-file", "", "the agent listener certificate's private key")
 	flags.StringVar(&kubeconfig, "kubeconfig", "",
 		"the console's own identity, for running it outside a cluster (default: the Pod's ServiceAccount)")
 	return command

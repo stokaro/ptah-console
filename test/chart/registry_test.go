@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	qt "github.com/frankban/quicktest"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -109,4 +111,34 @@ func TestThisClustersConnectionFollowsItsScope(t *testing.T) {
 	for _, object := range ofKind(without, "Role") {
 		c.Assert(object.GetName(), qt.Not(qt.Contains), "registry")
 	}
+}
+
+// The agents have a Service of their own, which carries the agent port and
+// nothing else, and the browser's Service does not carry the agent port.
+func TestAgentsHaveAServiceOfTheirOwn(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	all := objects(t, mustRender(t, values("agents")))
+
+	names := make(map[string]string)
+	for _, object := range ofKind(all, "Service") {
+		service := convert[corev1.Service](t, object)
+		for _, port := range service.Spec.Ports {
+			names[service.Name] += port.TargetPort.StrVal + " "
+		}
+	}
+	c.Assert(names, qt.DeepEquals, map[string]string{
+		"console-ptah-console":        "https ",
+		"console-ptah-console-agents": "agents ",
+	})
+	deployment := convert[appsv1.Deployment](t, ofKind(all, "Deployment")[0])
+	container := deployment.Spec.Template.Spec.Containers[0]
+	c.Assert(container.Ports, qt.HasLen, 2)
+	c.Assert(container.Args, qt.Contains, "--agent-listen=:8444")
+	policy := ofKind(all, "NetworkPolicy")[0]
+	ingress, _, _ := unstructured.NestedSlice(policy.Object, "spec", "ingress")
+	c.Assert(ingress, qt.HasLen, 2)
+	agentsRule, _ := ingress[1].(map[string]any)
+	_, restricted := agentsRule["from"]
+	c.Assert(restricted, qt.IsFalse, qt.Commentf("agents come from other clusters; an empty agents.ingressFrom admits any source"))
 }

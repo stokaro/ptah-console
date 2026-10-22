@@ -56,6 +56,26 @@ approverClusterRole: ptah-operator-ptah-operator-approver
 registry:
   enabled: false
 
+# The listener the agents of external clusters dial: a port, a Service and a
+# certificate of its own, apart from the browser's, so a browser session never
+# reaches an agent endpoint and an agent credential never reaches a browser
+# one. It needs the registry. How the Service is exposed to the other clusters,
+# a LoadBalancer or an Ingress that passes TLS through, is yours to choose.
+agents:
+  enabled: false
+  # Required when enabled. A kubernetes.io/tls Secret with the listener's
+  # certificate from the console's own CA, for the name agents are enrolled
+  # with. Agents trust that CA and that name and nothing else.
+  tls:
+    secretName: ""
+  service:
+    type: ClusterIP
+    port: 443
+    annotations: {}
+  # With networkPolicy.enabled, the peers that may reach the agent port.
+  # Empty admits any source: agents come from other clusters.
+  ingressFrom: []
+
 # Required. An existing Secret with the passwords file under key: one line of
 # <account id>:<bcrypt hash> per account. ptah-console accounts hash makes a
 # hash. A changed password takes effect when the Pod restarts.

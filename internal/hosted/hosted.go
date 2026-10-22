@@ -15,6 +15,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -61,6 +62,15 @@ type Options struct {
 	Stdout io.Writer
 	// Listening, when set, is told the address the console listens on.
 	Listening func(net.Addr)
+	// AgentListen, when set, serves the agents of the registry's connections
+	// on an address of their own, with a certificate of its own from the
+	// console's CA: AgentTLSCertFile and AgentTLSKeyFile, read again when
+	// either changes.
+	AgentListen      string
+	AgentTLSCertFile string
+	AgentTLSKeyFile  string
+	// AgentListening, when set, is told the address agents dial.
+	AgentListening func(net.Addr)
 	// Now is the clock sign-in limits are kept by; nil is time.Now.
 	Now func() time.Time
 	// PerLogin and PerAddress override the sign-in limits; zero keeps
@@ -88,17 +98,12 @@ func Run(ctx context.Context, options Options) error {
 	if err := options.transportProblem(); err != nil {
 		return err
 	}
-	if options.Logger == nil {
-		options.Logger = slog.New(slog.DiscardHandler)
-	}
-	if options.Audit == nil {
-		options.Audit = audit.Discard()
-	}
-	if options.Stdout == nil {
-		options.Stdout = io.Discard
-	}
+	options.defaults()
 	config, passwords, err := accounts.Load(options.ConfigPath, options.PasswordsPath)
 	if err != nil {
+		return err
+	}
+	if err := options.agentsProblem(config); err != nil {
 		return err
 	}
 	kubeConfig := options.Kube
@@ -110,6 +115,80 @@ func Run(ctx context.Context, options Options) error {
 	if err := checkThisCluster(ctx, kubeConfig, config); err != nil {
 		return err
 	}
+	browser, err := options.browser(config, passwords, kubeConfig)
+	if err != nil {
+		return err
+	}
+	agentListener, err := options.listenForAgents(kubeConfig, config)
+	if err != nil {
+		return err
+	}
+	listener, err := net.Listen("tcp", options.Listen)
+	if err != nil {
+		if agentListener != nil {
+			_ = agentListener.listener.Close()
+		}
+		return fmt.Errorf("listen on %s: %w", options.Listen, err)
+	}
+	if options.Listening != nil {
+		options.Listening(listener.Addr())
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go browser.store.Run(ctx, time.Minute)
+	served := server.Serve(ctx, server.NewHTTPServer(browser.handler, browser.tls, options.Logger), []net.Listener{listener})
+	agentsServed := make(<-chan error)
+	if agentListener != nil {
+		if agentsServed, err = agentListener.serve(ctx, kubeConfig, config.Registry.Namespace, options.Now, options.Logger); err != nil {
+			return err
+		}
+		if options.AgentListening != nil {
+			options.AgentListening(agentListener.listener.Addr())
+		}
+		fmt.Fprintf(options.Stdout, "Agents of external clusters dial %s\n", agentListener.listener.Addr())
+	}
+	transport := "HTTPS"
+	if browser.tls == nil {
+		transport = "HTTP behind a proxy that terminates TLS"
+	}
+	fmt.Fprintf(options.Stdout, "Ptah Console for installation %s serves %s on %s, over %s\n",
+		config.InstallationID, browser.origin, listener.Addr(), transport)
+	select {
+	case err := <-served:
+		return err
+	case err := <-agentsServed:
+		cancel()
+		<-served
+		return err
+	}
+}
+
+// defaults fills what the caller left out.
+func (o *Options) defaults() {
+	if o.Logger == nil {
+		o.Logger = slog.New(slog.DiscardHandler)
+	}
+	if o.Audit == nil {
+		o.Audit = audit.Discard()
+	}
+	if o.Stdout == nil {
+		o.Stdout = io.Discard
+	}
+	if o.Now == nil {
+		o.Now = time.Now
+	}
+}
+
+// browserSide is what serves people: the web app and the console's services
+// behind a session, on the browser's listener.
+type browserSide struct {
+	handler http.Handler
+	store   *session.Store
+	tls     *tls.Config
+	origin  string
+}
+
+func (o Options) browser(config *accounts.Config, passwords *accounts.Passwords, kubeConfig *rest.Config) (*browserSide, error) {
 	usernames := make(map[string]string, len(config.Accounts))
 	displayNames := make(map[string]string, len(config.Accounts))
 	for _, account := range config.Accounts {
@@ -118,74 +197,55 @@ func Run(ctx context.Context, options Options) error {
 	}
 	factory, err := kube.NewHostedFactory(kubeConfig, usernames, generation)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	verifier, err := signin.New(signin.Options{
-		Config: config, Passwords: passwords, Now: options.Now,
-		PerLogin: options.PerLogin, PerAddress: options.PerAddress,
+		Config: config, Passwords: passwords, Now: o.Now,
+		PerLogin: o.PerLogin, PerAddress: o.PerAddress,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	tlsConfig, err := options.tlsConfig()
+	tlsConfig, err := o.tlsConfig()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	origin, err := originOf(config.PublicURL)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	store := session.NewStore(session.Options{})
 	cookies := session.Cookies{Secure: true}
 	sessions := api.NewHostedSession(store, cookies, api.HostedAccounts{
 		Verifier: verifier, Generation: generation, DisplayNames: displayNames,
 		Addresses: clientaddr.New(config.Proxies()),
-	}, factory, api.SessionFacts{Mode: consolev1.Mode_MODE_HOSTED, ReadOnly: options.ReadOnly}, options.Audit)
+	}, factory, api.SessionFacts{Mode: consolev1.Mode_MODE_HOSTED, ReadOnly: o.ReadOnly}, o.Audit)
 	scope := api.Scope{Candidates: config.Namespaces, Ceiling: config.Namespaces}
 	interceptors := []connect.ServerInterceptor{
 		session.Interceptor(store, cookies,
 			consolev1connect.InfoServiceGetInfoProcedure,
 			consolev1connect.SessionServiceLoginProcedure),
 	}
-	if options.ReadOnly {
+	if o.ReadOnly {
 		interceptors = append(interceptors, api.ReadOnly(
 			consolev1connect.SessionServiceLoginProcedure,
 			consolev1connect.SessionServiceLogoutProcedure))
 	}
 	handler, err := server.New(server.Options{
 		Mode:         consolev1.Mode_MODE_HOSTED,
-		ReadOnly:     options.ReadOnly,
-		Assets:       options.Assets,
+		ReadOnly:     o.ReadOnly,
+		Assets:       o.Assets,
 		Origins:      []string{origin},
-		Logger:       options.Logger,
+		Logger:       o.Logger,
 		Interceptors: interceptors,
 		Services: []func(*connect.Server){func(rpc *connect.Server) {
-			api.Register(rpc, sessions, factory, scope, options.Audit)
+			api.Register(rpc, sessions, factory, scope, o.Audit)
 		}},
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	listener, err := net.Listen("tcp", options.Listen)
-	if err != nil {
-		return fmt.Errorf("listen on %s: %w", options.Listen, err)
-	}
-	if options.Listening != nil {
-		options.Listening(listener.Addr())
-	}
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	go store.Run(ctx, time.Minute)
-	served := server.Serve(ctx, server.NewHTTPServer(handler, tlsConfig, options.Logger), []net.Listener{listener})
-	transport := "HTTPS"
-	if tlsConfig == nil {
-		transport = "HTTP behind a proxy that terminates TLS"
-	}
-	fmt.Fprintf(options.Stdout, "Ptah Console for installation %s serves %s on %s, over %s\n",
-		config.InstallationID, origin, listener.Addr(), transport)
-	return <-served
+	return &browserSide{handler: handler, store: store, tls: tlsConfig, origin: origin}, nil
 }
 
 // tlsConfig is nil behind a proxy that terminates TLS.

@@ -125,7 +125,7 @@ func golden(t *testing.T, path, rendered string) string {
 
 func TestRendersMatchTheirGoldenFiles(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"minimal", "full", "registry"} {
+	for _, name := range []string{"minimal", "full", "registry", "agents"} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			c := qt.New(t)
@@ -151,7 +151,7 @@ func TestTheChartLints(t *testing.T) {
 // group, resource, verb or name.
 func TestNoRenderedRuleHasAWildcard(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"minimal", "full", "registry"} {
+	for _, name := range []string{"minimal", "full", "registry", "agents"} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			c := qt.New(t)
@@ -318,6 +318,10 @@ func TestEachRefusal(t *testing.T) {
 		{name: "a proxy that is no network", overlay: "trustedProxies: [10.244.0.0]", says: `/trustedProxies/0.*does not match pattern`},
 		{name: "a registry value the chart does not read", overlay: "registry: {enabled: true, connectionUID: x}",
 			says: `/registry.*additional properties 'connectionUID' not allowed`},
+		{name: "agents without the registry", overlay: "agents: {enabled: true, tls: {secretName: agents-tls}}",
+			says: `agents: serves the agents of the registry's connections; enable the registry`},
+		{name: "agents without their certificate", overlay: "registry: {enabled: true}\nagents: {enabled: true}",
+			says: `agents: tls.secretName names the agent listener's certificate`},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
