@@ -134,6 +134,14 @@ can retry, and any other report is refused. An enrollment nobody completed
 within 10 minutes, or nobody activated within a day of completion, is
 removed.
 
+The agent then opens its channel with the credential. The console takes it as
+the pending enrollment's, records that the agent connected, and sends it
+nothing: there is no connection yet. An administrator activates the
+enrollment once the agent shows connected. Their own client creates the
+`ConsoleCluster`, the console records the credential's verifier in its status
+and removes the enrollment, and the pending channel ends, so the agent opens
+it again as the connection's.
+
 ## Credentials over time
 
 The credential expires; 90 days by default. The console warns from 14 days

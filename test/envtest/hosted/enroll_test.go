@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
@@ -18,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -53,7 +55,8 @@ func grantEnrollments(t *testing.T, namespace string) {
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "connection-admin"},
 			Rules: []rbacv1.PolicyRule{{
-				APIGroups: []string{group}, Resources: []string{"consoleclusterenrollments"}, Verbs: []string{"get", "list", "create", "delete"},
+				APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterenrollments"},
+				Verbs: []string{"get", "list", "create", "delete"},
 			}},
 		},
 		&rbacv1.RoleBinding{
@@ -212,4 +215,77 @@ func TestTheHelperCompletesAndResumes(t *testing.T) {
 	c.Assert(helper(true).Enroll(t.Context()), qt.IsNil, qt.Commentf("a second run of the same enrollment did not resume"))
 	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKeyFromObject(secret), secret), qt.IsNil)
 	c.Assert(string(secret.Data["credential"]), qt.Equals, credential)
+}
+
+// The whole enrollment: the console issues it, the helper completes it, the
+// agent connects and is sent nothing, an administrator activates it once it
+// has, and the agent then serves the new connection.
+func TestAnEnrolledClusterIsActivatedAndServed(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	r := arrangeRouting(t)
+	grantEnrollments(t, r.namespace)
+	certificates := newPKI(t)
+	agents := r.startConsole(t, certificates)
+	alex := r.signIn(t, "alex@example.com", "alex-secret")
+	connections := consolev1connect.NewConnectionServiceClient(r.transport())
+	created, err := connections.CreateEnrollment(to(t.Context(), alex, ""), &consolev1.CreateEnrollmentRequest{
+		ClusterName: "prod-ap-5", Namespaces: []string{"storefront"},
+		Accounts:            []*consolev1.EnrollmentAccount{{Id: "alex", Roles: []string{"viewer"}}},
+		ApproverClusterRole: "ptah-operator-ptah-operator-approver",
+	})
+	c.Assert(err, qt.IsNil)
+	file, err := enrollment.Parse(created.GetEnrollmentFile())
+	c.Assert(err, qt.IsNil)
+	file.Console.Address = "https://" + agents
+	agentNamespace := "agent-" + file.Identity.ConnectionUID[:8]
+	c.Assert((&enrollment.Helper{
+		File: file, Kube: plane.Env.Config, ContextName: "envtest-admin", Namespace: agentNamespace, Release: "ptah-console-agent",
+		ValuesPath: filepath.Join(t.TempDir(), "values.yaml"), Out: io.Discard,
+	}).Enroll(t.Context()), qt.IsNil)
+	secret := &corev1.Secret{}
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKey{Namespace: agentNamespace, Name: "ptah-console-agent-credential"}, secret), qt.IsNil)
+	credential := string(secret.Data["credential"])
+	scope := consolev1connect.NewScopeServiceClient(r.transport())
+	activate := &consolev1.ActivateEnrollmentRequest{ClusterName: "prod-ap-5"}
+
+	_, err = connections.ActivateEnrollment(to(t.Context(), alex, ""), activate)
+	c.Assert(connect.CodeOf(err), qt.Equals, connect.CodeFailedPrecondition, qt.Commentf("activated before the agent connected: %v", err))
+
+	runAgent(t, agents, certificates, file.Identity.ConnectionUID, plane.Env.Config, "[alex]", credential)
+	pending := &consolev1alpha1.ConsoleClusterEnrollment{}
+	eventually(t, "the console seeing the agent of the pending enrollment", func() bool {
+		c.Assert(plane.Admin.Get(t.Context(), client.ObjectKey{Namespace: r.namespace, Name: "prod-ap-5"}, pending), qt.IsNil)
+		return meta.IsStatusConditionTrue(pending.Status.Conditions, consolev1alpha1.ConditionAgentConnected)
+	})
+	_, err = scope.ListNamespaces(to(t.Context(), alex, file.Identity.ConnectionUID), &consolev1.ListNamespacesRequest{})
+	c.Assert(connect.CodeOf(err), qt.Equals, connect.CodeNotFound, qt.Commentf("a pending enrollment was dispatched to: %v", err))
+	_, err = connections.ActivateEnrollment(to(t.Context(), r.signIn(t, "sam@example.com", "sam-secret"), ""), activate)
+	c.Assert(connect.CodeOf(err), qt.Equals, connect.CodePermissionDenied, qt.Commentf("%v", err))
+
+	activated, err := connections.ActivateEnrollment(to(t.Context(), alex, ""), activate)
+
+	c.Assert(err, qt.IsNil)
+	c.Assert(activated.GetConnectionUid(), qt.Equals, file.Identity.ConnectionUID)
+	entry := &consolev1alpha1.ConsoleCluster{}
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKey{Namespace: r.namespace, Name: "prod-ap-5"}, entry), qt.IsNil)
+	c.Assert(entry.Spec.Agent.TargetServer, qt.Equals, strings.TrimSuffix(plane.Env.Config.Host, "/"))
+	c.Assert(entry.Status.Channel.Credentials[0].Verifier, qt.Equals, enrollment.Verifier(credential))
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKeyFromObject(pending), pending), qt.Satisfies, apierrors.IsNotFound)
+	eventually(t, "a request reaching the new connection's agent", func() bool {
+		_, err := scope.ListNamespaces(to(t.Context(), alex, file.Identity.ConnectionUID), &consolev1.ListNamespacesRequest{})
+		return err == nil
+	})
+}
+
+// eventually waits until check holds, and fails the test after ten seconds.
+func eventually(t *testing.T, what string, check func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for !check() {
+		if time.Now().After(deadline) {
+			t.Fatalf("%s did not happen", what)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 }

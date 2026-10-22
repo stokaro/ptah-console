@@ -27,6 +27,12 @@ const (
 	// ConnectionServiceCreateEnrollmentProcedure is the procedure name of the ConnectionService's
 	// CreateEnrollment RPC.
 	ConnectionServiceCreateEnrollmentProcedure = "/ptah.console.v1.ConnectionService/CreateEnrollment"
+	// ConnectionServiceListEnrollmentsProcedure is the procedure name of the ConnectionService's
+	// ListEnrollments RPC.
+	ConnectionServiceListEnrollmentsProcedure = "/ptah.console.v1.ConnectionService/ListEnrollments"
+	// ConnectionServiceActivateEnrollmentProcedure is the procedure name of the ConnectionService's
+	// ActivateEnrollment RPC.
+	ConnectionServiceActivateEnrollmentProcedure = "/ptah.console.v1.ConnectionService/ActivateEnrollment"
 )
 
 var (
@@ -37,6 +43,21 @@ var (
 			Procedure:  ConnectionServiceCreateEnrollmentProcedure,
 		}
 	})
+	connectionServiceListEnrollmentsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType:       connect.StreamTypeUnary,
+			Schema:           v1.File_ptah_console_v1_connections_proto.Services().ByName("ConnectionService").Methods().ByName("ListEnrollments"),
+			Procedure:        ConnectionServiceListEnrollmentsProcedure,
+			IdempotencyLevel: connect.IdempotencyNoSideEffects,
+		}
+	})
+	connectionServiceActivateEnrollmentSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_ptah_console_v1_connections_proto.Services().ByName("ConnectionService").Methods().ByName("ActivateEnrollment"),
+			Procedure:  ConnectionServiceActivateEnrollmentProcedure,
+		}
+	})
 )
 
 // ConnectionServiceClient is a client for the ptah.console.v1.ConnectionService service.
@@ -44,6 +65,11 @@ type ConnectionServiceClient interface {
 	// CreateEnrollment starts enrolling an external cluster. The answer holds
 	// the enrollment file, with its single-use bootstrap secret, this once.
 	CreateEnrollment(context.Context, *v1.CreateEnrollmentRequest) (*v1.CreateEnrollmentResponse, error)
+	// ListEnrollments lists the enrollments the person may read.
+	ListEnrollments(context.Context, *v1.ListEnrollmentsRequest) (*v1.ListEnrollmentsResponse, error)
+	// ActivateEnrollment makes a completed enrollment whose agent has
+	// connected a connection.
+	ActivateEnrollment(context.Context, *v1.ActivateEnrollmentRequest) (*v1.ActivateEnrollmentResponse, error)
 }
 
 // NewConnectionServiceClient constructs a client for the ptah.console.v1.ConnectionService service.
@@ -57,6 +83,11 @@ type ConnectionServiceHandler interface {
 	// CreateEnrollment starts enrolling an external cluster. The answer holds
 	// the enrollment file, with its single-use bootstrap secret, this once.
 	CreateEnrollment(context.Context, *v1.CreateEnrollmentRequest) (*v1.CreateEnrollmentResponse, error)
+	// ListEnrollments lists the enrollments the person may read.
+	ListEnrollments(context.Context, *v1.ListEnrollmentsRequest) (*v1.ListEnrollmentsResponse, error)
+	// ActivateEnrollment makes a completed enrollment whose agent has
+	// connected a connection.
+	ActivateEnrollment(context.Context, *v1.ActivateEnrollmentRequest) (*v1.ActivateEnrollmentResponse, error)
 }
 
 // RegisterConnectionServiceHandler registers svc as the ptah.console.v1.ConnectionService
@@ -65,6 +96,8 @@ func RegisterConnectionServiceHandler(server *connect.Server, svc ConnectionServ
 	adapter := connectionServiceHandler{svc: svc}
 	server.Register(
 		connect.Method{Spec: connectionServiceCreateEnrollmentSpec(), Handler: adapter.createEnrollment},
+		connect.Method{Spec: connectionServiceListEnrollmentsSpec(), Handler: adapter.listEnrollments},
+		connect.Method{Spec: connectionServiceActivateEnrollmentSpec(), Handler: adapter.activateEnrollment},
 	)
 }
 
@@ -73,6 +106,14 @@ type UnimplementedConnectionServiceHandler struct{}
 
 func (UnimplementedConnectionServiceHandler) CreateEnrollment(context.Context, *v1.CreateEnrollmentRequest) (*v1.CreateEnrollmentResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.ConnectionService.CreateEnrollment is not implemented")
+}
+
+func (UnimplementedConnectionServiceHandler) ListEnrollments(context.Context, *v1.ListEnrollmentsRequest) (*v1.ListEnrollmentsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.ConnectionService.ListEnrollments is not implemented")
+}
+
+func (UnimplementedConnectionServiceHandler) ActivateEnrollment(context.Context, *v1.ActivateEnrollmentRequest) (*v1.ActivateEnrollmentResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.ConnectionService.ActivateEnrollment is not implemented")
 }
 
 type connectionServiceClient struct {
@@ -87,6 +128,22 @@ func (c *connectionServiceClient) CreateEnrollment(ctx context.Context, req *v1.
 	return &res, nil
 }
 
+func (c *connectionServiceClient) ListEnrollments(ctx context.Context, req *v1.ListEnrollmentsRequest) (*v1.ListEnrollmentsResponse, error) {
+	var res v1.ListEnrollmentsResponse
+	if err := c.client.CallUnary(ctx, connectionServiceListEnrollmentsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *connectionServiceClient) ActivateEnrollment(ctx context.Context, req *v1.ActivateEnrollmentRequest) (*v1.ActivateEnrollmentResponse, error) {
+	var res v1.ActivateEnrollmentResponse
+	if err := c.client.CallUnary(ctx, connectionServiceActivateEnrollmentSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 type connectionServiceHandler struct{ svc ConnectionServiceHandler }
 
 func (h connectionServiceHandler) createEnrollment(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
@@ -95,6 +152,30 @@ func (h connectionServiceHandler) createEnrollment(ctx context.Context, _ connec
 		return err
 	}
 	res, err := h.svc.CreateEnrollment(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h connectionServiceHandler) listEnrollments(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListEnrollmentsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListEnrollments(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h connectionServiceHandler) activateEnrollment(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ActivateEnrollmentRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ActivateEnrollment(ctx, &req)
 	if err != nil {
 		return err
 	}
