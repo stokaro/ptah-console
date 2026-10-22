@@ -32,6 +32,7 @@ import (
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/v1/consolev1connect"
 	"github.com/stokaro/ptah-console/internal/kube"
 	"github.com/stokaro/ptah-console/internal/registry"
+	"github.com/stokaro/ptah-console/internal/route"
 	"github.com/stokaro/ptah-console/internal/server"
 )
 
@@ -115,12 +116,15 @@ func Run(ctx context.Context, options Options) error {
 	if err := checkThisCluster(ctx, kubeConfig, config); err != nil {
 		return err
 	}
-	browser, err := options.browser(config, passwords, kubeConfig)
+	agentListener, err := options.listenForAgents(kubeConfig, config)
 	if err != nil {
 		return err
 	}
-	agentListener, err := options.listenForAgents(kubeConfig, config)
+	browser, err := options.browser(config, passwords, kubeConfig, agentListener)
 	if err != nil {
+		if agentListener != nil {
+			_ = agentListener.listener.Close()
+		}
 		return err
 	}
 	listener, err := net.Listen("tcp", options.Listen)
@@ -188,7 +192,7 @@ type browserSide struct {
 	origin  string
 }
 
-func (o Options) browser(config *accounts.Config, passwords *accounts.Passwords, kubeConfig *rest.Config) (*browserSide, error) {
+func (o Options) browser(config *accounts.Config, passwords *accounts.Passwords, kubeConfig *rest.Config, agents *agents) (*browserSide, error) {
 	usernames := make(map[string]string, len(config.Accounts))
 	displayNames := make(map[string]string, len(config.Accounts))
 	for _, account := range config.Accounts {
@@ -230,6 +234,17 @@ func (o Options) browser(config *accounts.Config, passwords *accounts.Passwords,
 		interceptors = append(interceptors, api.ReadOnly(
 			consolev1connect.SessionServiceLoginProcedure,
 			consolev1connect.SessionServiceLogoutProcedure))
+	}
+	if agents != nil {
+		// After the session and read-only checks: a routed request is a
+		// signed-in person's, and a read-only console sends no change to any
+		// cluster.
+		housekeeping, err := kube.NewClient(kubeConfig)
+		if err != nil {
+			return nil, err
+		}
+		router := route.New(agents.hub, housekeeping, factory, config.Registry.Namespace, config.Registry.ConnectionUID)
+		interceptors = append(interceptors, router.Interceptor())
 	}
 	handler, err := server.New(server.Options{
 		Mode:         consolev1.Mode_MODE_HOSTED,
