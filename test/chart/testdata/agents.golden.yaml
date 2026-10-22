@@ -80,6 +80,21 @@ data:
       namespace: "ptah-console"
       thisCluster: "this-cluster-b73e9e22"
       connectionUID: "b73e9e22-9e53-81b7-8ea0-495aefdd3d83"
+      agents:
+        address: "https://agents.console.example.com"
+        serverName: "agents.console.example.com"
+        caBundle: |
+          -----BEGIN CERTIFICATE-----
+          MIIBkTCCATegAwIBAgIUWnJ3C7dsyDNF9oRlsVJfqqH3s20wCgYIKoZIzj0EAwIw
+          HTEbMBkGA1UEAwwSRXhhbXBsZSBDb25zb2xlIENBMCAXDTI2MTAyMjExMjUzOFoY
+          DzIxMjYwOTI4MTEyNTM4WjAdMRswGQYDVQQDDBJFeGFtcGxlIENvbnNvbGUgQ0Ew
+          WTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATFXWGP61hDf7EMjev0a5kD/D6UjoBC
+          7VrTqJ1Qqwxv7LLsMWin/aIrN/ibDyLjeg4XT+g7Noo7A47wKGBrRQvvo1MwUTAd
+          BgNVHQ4EFgQU4aSXTh4r/mexfmHsb6kfpVVOAX4wHwYDVR0jBBgwFoAU4aSXTh4r
+          /mexfmHsb6kfpVVOAX4wDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNIADBF
+          AiEAm6G476IDOEBhiMWV+zzZJaQjrIgcxJ40M/51tIsohfcCICm8+T/9Ov8a09GL
+          QGuN/ZwUmBV918D4PUTDlcrAHR16
+          -----END CERTIFICATE-----
 
 ---
 # Source: ptah-console/templates/impersonation.yaml
@@ -146,6 +161,14 @@ rules:
   - apiGroups: ["console.ptah.run"]
     resources: ["consoleclusters/status"]
     verbs: ["update", "patch"]
+  # Enrollments: their status, which records the bootstrap verifier and the
+  # helper's report, and their removal once they expire.
+  - apiGroups: ["console.ptah.run"]
+    resources: ["consoleclusterenrollments"]
+    verbs: ["get", "list", "watch", "delete"]
+  - apiGroups: ["console.ptah.run"]
+    resources: ["consoleclusterenrollments/status"]
+    verbs: ["update", "patch"]
 
 ---
 # Source: ptah-console/templates/registry.yaml
@@ -181,7 +204,7 @@ metadata:
     helm.sh/chart: ptah-console-0.1.0
 rules:
   - apiGroups: ["console.ptah.run"]
-    resources: ["consoleclusters", "consoleclusterpreferences"]
+    resources: ["consoleclusters", "consoleclusterpreferences", "consoleclusterenrollments"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
 ---
@@ -432,7 +455,7 @@ spec:
         app.kubernetes.io/name: ptah-console
         app.kubernetes.io/instance: console
       annotations:
-        checksum/configuration: 96517806ba2beddb998d70f4bcac5615dea0ebf69f2b514621fc23d0425d5dc1
+        checksum/configuration: 8e88b6fc11c587801ceb3da7c5d3fd421a0bee7e0a91feb5f2658bbcad86d06b
     spec:
       serviceAccountName: console-ptah-console
       automountServiceAccountToken: true

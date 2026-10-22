@@ -13,8 +13,8 @@ import (
 )
 
 // consoleOwn are the services that are the console's own, whichever cluster
-// a page shows: the session and the console's information.
-var consoleOwn = []string{"ptah.console.v1.SessionService", "ptah.console.v1.InfoService"}
+// a page shows: the session, the console's information and its registry.
+var consoleOwn = []string{"ptah.console.v1.SessionService", "ptah.console.v1.InfoService", "ptah.console.v1.ConnectionService"}
 
 // procedures are every procedure of the console's API, by whether it is the
 // console's own.
@@ -52,7 +52,7 @@ func TestEveryClusterProcedureFollowsTheConnection(t *testing.T) {
 	for _, procedure := range cluster {
 		c.Assert(route.Routed(procedure), qt.IsTrue, qt.Commentf("%s", procedure))
 	}
-	c.Assert(own, qt.HasLen, 5)
+	c.Assert(own, qt.HasLen, 6)
 	for _, procedure := range own {
 		c.Assert(route.Routed(procedure), qt.IsFalse, qt.Commentf("%s", procedure))
 	}

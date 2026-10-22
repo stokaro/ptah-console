@@ -137,6 +137,14 @@ func TestEachRegistryIdentityMayDoOnlyItsPart(t *testing.T) {
 	entry := func(verb, name string) authorizationv1.ResourceAttributes {
 		return authorizationv1.ResourceAttributes{Group: group, Resource: "consoleclusters", Namespace: hubNS, Verb: verb, Name: name}
 	}
+	enrollment := func(verb, name string) authorizationv1.ResourceAttributes {
+		return authorizationv1.ResourceAttributes{Group: group, Resource: "consoleclusterenrollments", Namespace: hubNS, Verb: verb, Name: name}
+	}
+	enrollmentStatus := func() authorizationv1.ResourceAttributes {
+		access := enrollment("patch", "prod-ap-3")
+		access.Subresource = "status"
+		return access
+	}
 	status := func(verb string) authorizationv1.ResourceAttributes {
 		access := entry(verb, config.Registry.ThisCluster)
 		access.Subresource = "status"
@@ -162,6 +170,13 @@ func TestEachRegistryIdentityMayDoOnlyItsPart(t *testing.T) {
 		{name: "an administrator adds an entry", user: hubPrefix + "alex", access: entry("create", ""), allowed: true},
 		{name: "an administrator deletes an entry", user: hubPrefix + "alex", access: entry("delete", "prod-ap-2"), allowed: true},
 		{name: "an administrator writes no status", user: hubPrefix + "alex", access: status("patch")},
+		{name: "an administrator starts an enrollment", user: hubPrefix + "alex", access: enrollment("create", ""), allowed: true},
+		{name: "an administrator writes no enrollment status", user: hubPrefix + "alex", access: enrollmentStatus()},
+		{name: "an account starts no enrollment", user: hubPrefix + "sam", access: enrollment("create", "")},
+		{name: "the console starts no enrollment", user: hubSA, access: enrollment("create", "")},
+		{name: "the console records an enrollment", user: hubSA, access: enrollmentStatus(), allowed: true},
+		{name: "the console removes an expired enrollment", user: hubSA, access: enrollment("delete", "prod-ap-3"), allowed: true},
+		{name: "the console changes no enrollment", user: hubSA, access: enrollment("update", "prod-ap-3")},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

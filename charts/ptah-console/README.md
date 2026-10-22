@@ -63,8 +63,9 @@ the server in [Serving a hosted console](../../docs/hosted/serve.md).
   change and delete entries; the role grants nothing in the namespaces of the
   ceiling.
 
-- With `agents.enabled`, which needs the registry: the listener the agents of
-  external clusters dial, on port 8444 with its own certificate from
+- With `agents.enabled`, which needs the registry and `agents.address`,
+  `agents.serverName` and `agents.caBundle`, which an enrollment file tells
+  agents: the listener the agents of external clusters dial, on port 8444 with its own certificate from
   `agents.tls.secretName`, and a Service of its own that carries that port
   and nothing else. It serves only the agent channel, over HTTP/2 and TLS 1.3,
   and the browser's port does not serve it. With the NetworkPolicy, an empty

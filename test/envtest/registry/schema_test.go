@@ -373,3 +373,60 @@ func uuidFor(name string) string {
 	digest := hex.EncodeToString(sum[:])
 	return digest[0:8] + "-" + digest[8:12] + "-4" + digest[13:16] + "-8" + digest[17:20] + "-" + digest[20:32]
 }
+
+func enrollmentObject(namespace, name string) *consolev1alpha1.ConsoleClusterEnrollment {
+	return &consolev1alpha1.ConsoleClusterEnrollment{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+		Spec: consolev1alpha1.ConsoleClusterEnrollmentSpec{
+			ClusterName: name, ConnectionUID: uuidFor(name), InstallationID: "prod-eu-1",
+			Namespaces:          []string{"application"},
+			Accounts:            []consolev1alpha1.EnrollmentAccount{{ID: "alex", Roles: []consolev1alpha1.EnrollmentRole{"viewer", "approver"}}},
+			ApproverClusterRole: "ptah-operator-ptah-operator-approver",
+			ConsoleServerName:   "agents.console.example.com", ConsoleCASHA256: sha,
+		},
+	}
+}
+
+// Each rule on an enrollment refuses what breaks it, by field and message:
+// the request cannot be edited, the approver role is never an administrator
+// role, and once the console records the bootstrap or the helper's report,
+// neither changes.
+func TestAnEnrollmentHoldsWhatWasAskedAndReported(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	namespace := newNamespace(t)
+	enrollment := enrollmentObject(namespace, "prod-ap-2")
+	c.Assert(plane.Admin.Create(t.Context(), enrollment), qt.IsNil)
+	expires := metav1.NewTime(time.Now().Add(10 * time.Minute).Truncate(time.Second))
+	enrollment.Status = consolev1alpha1.ConsoleClusterEnrollmentStatus{
+		BootstrapVerifier: strings.Repeat("a", 64), ExpiresAt: &expires, Fingerprint: sha,
+	}
+	c.Assert(plane.Admin.Status().Update(t.Context(), enrollment), qt.IsNil)
+	completed := metav1.NewTime(time.Now().Truncate(time.Second))
+	enrollment.Status.Completion = &consolev1alpha1.EnrollmentCompletion{
+		TargetServer: "https://api.prod-ap-2.example.com:6443", TargetCASHA256: sha,
+		CredentialVerifier: strings.Repeat("b", 64), CompletedAt: completed,
+	}
+	c.Assert(plane.Admin.Status().Update(t.Context(), enrollment), qt.IsNil)
+
+	edited := enrollment.DeepCopy()
+	edited.Spec.Namespaces = []string{"application", "kube-system"}
+	c.Assert(refusedWith(plane.Admin.Update(t.Context(), edited), cause{"spec", "an enrollment cannot be edited; start a new one"}), qt.IsNil)
+	reissued := enrollment.DeepCopy()
+	reissued.Status.BootstrapVerifier = strings.Repeat("c", 64)
+	c.Assert(refusedWith(plane.Admin.Status().Update(t.Context(), reissued), cause{"status", "an enrollment's bootstrap secret is issued once"}), qt.IsNil)
+	recompleted := enrollment.DeepCopy()
+	recompleted.Status.Completion.CredentialVerifier = strings.Repeat("d", 64)
+	c.Assert(refusedWith(plane.Admin.Status().Update(t.Context(), recompleted), cause{"status", "a completed enrollment stays completed as it was"}), qt.IsNil)
+	uncompleted := enrollment.DeepCopy()
+	uncompleted.Status.Completion = nil
+	c.Assert(refusedWith(plane.Admin.Status().Update(t.Context(), uncompleted), cause{"status", "a completed enrollment stays completed as it was"}), qt.IsNil)
+
+	administrator := enrollmentObject(namespace, "administrator")
+	administrator.Spec.ApproverClusterRole = "cluster-admin"
+	c.Assert(refusedWith(plane.Admin.Create(t.Context(), administrator),
+		cause{"spec.approverClusterRole", "the approver role is the operator's approver ClusterRole, never an administrator role"}), qt.IsNil)
+	owner := enrollmentObject(namespace, "owner")
+	owner.Spec.Accounts[0].Roles = []consolev1alpha1.EnrollmentRole{"connection-admin"}
+	c.Assert(refusedWith(plane.Admin.Create(t.Context(), owner), cause{"spec.accounts[0].roles[0]", "Unsupported value"}), qt.IsNil)
+}
