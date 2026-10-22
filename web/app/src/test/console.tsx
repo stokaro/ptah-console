@@ -22,6 +22,13 @@ import {
   DiagnosticsService,
   type GetDiagnosticsResponseSchema,
 } from "../gen/ptah/console/v1/diagnostics_pb"
+import { connectionHeader } from "../api/cluster"
+import {
+  ConnectionService,
+  type ConnectionSchema,
+  type CreateEnrollmentResponseSchema,
+  type EnrollmentSchema,
+} from "../gen/ptah/console/v1/connections_pb"
 import { InfoService, Mode } from "../gen/ptah/console/v1/info_pb"
 import {
   Access,
@@ -37,6 +44,7 @@ import {
   StageState,
   type CapabilitiesSchema,
   type OperatorApiSchema,
+  type ListNamespacesResponseSchema,
   type Migration,
   type MigrationPlan,
   type Schema,
@@ -242,9 +250,30 @@ export interface Fixture {
    * A hosted console. The browser starts signed out; login throws to refuse
    * a sign-in, and returning signs the account in.
    */
-  hosted?: { login: (request: LoginRequest) => void }
+  hosted?: { login: (request: LoginRequest) => void; signedIn?: boolean }
+  /** The registry of a hosted console with external clusters. */
+  registry?: RegistryFixture
   /** The server's side of the session; set ended to forget it, as a restart does. */
   server?: { ended: boolean }
+}
+
+/** A hosted console's registry, and what its clusters answer. */
+export interface RegistryFixture {
+  thisCluster: string
+  manage: boolean
+  connections: MessageInitShape<typeof ConnectionSchema>[]
+  enrollments?: MessageInitShape<typeof EnrollmentSchema>[]
+  /**
+   * What a connection's cluster answers about its namespaces, by connection
+   * UID: unavailable for one whose agent is not connected. Unset is the
+   * application namespace, readable.
+   */
+  clusters?: Record<string, "unavailable" | MessageInitShape<typeof ListNamespacesResponseSchema>>
+  created?: MessageInitShape<typeof CreateEnrollmentResponseSchema>
+  /** The changes the console was asked for, in order. */
+  calls: { method: string; request: unknown }[]
+  /** The connection header of each request a cluster served. */
+  headers: string[]
 }
 
 /** A watch that says it is live once and then stays quiet. */
@@ -268,7 +297,17 @@ export function result(init: MessageInitShape<typeof DecisionResultSchema>) {
 /** The console's API in memory, answering from the fixture. */
 export function consoleTransport(fixture: Fixture) {
   const hosted = fixture.hosted
-  let signedIn = hosted === undefined
+  let signedIn = hosted === undefined || hosted.signedIn === true
+  const registry = fixture.registry
+  /** The cluster a request names, recorded; throws for one that is not reached. */
+  const cluster = (header: Headers) => {
+    const uid = header.get(connectionHeader) ?? ""
+    registry?.headers.push(uid)
+    if (uid && registry?.clusters?.[uid] === "unavailable") {
+      throw new ConnectError("the cluster's agent is not connected", Code.Unavailable)
+    }
+    return uid
+  }
   const requireSession = () => {
     if (!signedIn || fixture.server?.ended) {
       throw new ConnectError("sign in first", Code.Unauthenticated)
@@ -314,9 +353,49 @@ export function consoleTransport(fixture: Fixture) {
         return {}
       },
     })
+    if (registry) {
+      const record = (method: string, request: unknown) => {
+        registry.calls.push({ method, request })
+        return {}
+      }
+      service(ConnectionService, {
+        listConnections: () => ({
+          connections: registry.connections,
+          manage: registry.manage,
+          thisCluster: registry.thisCluster,
+        }),
+        listEnrollments: () => ({ enrollments: registry.enrollments ?? [] }),
+        createEnrollment: (request) => {
+          record("createEnrollment", request)
+          return registry.created ?? {}
+        },
+        activateEnrollment: (request) => record("activateEnrollment", request),
+        setConnectionEnabled: (request) => record("setConnectionEnabled", request),
+        quarantineConnection: (request) => {
+          record("quarantineConnection", request)
+          return { generation: 1n }
+        },
+        removeConnection: (request) => {
+          record("removeConnection", request)
+          return {
+            connectionUid: "uid",
+            cleanupPending: true,
+            cleanupSteps: ["helm uninstall ptah-console-agent --namespace ptah-console-agent"],
+          }
+        },
+        issueChannelCredential: (request) => {
+          record("issueChannelCredential", request)
+          return { credential: "shown-once-credential", generation: 2n }
+        },
+      })
+    }
     service(ScopeService, {
-      listNamespaces: () => {
+      listNamespaces: (_request, context) => {
         requireSession()
+        const answer = registry?.clusters?.[cluster(context.requestHeader)]
+        if (answer && answer !== "unavailable") {
+          return answer
+        }
         return {
           namespaces: [
             {
@@ -331,7 +410,8 @@ export function consoleTransport(fixture: Fixture) {
       },
     })
     service(SchemaService, {
-      listSchemas: () => {
+      listSchemas: (_request, context) => {
+        cluster(context.requestHeader)
         if (fixture.listForbidden) {
           throw new ConnectError("may not list ptahschemas", Code.PermissionDenied)
         }

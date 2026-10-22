@@ -3,13 +3,16 @@ import { useMutation } from "@connectrpc/connect-query"
 import { Button, Freshness, Pill, Wordmark } from "@ptah/console-ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router"
+import { Suspense } from "react"
 
+import { useConnections } from "../api/cluster"
 import { LiveUpdates, useLive } from "../api/live"
 import { useHosted, useScope, useSession } from "../api/resources"
 import { BuildFooter } from "../BuildFooter"
 import { Mode } from "../gen/ptah/console/v1/info_pb"
 import { SessionService } from "../gen/ptah/console/v1/session_pb"
 import { useTheme, type ThemeChoice } from "../theme"
+import { ClusterBanner, ClusterSwitcher } from "./clusters"
 import { useNow } from "./common"
 
 const roles = [
@@ -73,6 +76,7 @@ export function FocusLayout({ launchError }: FocusLayoutProps) {
           <Outlet />
         ) : (
           <>
+            <ClusterBanner />
             <OperatorApiBanner />
             <LiveBanner />
             {onList ? <RoleNav /> : null}
@@ -117,6 +121,9 @@ function Header() {
       <Link to="/" aria-label="Ptah Console, home" className="text-fg">
         <Wordmark caption="focus" />
       </Link>
+      <Suspense fallback={null}>
+        <ClusterSwitcher />
+      </Suspense>
       <SessionChips />
       <span className="flex-auto" />
       {identity ? (
@@ -206,12 +213,15 @@ export function SignOut() {
 }
 
 function RoleNav() {
+  // Connections are the registry's: the Admin role is offered to who may change it.
+  const { manage } = useConnections()
+  const shown = manage ? [...roles, { to: "/connections", label: "Admin" } as const] : roles
   return (
     <nav
       aria-label="Role"
       className="flex gap-1 overflow-x-auto rounded-2xl border border-line bg-[color-mix(in_oklab,var(--card)_60%,transparent)] p-1"
     >
-      {roles.map((role) => (
+      {shown.map((role) => (
         <Link
           key={role.to}
           to={role.to}

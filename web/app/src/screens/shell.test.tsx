@@ -92,8 +92,11 @@ describe("The shell", () => {
     watch.push(new ConnectError("may not watch", Code.PermissionDenied))
 
     expect(await screen.findByText(/Not live: this identity may not watch/)).toBeInTheDocument()
+    // The queue may finish loading after the watch is refused; the approval
+    // is offered all the same, and the page still says it is not live.
+    expect(await screen.findByRole("button", { name: "Approve…" })).toBeInTheDocument()
+    expect(screen.getByText(/Not live: this identity may not watch/)).toBeInTheDocument()
     expect(screen.queryByText(/Live updates stopped at/)).toBeNull()
-    expect(screen.getByRole("button", { name: "Approve…" })).toBeInTheDocument()
   })
 
   it("says when the cluster does not serve the operator's API", async () => {
