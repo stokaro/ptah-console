@@ -3,17 +3,21 @@ package hosted_test
 import (
 	"context"
 	"crypto/tls"
+	"io"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/fstest"
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
 	qt "github.com/frankban/quicktest"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -153,4 +157,59 @@ func TestAnAdministratorEnrollsThroughTheConsole(t *testing.T) {
 	stored := &consolev1alpha1.ConsoleClusterEnrollment{}
 	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKey{Namespace: r.namespace, Name: "prod-ap-9"}, stored), qt.IsNil)
 	c.Assert(stored.Status.Completion.TargetServer, qt.Equals, "https://api.prod-ap-9.example.com:6443")
+}
+
+// The helper on the target: it completes the enrollment the console issued
+// with the credential it wrote into the agent's Secret, which never reaches
+// the console, writes the agent's values, and a second run resumes with the
+// same credential. A run the administrator declines changes nothing.
+func TestTheHelperCompletesAndResumes(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	r := arrangeRouting(t)
+	grantEnrollments(t, r.namespace)
+	certificates := newPKI(t)
+	agents := r.startConsole(t, certificates)
+	connections := consolev1connect.NewConnectionServiceClient(r.transport())
+	created, err := connections.CreateEnrollment(to(t.Context(), r.signIn(t, "alex@example.com", "alex-secret"), ""), &consolev1.CreateEnrollmentRequest{
+		ClusterName: "prod-ap-7", Namespaces: []string{"storefront"},
+		Accounts:            []*consolev1.EnrollmentAccount{{Id: "alex", Roles: []string{"viewer"}}},
+		ApproverClusterRole: "ptah-operator-ptah-operator-approver",
+	})
+	c.Assert(err, qt.IsNil)
+	file, err := enrollment.Parse(created.GetEnrollmentFile())
+	c.Assert(err, qt.IsNil)
+	// The file names the address the agents' Service would have; here the
+	// listener is on a local port under the same certificate name.
+	file.Console.Address = "https://" + agents
+	agentNamespace := "agent-" + file.Identity.ConnectionUID[:8]
+	helper := func(confirm bool) *enrollment.Helper {
+		return &enrollment.Helper{
+			File: file, Kube: plane.Env.Config, ContextName: "envtest-admin",
+			Namespace: agentNamespace, Release: "ptah-console-agent", ValuesPath: filepath.Join(t.TempDir(), "values.yaml"),
+			Confirm: func(string) (bool, error) { return confirm, nil }, Out: io.Discard,
+		}
+	}
+
+	c.Assert(helper(false).Enroll(t.Context()), qt.ErrorIs, enrollment.ErrDeclined)
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKey{Name: agentNamespace}, &corev1.Namespace{}), qt.Satisfies, apierrors.IsNotFound)
+
+	first := helper(true)
+	c.Assert(first.Enroll(t.Context()), qt.IsNil)
+	secret := &corev1.Secret{}
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKey{Namespace: agentNamespace, Name: "ptah-console-agent-credential"}, secret), qt.IsNil)
+	credential := string(secret.Data["credential"])
+	stored := &consolev1alpha1.ConsoleClusterEnrollment{}
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKey{Namespace: r.namespace, Name: "prod-ap-7"}, stored), qt.IsNil)
+	c.Assert(stored.Status.Completion.CredentialVerifier, qt.Equals, enrollment.Verifier(credential))
+	c.Assert(stored.Status.Completion.TargetServer, qt.Equals, strings.TrimSuffix(plane.Env.Config.Host, "/"))
+	c.Assert(stored.Status.Completion.TargetCASHA256, qt.Equals, enrollment.CASHA256(string(plane.Env.Config.CAData)))
+	values, err := os.ReadFile(first.ValuesPath)
+	c.Assert(err, qt.IsNil)
+	c.Assert(string(values), qt.Contains, "uid: "+file.Identity.ConnectionUID)
+	c.Assert(string(values), qt.Not(qt.Contains), credential)
+
+	c.Assert(helper(true).Enroll(t.Context()), qt.IsNil, qt.Commentf("a second run of the same enrollment did not resume"))
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKeyFromObject(secret), secret), qt.IsNil)
+	c.Assert(string(secret.Data["credential"]), qt.Equals, credential)
 }

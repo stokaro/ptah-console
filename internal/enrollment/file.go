@@ -15,6 +15,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -184,4 +186,24 @@ func Parse(data []byte) (*File, error) {
 // Marshal writes the file.
 func (f *File) Marshal() ([]byte, error) {
 	return yaml.Marshal(f)
+}
+
+// maxFileBytes bounds an enrollment file.
+const maxFileBytes = 64 << 10
+
+// ReadFile reads an enrollment file, bounded.
+func ReadFile(path string) ([]byte, error) {
+	file, err := os.Open(path) // #nosec G304 -- the administrator names the file, by flag.
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+	data, err := io.ReadAll(io.LimitReader(file, maxFileBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	if len(data) > maxFileBytes {
+		return nil, fmt.Errorf("%s: larger than %d bytes", path, maxFileBytes)
+	}
+	return data, nil
 }

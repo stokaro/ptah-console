@@ -81,6 +81,7 @@ func newRoot(stdin io.Reader, stdout, stderr io.Writer) *cobra.Command {
 		newServe(stdout),
 		newAccounts(stdin, stdout, stderr),
 		newConfig(stdout),
+		newCluster(stdin, stdout),
 	)
 	return root
 }
