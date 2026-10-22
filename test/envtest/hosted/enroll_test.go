@@ -54,10 +54,13 @@ func grantEnrollments(t *testing.T, namespace string) {
 		},
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "connection-admin"},
-			Rules: []rbacv1.PolicyRule{{
-				APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterenrollments"},
-				Verbs: []string{"get", "list", "create", "delete"},
-			}},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{group}, Resources: []string{"consoleclusters", "consoleclusterenrollments"},
+					Verbs: []string{"get", "list", "create", "delete"},
+				},
+				{APIGroups: []string{rbacv1.GroupName}, Resources: []string{"roles", "rolebindings"}, Verbs: []string{"create"}},
+			},
 		},
 		&rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "connection-admin"},
@@ -79,6 +82,8 @@ func (r *routing) startConsole(t *testing.T, certificates *pki) string {
 	c.Assert(err, qt.IsNil)
 	samHash, err := accounts.Hash([]byte("sam-secret"), accounts.MinCost)
 	c.Assert(err, qt.IsNil)
+	kimHash, err := accounts.Hash([]byte("kim-secret"), accounts.MinCost)
+	c.Assert(err, qt.IsNil)
 	configPath, passwordsPath := filepath.Join(dir, "configuration.yaml"), filepath.Join(dir, "passwords")
 	c.Assert(os.WriteFile(configPath, []byte(`apiVersion: console.ptah.run/v1alpha1
 kind: HostedConfiguration
@@ -90,12 +95,14 @@ accounts:
     login: alex@example.com
   - id: sam
     login: sam@example.com
+  - id: kim
+    login: kim@example.com
 registry:
   namespace: `+r.namespace+`
   thisCluster: this-cluster
   connectionUID: `+routeThis+`
 `+registryAgents(certificates)), 0o600), qt.IsNil)
-	c.Assert(os.WriteFile(passwordsPath, []byte("alex:"+string(alexHash)+"\nsam:"+string(samHash)+"\n"), 0o600), qt.IsNil)
+	c.Assert(os.WriteFile(passwordsPath, []byte("alex:"+string(alexHash)+"\nsam:"+string(samHash)+"\nkim:"+string(kimHash)+"\n"), 0o600), qt.IsNil)
 	browser, agents := make(chan net.Addr, 1), make(chan net.Addr, 1)
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
@@ -176,7 +183,7 @@ func TestTheHelperCompletesAndResumes(t *testing.T) {
 	connections := consolev1connect.NewConnectionServiceClient(r.transport())
 	created, err := connections.CreateEnrollment(to(t.Context(), r.signIn(t, "alex@example.com", "alex-secret"), ""), &consolev1.CreateEnrollmentRequest{
 		ClusterName: "prod-ap-7", Namespaces: []string{"storefront"},
-		Accounts:            []*consolev1.EnrollmentAccount{{Id: "alex", Roles: []string{"viewer"}}},
+		Accounts:            []*consolev1.EnrollmentAccount{{Id: "alex", Roles: []string{"viewer"}}, {Id: "sam", Roles: []string{"viewer"}}},
 		ApproverClusterRole: "ptah-operator-ptah-operator-approver",
 	})
 	c.Assert(err, qt.IsNil)
@@ -227,7 +234,8 @@ func TestTheHelperCompletesAndResumes(t *testing.T) {
 
 // The whole enrollment: the console issues it, the helper completes it, the
 // agent connects and is sent nothing, an administrator activates it once it
-// has, and the agent then serves the new connection.
+// has, and the agent then serves the new connection. The accounts enrolled
+// see it from then on, and an account that was not does not.
 func TestAnEnrolledClusterIsActivatedAndServed(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
@@ -239,7 +247,7 @@ func TestAnEnrolledClusterIsActivatedAndServed(t *testing.T) {
 	connections := consolev1connect.NewConnectionServiceClient(r.transport())
 	created, err := connections.CreateEnrollment(to(t.Context(), alex, ""), &consolev1.CreateEnrollmentRequest{
 		ClusterName: "prod-ap-5", Namespaces: []string{"storefront"},
-		Accounts:            []*consolev1.EnrollmentAccount{{Id: "alex", Roles: []string{"viewer"}}},
+		Accounts:            []*consolev1.EnrollmentAccount{{Id: "alex", Roles: []string{"viewer"}}, {Id: "sam", Roles: []string{"viewer"}}},
 		ApproverClusterRole: "ptah-operator-ptah-operator-approver",
 	})
 	c.Assert(err, qt.IsNil)
@@ -268,8 +276,10 @@ func TestAnEnrolledClusterIsActivatedAndServed(t *testing.T) {
 	})
 	_, err = scope.ListNamespaces(to(t.Context(), alex, file.Identity.ConnectionUID), &consolev1.ListNamespacesRequest{})
 	c.Assert(connect.CodeOf(err), qt.Equals, connect.CodeNotFound, qt.Commentf("a pending enrollment was dispatched to: %v", err))
-	_, err = connections.ActivateEnrollment(to(t.Context(), r.signIn(t, "sam@example.com", "sam-secret"), ""), activate)
+	sam := r.signIn(t, "sam@example.com", "sam-secret")
+	_, err = connections.ActivateEnrollment(to(t.Context(), sam, ""), activate)
 	c.Assert(connect.CodeOf(err), qt.Equals, connect.CodePermissionDenied, qt.Commentf("%v", err))
+	c.Assert(visibleTo(t, connections, sam), qt.Not(qt.Contains), "prod-ap-5")
 
 	activated, err := connections.ActivateEnrollment(to(t.Context(), alex, ""), activate)
 
@@ -284,6 +294,27 @@ func TestAnEnrolledClusterIsActivatedAndServed(t *testing.T) {
 		_, err := scope.ListNamespaces(to(t.Context(), alex, file.Identity.ConnectionUID), &consolev1.ListNamespacesRequest{})
 		return err == nil
 	})
+	c.Assert(visibleTo(t, connections, sam), qt.Contains, "prod-ap-5")
+	c.Assert(visibleTo(t, connections, r.signIn(t, "kim@example.com", "kim-secret")), qt.Not(qt.Contains), "prod-ap-5")
+	for _, grant := range []client.Object{&rbacv1.Role{}, &rbacv1.RoleBinding{}} {
+		key := client.ObjectKey{Namespace: r.namespace, Name: enrollment.GrantName(file.Identity.ConnectionUID)}
+		c.Assert(plane.Admin.Get(t.Context(), key, grant), qt.IsNil)
+		c.Assert(grant.GetOwnerReferences(), qt.HasLen, 1)
+		c.Assert(grant.GetOwnerReferences()[0].UID, qt.Equals, entry.UID, qt.Commentf("the grant is not the entry's, so it outlives it"))
+	}
+}
+
+// visibleTo is the names of the connections an account's ListConnections
+// returns.
+func visibleTo(t *testing.T, connections consolev1connect.ConnectionServiceClient, session *http.Cookie) []string {
+	t.Helper()
+	listed, err := connections.ListConnections(to(t.Context(), session, ""), &consolev1.ListConnectionsRequest{})
+	qt.New(t).Assert(err, qt.IsNil)
+	names := make([]string, 0, len(listed.GetConnections()))
+	for _, connection := range listed.GetConnections() {
+		names = append(names, connection.GetName())
+	}
+	return names
 }
 
 // eventually waits until check holds, and fails the test after ten seconds.
