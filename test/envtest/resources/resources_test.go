@@ -101,9 +101,9 @@ func schema(namespace, name string) *operatorv1alpha1.PtahSchema {
 					LocalObjectReference: corev1.LocalObjectReference{Name: name + "-database"}, Key: "url",
 				},
 			},
-			Desired: operatorv1alpha1.OCIArtifactSourceSpec{
+			Desired: operatorv1alpha1.SourceSpec{
 				OCIRef: "oci://registry.example/shop/schema:1.0.0",
-				VerificationPolicyFrom: corev1.ConfigMapKeySelector{
+				VerificationPolicyFrom: &corev1.ConfigMapKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "ptah-verification-policy"}, Key: "policy.yaml",
 				},
 			},

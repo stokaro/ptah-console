@@ -40,7 +40,7 @@ func SchemaPlanManifest(plan *operatorv1alpha1.PtahSchemaPlan, selection console
 		ContentDigest:      spec.ContentDigest,
 		Dialect:            spec.Dialect,
 		ContractVersion:    spec.ContractVersion,
-		ContractSupported:  spec.ContractVersion == planread.ContractVersion,
+		ContractSupported:  planread.SupportedContract(spec.ContractVersion),
 		Destructive:        spec.Destructive,
 		PrivilegeChanges:   privilegeChanges(spec.PrivilegeChanges),
 		StatementCount:     spec.StatementCount,
@@ -49,6 +49,7 @@ func SchemaPlanManifest(plan *operatorv1alpha1.PtahSchemaPlan, selection console
 		ExecutionBindingId: spec.ExecutionBindingID,
 		PtahVersion:        spec.PtahVersion,
 		CreatedAt:          timestamp(&plan.CreationTimestamp),
+		Source:             planSource(spec.Source),
 	}
 	for _, chunk := range spec.Chunks {
 		out.Chunks = append(out.Chunks, &consolev1.PlanChunk{Name: chunk.Name, Index: chunk.Index, Size: chunk.Size, Digest: chunk.Digest})
@@ -72,6 +73,7 @@ func MigrationPlan(plan *operatorv1alpha1.PtahMigrationPlan) *consolev1.Migratio
 		ArtifactDigest:     spec.ArtifactDigest,
 		PolicyFingerprint:  spec.PolicyFingerprint,
 		CreatedAt:          timestamp(&spec.CreatedAt),
+		Source:             planSource(spec.Source),
 	}
 	for _, migration := range spec.Migrations {
 		out.Migrations = append(out.Migrations, &consolev1.PlannedMigration{
