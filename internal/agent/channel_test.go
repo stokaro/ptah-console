@@ -377,3 +377,29 @@ func TestAnAgentNoticesAStoppedConsoleWithARequestInFlight(t *testing.T) {
 		c.Fatal("the agent still held its channel, and the request in it, ten seconds after its console stopped answering")
 	}
 }
+
+// A console that takes the connection and never answers the handshake, as a
+// Service does while its new Pod starts behind a port that drops packets,
+// ends the attempt at the dial bound, so the agent dials again instead of
+// waiting minutes for TCP to give up.
+func TestAnAgentGivesUpOnAHandshakeNobodyAnswers(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	ca := newAuthority(t)
+	handler := &console{authorizations: make(chan string, 1), script: script(holdOpen)}
+	address := serveConsole(t, ca.issue(t, consoleName), tls.VersionTLS13, handler)
+	proxy := freeze.Start(t, strings.TrimPrefix(address, "https://"))
+	proxy.Freeze()
+	options := channelOptions(t, "https://"+proxy.Addr(), ca.pool())
+	options.DialTimeout = 300 * time.Millisecond
+	dispatcher, _ := newDispatcher(t, &apiServer{})
+
+	ended := open(t, options, dispatcher)
+
+	select {
+	case err := <-ended:
+		c.Assert(err, qt.IsNotNil)
+	case <-time.After(10 * time.Second):
+		c.Fatal("the agent still waited for a handshake ten seconds after its dial bound")
+	}
+}
