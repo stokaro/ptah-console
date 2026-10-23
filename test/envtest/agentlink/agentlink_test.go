@@ -6,6 +6,7 @@ package agentlink_test
 import (
 	"context"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -183,6 +184,27 @@ func eventually(t *testing.T, what string, check func() bool) {
 	}
 }
 
+// answersWhoAmI reports whether a connected agent answered whom alex acts as.
+// An agent that is between channels is not an answer yet, so an eventually
+// loop asks again instead of failing.
+func (w *world) answersWhoAmI() bool {
+	w.t.Helper()
+	c := qt.New(w.t)
+	pending, err := w.hub.Send(w.t.Context(), w.uid, &agentv1.Request{
+		Envelope: &agentv1.Envelope{AccountId: "alex", Deadline: durationpb.New(10 * time.Second), SentAt: timestamppb.Now()},
+		Action:   &agentv1.Request_WhoAmI{WhoAmI: &agentv1.WhoAmIRequest{}},
+	})
+	if errors.Is(err, agentlink.ErrNotConnected) {
+		return false
+	}
+	c.Assert(err, qt.IsNil)
+	var results []*agentv1.Result
+	for result := range pending.Results {
+		results = append(results, result)
+	}
+	return len(results) == 1
+}
+
 // whoAmI asks the connected agent whom alex acts as, and returns every result.
 func (w *world) whoAmI() []*agentv1.Result {
 	w.t.Helper()
@@ -312,7 +334,7 @@ func TestANewerChannelReplacesTheOlder(t *testing.T) {
 	w.open(file(credential), 1)
 
 	c.Assert(<-first.ended, qt.IsNotNil)
-	eventually(t, "the second channel serving", func() bool { return len(w.whoAmI()) == 1 })
+	eventually(t, "the second channel serving", w.answersWhoAmI)
 }
 
 // alexMayWatch lets alex's username watch schemas, so a watch window stays
@@ -390,14 +412,20 @@ func TestARotationRetiresTheOldCredentialAfterTheNewOneIsUsed(t *testing.T) {
 	secret.set(rotated)
 
 	c.Assert(<-run.ended, qt.ErrorIs, agent.ErrCredentialRotated)
-	w.open(secret, 1)
+	current := w.open(secret, 1)
 	eventually(t, "the old credential's retirement", func() bool { return w.retireAt(old) != nil })
 	retireAt := w.retireAt(old).Time
 	c.Assert(retireAt, qt.Equals, w.clock.now().Add(agentlink.RotationOverlap))
 
+	// Only the old credential's agent may answer next: with the rotated one
+	// still running, the two would replace each other's channel, and an
+	// answer could come from the rotated credential.
+	current.cancel()
+	<-current.ended
+	eventually(t, "the rotated agent leaving", func() bool { return !w.hub.Connected(w.uid) })
 	w.clock.set(retireAt.Add(-time.Second))
 	stillAccepted := w.open(file(old), 1)
-	eventually(t, "the old credential opening a channel within the hour", func() bool { return len(w.whoAmI()) == 1 })
+	eventually(t, "the old credential opening a channel within the hour", w.answersWhoAmI)
 	stillAccepted.cancel()
 	w.clock.set(retireAt)
 	err = <-w.open(file(old), 1).ended
