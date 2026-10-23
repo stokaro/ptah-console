@@ -182,6 +182,21 @@ message GitOps {
   string application = 2;
 }
 
+// SourceKind is where a resource's files come from.
+enum SourceKind {
+  SOURCE_KIND_UNSPECIFIED = 0;
+  SOURCE_KIND_OCI = 1;
+  SOURCE_KIND_CONFIG_MAP = 2;
+  SOURCE_KIND_GIT = 3;
+}
+
+// Source is what a resource asked for and what it resolved to. For an OCI
+// source, requested and resolved are references and digest is the manifest
+// digest. For a ConfigMap source, requested is the ConfigMap and resolved the
+// snapshot the operator copied it into. For a Git source, requested is the
+// repository, ref and path name the selection, and resolved is the commit.
+// A ConfigMap or Git source has no verification policy, so verified stays
+// false; content_digest is the digest of the selected files.
 message Source {
   string requested = 1;
   string resolved = 2;
@@ -189,6 +204,29 @@ message Source {
   bool verified = 4;
   google.protobuf.Timestamp resolved_at = 5;
   google.protobuf.Timestamp verified_at = 6;
+  SourceKind kind = 7;
+  string ref = 8;
+  string path = 9;
+  string content_digest = 10;
+  SourcePolicy policy = 11;
+}
+
+// SourcePolicy is the source policy a ConfigMap or Git source names, and the
+// one its last resolution was checked against.
+message SourcePolicy {
+  string name = 1;
+  string uid = 2;
+  string digest = 3;
+}
+
+// PlanSource is what a plan computed from a ConfigMap or Git source is bound
+// to, in place of an artifact digest.
+message PlanSource {
+  SourceKind kind = 1;
+  string revision = 2;
+  string content_digest = 3;
+  string policy_uid = 4;
+  string policy_digest = 5;
 }
 
 message DriftFinding {
@@ -357,6 +395,7 @@ message SchemaPlan {
   google.protobuf.Timestamp completed_at = 23;
   SqlAccess sql_access = 24;
   string sql_problem = 25;
+  PlanSource source = 26;
 }
 
 message GetSchemaPlanRequest {
@@ -475,6 +514,7 @@ message MigrationPlan {
   string policy_fingerprint = 11;
   repeated PlannedMigration migrations = 12;
   google.protobuf.Timestamp created_at = 13;
+  PlanSource source = 14;
 }
 
 message GetMigrationPlanRequest {

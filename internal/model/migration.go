@@ -37,7 +37,7 @@ func Migration(migration *operatorv1alpha1.PtahMigration) *consolev1.Migration {
 		Suspended:          migration.Spec.Suspend,
 		ApplyPolicy:        string(migration.Spec.Policy.Apply),
 		Conditions:         toConditions(status.Conditions),
-		Source:             &consolev1.Source{Requested: migration.Spec.Artifact.OCIRef},
+		Source:             migrationSource(migration, c),
 		Target:             &consolev1.Target{Engine: string(migration.Spec.Target.Engine), SecretName: migration.Spec.Target.URLFrom.Name, SecretKey: migration.Spec.Target.URLFrom.Key},
 		NextReconciliation: timestamp(status.NextReconciliationTime),
 		Gitops:             gitOps(migration.ObjectMeta),
@@ -45,11 +45,6 @@ func Migration(migration *operatorv1alpha1.PtahMigration) *consolev1.Migration {
 	}
 	if realm := migration.Spec.Target.RealmRef; realm != nil {
 		out.Target.Realm = realm.Name
-	}
-	if artifact := status.Artifact; artifact != nil {
-		out.Source.Resolved = artifact.ResolvedReference
-		out.Source.Digest = artifact.Digest
-		out.Source.Verified = c.is(operatorv1alpha1.ConditionArtifactVerified, metav1.ConditionTrue)
 	}
 	if history := status.History; history != nil {
 		out.History = &consolev1.MigrationHistory{
@@ -104,7 +99,7 @@ func migrationStages(migration *operatorv1alpha1.PtahMigration, c conditions) []
 	status := migration.Status
 	ready := c.is(operatorv1alpha1.ConditionMigrationReady, metav1.ConditionTrue)
 	return []*consolev1.Stage{
-		migrationResolve(status, c),
+		migrationResolve(migration, c),
 		migrationReadHistory(status, c),
 		migrationPlan(status, ready),
 		migrationApprove(c, ready),
@@ -113,7 +108,20 @@ func migrationStages(migration *operatorv1alpha1.PtahMigration, c conditions) []
 	}
 }
 
-func migrationResolve(status operatorv1alpha1.PtahMigrationStatus, c conditions) *consolev1.Stage {
+func migrationResolve(migration *operatorv1alpha1.PtahMigration, c conditions) *consolev1.Stage {
+	status := migration.Status
+	if source := migrationSource(migration, c); unverifiedSource(source) {
+		// A ConfigMap or Git source has no verification policy: the artifact
+		// binding the history read takes is the whole of Resolve.
+		switch {
+		case source.GetResolved() != "":
+			return stage(StageResolve, consolev1.StageState_STAGE_STATE_DONE, resolvedDetail(source))
+		case status.Phase == operatorv1alpha1.MigrationPhaseResolving:
+			return stage(StageResolve, consolev1.StageState_STAGE_STATE_ACTIVE, "")
+		default:
+			return stage(StageResolve, consolev1.StageState_STAGE_STATE_WAITING, "")
+		}
+	}
 	switch {
 	case c.is(operatorv1alpha1.ConditionArtifactVerified, metav1.ConditionFalse):
 		return stage(StageResolve, consolev1.StageState_STAGE_STATE_FAILED, c.message(operatorv1alpha1.ConditionArtifactVerified))

@@ -49,9 +49,9 @@ func arrange(t *testing.T, user string) string {
 				Engine: operatorv1alpha1.DatabaseEnginePostgreSQL, CoordinationKey: "envtest/" + namespace,
 				URLFrom: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "database"}, Key: "url"},
 			},
-			Desired: operatorv1alpha1.OCIArtifactSourceSpec{
+			Desired: operatorv1alpha1.SourceSpec{
 				OCIRef: "oci://registry.example/shop/schema:1.0.0",
-				VerificationPolicyFrom: corev1.ConfigMapKeySelector{
+				VerificationPolicyFrom: &corev1.ConfigMapKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "ptah-verification-policy"}, Key: "policy.yaml",
 				},
 			},
