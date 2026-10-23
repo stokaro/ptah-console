@@ -14,7 +14,13 @@ import { Link } from "@tanstack/react-router"
 import { useState, type ReactNode } from "react"
 
 import { useOffer, useSession } from "../../api/resources"
-import type { Condition, Source, Target } from "../../gen/ptah/console/v1/resources_pb"
+import {
+  SourceKind,
+  type Condition,
+  type Source,
+  type SourcePolicy,
+  type Target,
+} from "../../gen/ptah/console/v1/resources_pb"
 import {
   attentionTitle,
   attentionTone,
@@ -246,8 +252,38 @@ export function ConditionsCard({ conditions, now }: { conditions: Condition[]; n
   )
 }
 
-/** The artifact as requested, as resolved, and whether its signature was verified. */
+/**
+ * The source as requested and as resolved. An OCI artifact also says whether
+ * its signature was verified; a ConfigMap or a Git repository has no
+ * verification policy, and says which files were read and under which source
+ * policy instead.
+ */
 export function ArtifactCard({ source, now }: { source?: Source; now: Date }) {
+  if (source?.kind === SourceKind.GIT || source?.kind === SourceKind.CONFIG_MAP) {
+    const git = source.kind === SourceKind.GIT
+    return (
+      <Card title="Source">
+        <Facts
+          rows={[
+            ...(git
+              ? ([
+                  ["Repository", <Mono key="r" value={source.requested} />],
+                  ["Ref", <Mono key="f" value={source.ref} />],
+                  ["Path", <Mono key="p" value={source.path} />],
+                  ["Commit", <Mono key="c" value={source.resolved} />],
+                ] satisfies [string, ReactNode][])
+              : ([
+                  ["ConfigMap", <Mono key="r" value={source.requested} />],
+                  ["Snapshot", <Mono key="s" value={source.resolved} />],
+                ] satisfies [string, ReactNode][])),
+            ["Content", <Mono key="d" value={source.contentDigest} />],
+            ["Source policy", <SourcePolicyFact key="p" policy={source.policy} />],
+            ["Resolved at", <When key="a" at={source.resolvedAt} now={now} />],
+          ]}
+        />
+      </Card>
+    )
+  }
   return (
     <Card title="Artifact">
       <Facts
@@ -271,6 +307,27 @@ export function ArtifactCard({ source, now }: { source?: Source; now: Date }) {
         ]}
       />
     </Card>
+  )
+}
+
+/**
+ * The source policy a source names, and the digest of the one its last
+ * resolution was checked against. A policy named and not read yet has no
+ * digest.
+ */
+function SourcePolicyFact({ policy }: { policy?: SourcePolicy }) {
+  if (!policy) {
+    return <span className="text-mute">None</span>
+  }
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      {policy.name || <span className="text-mute">no longer named</span>}
+      {policy.digest ? (
+        <Mono value={policy.digest} short />
+      ) : (
+        <span className="text-mute">not read yet</span>
+      )}
+    </span>
   )
 }
 

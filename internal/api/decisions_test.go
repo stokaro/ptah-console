@@ -13,7 +13,6 @@ import (
 	"connectrpc.com/connect/v2/connectinprocess"
 	qt "github.com/frankban/quicktest"
 	operatorv1alpha1 "github.com/stokaro/ptah-operator/api/v1alpha1"
-	"github.com/stokaro/ptah-operator/pkg/planread"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -157,11 +156,18 @@ func waitingSchema(contract int32) []client.Object {
 	}
 }
 
+// The plan contracts the console approves: 1, a plan computed from an OCI
+// artifact, and 2, one computed from a ConfigMap or Git source.
+const (
+	ociContract    int32 = 1
+	sourceContract int32 = 2
+)
+
 func reviewed() *consolev1.ApproveSchemaPlanRequest {
 	return &consolev1.ApproveSchemaPlanRequest{
 		Namespace: namespace, SchemaName: "storefront", SchemaUid: "uid-schema",
 		PlanName: "storefront-plan-1", PlanUid: "uid-plan", PlanFingerprint: "sha256:aa",
-		ContractVersion: planread.ContractVersion,
+		ContractVersion: ociContract,
 	}
 }
 
@@ -185,51 +191,56 @@ func TestApproveSchemaPlanReportsEachOutcome(t *testing.T) {
 		sent     int
 	}{
 		{
-			name: "admitted", contract: planread.ContractVersion, request: func(*consolev1.ApproveSchemaPlanRequest) {},
+			name: "admitted", contract: ociContract, request: func(*consolev1.ApproveSchemaPlanRequest) {},
 			answer: admit("alice"), want: consolev1.DecisionOutcome_DECISION_OUTCOME_ADMITTED, message: "", sent: 1,
 		},
 		{
-			name: "a newer plan replaced the reviewed one", contract: planread.ContractVersion,
+			name: "a newer plan replaced the reviewed one", contract: ociContract,
 			request: func(r *consolev1.ApproveSchemaPlanRequest) { r.PlanFingerprint = "sha256:00" },
 			answer:  admit("alice"), want: consolev1.DecisionOutcome_DECISION_OUTCOME_CHANGED, message: "A newer plan replaced", sent: 0,
 		},
 		{
-			name: "the schema was created again", contract: planread.ContractVersion,
+			name: "the schema was created again", contract: ociContract,
 			request: func(r *consolev1.ApproveSchemaPlanRequest) { r.SchemaUid = "uid-earlier-schema" },
 			answer:  admit("alice"), want: consolev1.DecisionOutcome_DECISION_OUTCOME_CHANGED, message: "deleted and created again", sent: 0,
 		},
 		{
-			name: "a plan written under a contract this console does not know", contract: planread.ContractVersion + 1,
-			request: func(r *consolev1.ApproveSchemaPlanRequest) { r.ContractVersion = planread.ContractVersion + 1 },
+			name: "a plan computed from a ConfigMap or Git source", contract: sourceContract,
+			request: func(r *consolev1.ApproveSchemaPlanRequest) { r.ContractVersion = sourceContract },
+			answer:  admit("alice"), want: consolev1.DecisionOutcome_DECISION_OUTCOME_ADMITTED, message: "", sent: 1,
+		},
+		{
+			name: "a plan written under a contract this console does not know", contract: sourceContract + 1,
+			request: func(r *consolev1.ApproveSchemaPlanRequest) { r.ContractVersion = sourceContract + 1 },
 			answer:  admit("alice"), want: consolev1.DecisionOutcome_DECISION_OUTCOME_CHANGED, message: "contract", sent: 0,
 		},
 		{
-			name: "reviewed under another contract", contract: planread.ContractVersion,
+			name: "reviewed under another contract", contract: ociContract,
 			request: func(r *consolev1.ApproveSchemaPlanRequest) { r.ContractVersion = 0 },
 			answer:  admit("alice"), want: consolev1.DecisionOutcome_DECISION_OUTCOME_CHANGED, message: "contract", sent: 0,
 		},
 		{
-			name: "RBAC refuses the identity", contract: planread.ContractVersion, request: func(*consolev1.ApproveSchemaPlanRequest) {},
+			name: "RBAC refuses the identity", contract: ociContract, request: func(*consolev1.ApproveSchemaPlanRequest) {},
 			answer: refuse(http.StatusForbidden, metav1.StatusReasonForbidden, rbacMessage),
 			want:   consolev1.DecisionOutcome_DECISION_OUTCOME_FORBIDDEN, message: rbacMessage, sent: 1,
 		},
 		{
-			name: "admission refuses the decision", contract: planread.ContractVersion, request: func(*consolev1.ApproveSchemaPlanRequest) {},
+			name: "admission refuses the decision", contract: ociContract, request: func(*consolev1.ApproveSchemaPlanRequest) {},
 			answer: refuse(http.StatusForbidden, metav1.StatusReasonForbidden, admissionMessage),
 			want:   consolev1.DecisionOutcome_DECISION_OUTCOME_REFUSED, message: admissionMessage, sent: 1,
 		},
 		{
-			name: "the schema refuses the decision", contract: planread.ContractVersion, request: func(*consolev1.ApproveSchemaPlanRequest) {},
+			name: "the schema refuses the decision", contract: ociContract, request: func(*consolev1.ApproveSchemaPlanRequest) {},
 			answer: refuse(http.StatusUnprocessableEntity, metav1.StatusReasonInvalid, "spec.planFingerprint: Invalid value"),
 			want:   consolev1.DecisionOutcome_DECISION_OUTCOME_REFUSED, message: "spec.planFingerprint: Invalid value", sent: 1,
 		},
 		{
-			name: "no answer in time", contract: planread.ContractVersion, request: func(*consolev1.ApproveSchemaPlanRequest) {},
+			name: "no answer in time", contract: ociContract, request: func(*consolev1.ApproveSchemaPlanRequest) {},
 			answer: func(context.Context, client.WithWatch, client.Object) error { return context.DeadlineExceeded },
 			want:   consolev1.DecisionOutcome_DECISION_OUTCOME_UNKNOWN, message: "did not answer in time", sent: 1,
 		},
 		{
-			name: "the API server failed", contract: planread.ContractVersion, request: func(*consolev1.ApproveSchemaPlanRequest) {},
+			name: "the API server failed", contract: ociContract, request: func(*consolev1.ApproveSchemaPlanRequest) {},
 			answer: refuse(http.StatusInternalServerError, metav1.StatusReasonInternalError, "etcdserver: request timed out"),
 			want:   consolev1.DecisionOutcome_DECISION_OUTCOME_UNKNOWN, message: "may have been stored", sent: 1,
 		},
@@ -262,7 +273,7 @@ func TestApproveSchemaPlanReportsEachOutcome(t *testing.T) {
 func TestAnApprovalSendsOnlyWhatItApproves(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
-	service := decisionService(t, admit("alice"), waitingSchema(planread.ContractVersion)...)
+	service := decisionService(t, admit("alice"), waitingSchema(ociContract)...)
 
 	response, err := service.client.ApproveSchemaPlan(service.ctx, reviewed())
 
@@ -290,7 +301,7 @@ func TestAnApprovalSendsOnlyWhatItApproves(t *testing.T) {
 func TestARetryAfterALostAnswerFindsTheStoredApproval(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
-	service := decisionService(t, storeThenDrop("alice"), waitingSchema(planread.ContractVersion)...)
+	service := decisionService(t, storeThenDrop("alice"), waitingSchema(ociContract)...)
 
 	first, err := service.client.ApproveSchemaPlan(service.ctx, reviewed())
 	c.Assert(err, qt.IsNil)
@@ -315,7 +326,7 @@ func TestARetryAfterALostAnswerFindsTheStoredApproval(t *testing.T) {
 func TestANameHoldingAnotherDecisionIsNotThisOne(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
-	service := decisionService(t, squat("mallory"), waitingSchema(planread.ContractVersion)...)
+	service := decisionService(t, squat("mallory"), waitingSchema(ociContract)...)
 
 	response, err := service.client.ApproveSchemaPlan(service.ctx, reviewed())
 
@@ -329,7 +340,7 @@ func TestANameHoldingAnotherDecisionIsNotThisOne(t *testing.T) {
 func TestAnApprovalMustNameWhatWasReviewed(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
-	service := decisionService(t, admit("alice"), waitingSchema(planread.ContractVersion)...)
+	service := decisionService(t, admit("alice"), waitingSchema(ociContract)...)
 	request := reviewed()
 	request.PlanFingerprint = ""
 
