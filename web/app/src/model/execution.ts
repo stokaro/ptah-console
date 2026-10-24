@@ -10,7 +10,7 @@ import {
   type JobEvidence,
 } from "../gen/ptah/console/v1/diagnostics_pb"
 import type { Condition } from "../gen/ptah/console/v1/resources_pb"
-import { activity, whereStopped, type ActivityEntry } from "./activity"
+import { activity, duration, whereStopped, type ActivityEntry } from "./activity"
 import { conditionTone, type ResourceView } from "./resource"
 
 /** Who left a piece of evidence: the operator's controller, a Job it ran, or the database. */
@@ -259,10 +259,6 @@ const journalLanes: Record<ActivityEntry["type"], Lane> = {
   verification: "database",
 }
 
-function seconds(ms: number) {
-  return ms < 60_000 ? `${Math.max(1, Math.round(ms / 1000))} s` : `${Math.round(ms / 60_000)} min`
-}
-
 /** The resource's journal on the lanes, each event at the time it records. */
 function journalEntries(resource: ResourceView): Entry[] {
   return activity([resource], []).map((entry) => ({
@@ -271,7 +267,7 @@ function journalEntries(resource: ResourceView): Entry[] {
     title: entry.title,
     detail: [
       ...entry.details,
-      ...(entry.durationMs !== undefined ? [`took ${seconds(entry.durationMs)}`] : []),
+      ...(entry.durationMs !== undefined ? [`took ${duration(entry.durationMs)}`] : []),
     ].join(" · "),
     tone: entry.tone,
   }))

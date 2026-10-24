@@ -176,6 +176,13 @@ none.
 | How far the history is, how the last run ended, what the current plan would apply, the run waiting for a person, every condition, the artifact, the target, the spec | `ptahmigrations` | list, watch; get when opened from a link |
 | The files the plan would apply | `ptahmigrationplans` | get |
 | Acknowledge an unresolved run | `ptahmigrationrunacknowledgments` | create, as on call |
+| The runs the journal keeps, how each ended and how long it took | the migration's `status.journal` | get |
+
+The tiles above the page are the history's own numbers (current version and
+checkpoint, applied, pending) and the runs the journal keeps, with how many
+failed since it is complete. The runs list is newest first and narrows by how
+a run ended; its chart draws one bar per run that recorded its start, because
+the operator records a run, not each migration in it.
 
 The operator publishes a summary of the revision table, not its rows: the
 current version and checkpoint, how many migrations are applied and pending,

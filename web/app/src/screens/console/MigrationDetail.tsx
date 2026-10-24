@@ -16,6 +16,7 @@ import { say, steps, waitingForApproval } from "../../model/resource"
 import { Loading, ReadError, useNow } from "../common"
 import { AcknowledgeDialog } from "../IncidentDetail"
 import { Sentence } from "../Releases"
+import { MigrationGlance, RunsCard } from "./MigrationRuns"
 import {
   ArtifactCard,
   AttentionCard,
@@ -164,6 +165,7 @@ export function MigrationDetail({ namespace, name }: MigrationDetailProps) {
           ) : null
         }
       />
+      <MigrationGlance resource={resource} />
       <Card label="Where it stands">
         <StepRail steps={steps(resource)} label={`Progress of ${resource.name}`} />
         <Sentence tone={sentence.tone} text={sentence.text} large />
@@ -256,6 +258,7 @@ export function MigrationDetail({ namespace, name }: MigrationDetailProps) {
           )}
         </Card>
       </div>
+      <RunsCard resource={resource} now={now} />
       <Card title="Steps">
         {plan.error ? (
           <span className="text-sm text-fg2">

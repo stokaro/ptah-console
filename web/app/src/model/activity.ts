@@ -41,6 +41,15 @@ function date(timestamp: Timestamp | undefined) {
   return timestamp ? timestampDate(timestamp) : undefined
 }
 
+/** How long something took, in the unit a reader takes in at a glance. */
+export function duration(ms: number) {
+  if (ms < 60_000) {
+    return `${Math.max(1, Math.round(ms / 1000))} s`
+  }
+  const minutes = Math.round(ms / 60_000)
+  return minutes < 120 ? `${minutes} min` : `${Math.round(minutes / 60)} h`
+}
+
 function plural(count: number, one: string, many = `${one}s`) {
   return `${count} ${count === 1 ? one : many}`
 }

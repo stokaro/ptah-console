@@ -8,6 +8,7 @@ import {
   activityTypes,
   coverage,
   deciders,
+  duration,
   filterActivity,
   type ActivityEntry,
   type ActivityFilter,
@@ -22,14 +23,6 @@ export interface ActivityProps {
 }
 
 /** How long an Apply or a run took, in words. */
-function duration(ms: number) {
-  if (ms < 60_000) {
-    return `${Math.max(1, Math.round(ms / 1000))} s`
-  }
-  const minutes = Math.round(ms / 60_000)
-  return minutes < 120 ? `${minutes} min` : `${Math.round(minutes / 60)} h`
-}
-
 /**
  * What happened across the namespaces the console reads: plans, approvals,
  * Applies and runs, verifications, acknowledgments and failures, from the

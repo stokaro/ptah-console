@@ -21,7 +21,7 @@ import {
   type JobEvidence,
 } from "../../gen/ptah/console/v1/diagnostics_pb"
 import { StageState } from "../../gen/ptah/console/v1/resources_pb"
-import { coverage } from "../../model/activity"
+import { coverage, duration } from "../../model/activity"
 import { ago } from "../../model/connection"
 import { failureCauses, lastOutcome, relatedResources } from "../../model/diagnosis"
 import { goneWord, jobRank, lastLog } from "../../model/execution"
@@ -43,12 +43,6 @@ export interface ExecutionDiagnosisProps {
 }
 
 const date = (at: Timestamp | undefined) => (at ? timestampDate(at) : undefined)
-
-function minutesSeconds(ms: number) {
-  const total = Math.max(0, Math.round(ms / 1000))
-  const minutes = Math.floor(total / 60)
-  return minutes > 0 ? `${minutes}m ${total % 60}s` : `${total}s`
-}
 
 /** When a moment is, from now, in words: in 17 seconds, 3 min ago. */
 function relativeTo(at: Date, now: Date) {
@@ -173,7 +167,7 @@ export function ExecutionDiagnosis({ kind, namespace, name }: ExecutionDiagnosis
             <span className="text-xs text-mute">
               {done} of {resource.stages.length} stages done
               {operation && started
-                ? ` · ${operation.type} started ${started.toLocaleTimeString()}, running ${minutesSeconds(now.getTime() - started.getTime())}`
+                ? ` · ${operation.type} started ${started.toLocaleTimeString()}, running ${duration(now.getTime() - started.getTime())}`
                 : ""}
             </span>
           </Card>
