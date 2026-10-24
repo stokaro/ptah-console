@@ -121,6 +121,12 @@ message ListNamespacesResponse {
   // Whether the cluster serves the operator's API, as discovery tells the
   // session's identity.
   OperatorApi operator_api = 2;
+  // The identity may list more namespaces than the console offers. The
+  // console offers the first max_namespaces by name; a console started with
+  // the namespaces it should offer is never cut short.
+  bool truncated = 3;
+  // The most namespaces the console offers, and reads in one request.
+  uint32 max_namespaces = 4;
 }
 
 // OperatorApi is what discovery says about operator.ptah.run/v1alpha1.

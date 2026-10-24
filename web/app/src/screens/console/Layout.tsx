@@ -3,9 +3,12 @@ import { Icon, StatusGlyph, Wordmark, type IconName, type Tone } from "@ptah/con
 import { Link, Outlet } from "@tanstack/react-router"
 import { Suspense, useCallback, useState } from "react"
 
-import { accents, useAccent, type AccentChoice } from "../../accent"
+import { accents, type AccentChoice } from "../../accent"
+import { useAccent } from "../../appearance"
 import { useConnections } from "../../api/cluster"
 import { useInfo, useResources, useScope, useSession } from "../../api/resources"
+import { useNamespaceScope } from "../../api/scope"
+import { NamespaceSelection } from "../../api/selection"
 import { BuildFooter } from "../../BuildFooter"
 import { Mode } from "../../gen/ptah/console/v1/info_pb"
 import { punctuality } from "../../model/operator"
@@ -14,7 +17,10 @@ import { ClusterBanner, ClusterSwitcher } from "../clusters"
 import { useNow } from "../common"
 import { LiveBanner, OperatorApiBanner, SessionChips, SignOut, ThemeSwitch } from "../Shell"
 import { resourceLink } from "./links"
+import { NamespaceScopeChip } from "./NamespaceScope"
 import { Palette, usePaletteKeys } from "./Palette"
+import { Welcome } from "./Welcome"
+import { WelcomeControl } from "./welcomeControl"
 
 interface Page {
   to:
@@ -59,6 +65,41 @@ export function ConsoleLayout() {
   const hosted = session.isSuccess && session.data.mode === Mode.HOSTED
   const [palette, setPalette] = useState(false)
   usePaletteKeys(useCallback(() => setPalette(true), []))
+  const scope = useNamespaceScope()
+  const clusters = useConnections()
+  // The welcome asks once per cluster and identity, when there is a choice to
+  // make. Closed unfinished, it asks again on the next visit, not this one.
+  const [closedFor, setClosedFor] = useState<string>()
+  const [held, setHeld] = useState(false)
+  // It waits for the clusters too, so its steps do not change under the viewer.
+  const asks =
+    scope.ready &&
+    clusters.known &&
+    scope.choice === undefined &&
+    scope.scope.readable.length > 1 &&
+    closedFor !== scope.key
+  const welcome = held || asks
+  const setWelcome = (open: boolean) => {
+    setHeld(open)
+    if (!open) {
+      setClosedFor(scope.key)
+    }
+  }
+  // Until the session says whose choice to read, nothing is read; a session
+  // that could not say reads every readable namespace.
+  const selection = scope.pending ? null : scope.keyed ? scope.namespaces : undefined
+  return (
+    <NamespaceSelection.Provider value={selection}>
+      <WelcomeControl.Provider value={() => setWelcome(true)}>
+        <Frame hosted={hosted} openPalette={() => setPalette(true)} />
+        <Palette open={palette} onOpenChange={setPalette} />
+        <Welcome open={welcome} onOpenChange={setWelcome} />
+      </WelcomeControl.Provider>
+    </NamespaceSelection.Provider>
+  )
+}
+
+function Frame({ hosted, openPalette }: { hosted: boolean; openPalette: () => void }) {
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       {/* One navigation: a strip across the top on a phone, a sidebar on a wider screen. */}
@@ -87,11 +128,11 @@ export function ConsoleLayout() {
             <ClusterSwitcher />
           </Suspense>
           <SessionChips identityOnNarrowOnly />
-          <NamespacesChip />
+          <NamespaceScopeChip />
           <span className="flex-auto" />
           <button
             type="button"
-            onClick={() => setPalette(true)}
+            onClick={openPalette}
             className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-full border border-line bg-card px-3 text-xs text-fg2"
           >
             <Icon name="search" size={14} />
@@ -114,7 +155,6 @@ export function ConsoleLayout() {
         </main>
         <BuildFooter />
       </div>
-      <Palette open={palette} onOpenChange={setPalette} />
     </div>
   )
 }
@@ -339,25 +379,5 @@ function AccentSwitch() {
         </Menu.Positioner>
       </Menu.Portal>
     </Menu.Root>
-  )
-}
-
-/** The namespaces the pages read, so a short list is not mistaken for a quiet cluster. */
-function NamespacesChip() {
-  const scope = useScope()
-  if (scope.scopes.length === 0) {
-    return null
-  }
-  const readable = scope.readable
-  return (
-    <span
-      title={readable.join(", ")}
-      className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-card px-2.5 text-xs"
-    >
-      <span className="text-mute">namespaces</span>
-      <b className="font-mono font-semibold">
-        {readable.length === 1 ? readable[0] : `${readable.length} of ${scope.scopes.length}`}
-      </b>
-    </span>
   )
 }

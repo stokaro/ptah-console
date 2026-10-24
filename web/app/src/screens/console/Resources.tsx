@@ -21,6 +21,7 @@ import {
   type CatalogQuery,
 } from "../../model/catalog"
 import { say, steps, type ResourceView } from "../../model/resource"
+import { namespacesRead } from "../../model/scope"
 import { Loading, ReadError, TruncatedNotice, UnreadableNamespaces, useNow } from "../common"
 import { resourceLink } from "./links"
 import type { ResourcesSearch } from "./search"
@@ -32,7 +33,7 @@ export interface ResourcesProps {
 }
 
 export function Resources({ search, onSearch }: ResourcesProps) {
-  const { resources, scope, truncated, loading, error } = useResources()
+  const { resources, scope, namespaces, truncated, loading, error } = useResources()
   const now = useNow()
   const query: CatalogQuery = {
     q: search.q ?? "",
@@ -56,8 +57,8 @@ export function Resources({ search, onSearch }: ResourcesProps) {
           <span className="font-mono text-base font-medium text-mute">{resources.length}</span>
         </h1>
         <span className="text-[13.5px] text-fg2">
-          Every schema and migration in {scope.readable.length}{" "}
-          {scope.readable.length === 1 ? "namespace" : "namespaces"} this identity may read.
+          Every schema and migration in {namespacesRead(namespaces.length, scope.readable.length)}{" "}
+          this identity may read.
         </span>
       </section>
       <UnreadableNamespaces scopes={scope.scopes} />

@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react"
-
 /** The accents a viewer may choose. The states keep their own colors. */
 export const accents = [
   { value: "indigo", label: "Indigo" },
@@ -25,7 +23,7 @@ export function readAccent(): AccentChoice {
   }
 }
 
-function storeAccent(choice: AccentChoice) {
+export function storeAccent(choice: AccentChoice) {
   try {
     if (choice === "indigo") {
       window.localStorage.removeItem(storageKey)
@@ -44,17 +42,4 @@ export function applyAccent(choice: AccentChoice, root: HTMLElement = document.d
   } else {
     root.setAttribute("data-accent", choice)
   }
-}
-
-/** The accent choice, applied and stored. */
-export function useAccent(): [AccentChoice, (choice: AccentChoice) => void] {
-  const [choice, setChoice] = useState<AccentChoice>(readAccent)
-  useEffect(() => applyAccent(choice), [choice])
-  return [
-    choice,
-    (next) => {
-      storeAccent(next)
-      setChoice(next)
-    },
-  ]
 }
