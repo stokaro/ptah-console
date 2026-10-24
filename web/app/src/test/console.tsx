@@ -95,6 +95,7 @@ export function waitingSchema(change: (schema: Schema) => void = () => {}): Sche
       resourceVersion: "41",
     },
     phase: "AwaitingApproval",
+    approvalOpen: true,
     statusCurrent: true,
     applyPolicy: "OnApproval",
     source: {
@@ -233,7 +234,8 @@ export interface Fixture {
   username?: string
   readOnly?: boolean
   capabilities?: MessageInitShape<typeof CapabilitiesSchema>
-  schemas?: Schema[]
+  /** The schemas, read again on every request. */
+  schemas?: Schema[] | (() => Schema[])
   /** The migrations, read again on every request. */
   migrations?: Migration[] | (() => Migration[])
   decisions?: Decision[]
@@ -472,6 +474,8 @@ export function consoleTransport(fixture: Fixture) {
         }
       },
     })
+    const schemas = () =>
+      typeof fixture.schemas === "function" ? fixture.schemas() : (fixture.schemas ?? [])
     service(SchemaService, {
       listSchemas: (request, context) => {
         cluster(context.requestHeader)
@@ -481,7 +485,7 @@ export function consoleTransport(fixture: Fixture) {
         }
         return {
           // A list answers for the namespaces it names, as the server does.
-          schemas: (fixture.schemas ?? []).filter((schema) =>
+          schemas: schemas().filter((schema) =>
             request.namespaces.includes(schema.ref?.namespace ?? "")
           ),
           namespaces: request.namespaces.map((namespace) => ({
@@ -495,7 +499,7 @@ export function consoleTransport(fixture: Fixture) {
         plan: typeof fixture.plan === "function" ? fixture.plan() : (fixture.plan ?? storedPlan()),
       }),
       getSchema: (request) => {
-        const found = (fixture.schemas ?? []).find((schema) => schema.ref?.name === request.name)
+        const found = schemas().find((schema) => schema.ref?.name === request.name)
         if (!found) {
           throw new ConnectError("schema not found", Code.NotFound)
         }

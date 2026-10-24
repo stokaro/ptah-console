@@ -44,6 +44,12 @@ export interface ResourceView {
     privilegeChanges: string[]
     statementCount: number
   }
+  /**
+   * Whether the operator's admission admits an approval of the plan now. A
+   * resource waiting for approval refuses one while the operator reads it
+   * again at its interval, its plan still current.
+   */
+  approvalOpen: boolean
   gitops?: { controller: string; application: string }
   /** The plan the database last received, for a schema. */
   appliedPlanUid?: string
@@ -81,6 +87,7 @@ export function fromSchema(schema: Schema): ResourceView {
           statementCount: plan.statementCount,
         }
       : undefined,
+    approvalOpen: schema.approvalOpen,
     gitops: schema.gitops,
     appliedPlanUid: schema.applied?.planUid,
     schema,
@@ -112,6 +119,7 @@ export function fromMigration(migration: Migration): ResourceView {
           statementCount: 0,
         }
       : undefined,
+    approvalOpen: migration.approvalOpen,
     gitops: migration.gitops,
     unresolvedRun: migration.unresolvedRun
       ? {
@@ -191,6 +199,16 @@ export function incident(resource: ResourceView): Attention | undefined {
 
 export function waitingForApproval(resource: ResourceView): Attention | undefined {
   return resource.attention.find((a) => a.kind === AttentionKind.WAITING_FOR_APPROVAL)
+}
+
+/**
+ * Why a plan waiting for approval cannot be approved this moment: the
+ * operator is reading the resource again, as it does each interval, and its
+ * admission refuses an approval until the read ends.
+ */
+export function readingAgain(resource: ResourceView): string {
+  const what = resource.kind === "schema" ? resource.name : `the history of ${resource.name}`
+  return `The operator is reading ${what} again, as it does each interval. Approval opens when the read ends, unless the read replaces the plan.`
 }
 
 /** One sentence on where a resource stands. */

@@ -118,23 +118,25 @@ describe("A plan the link named", () => {
 })
 
 describe("The checks before an approval", () => {
-  const base = { current: true, allowed: "allowed" as const, namespace: "application" }
+  const base = { current: true, open: true, allowed: "allowed" as const, namespace: "application" }
 
   it("all pass for a current plan an approver may approve", () => {
     expect(approvalChecks({ ...base, contractSupported: true }).map((check) => check.tone)).toEqual(
-      ["ok", "ok", "ok"]
+      ["ok", "ok", "ok", "ok"]
     )
   })
 
   it("leave the contract out for a migration, whose SQL the console does not read", () => {
     expect(approvalChecks(base).map((check) => check.label)).toEqual([
       "The plan you read is the current plan",
+      "The operator waits for the decision",
       "This identity may create approvals in application",
     ])
   })
 
   it.each([
     [{ current: false }, "The plan you read is no longer current"],
+    [{ open: false }, "The operator is reading the resource again"],
     [{ contractSupported: false }, "Its contract is not one this console reads"],
     [{ allowed: "denied" as const }, "This identity may not create approvals in application"],
     [{ allowed: "read-only" as const }, "This console sends no decision"],

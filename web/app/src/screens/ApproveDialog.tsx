@@ -8,7 +8,7 @@ import { useState } from "react"
 import { useSession } from "../api/resources"
 import { DecisionKind, DecisionService } from "../gen/ptah/console/v1/decisions_pb"
 import { MigrationService, PlanSelection, SchemaService } from "../gen/ptah/console/v1/resources_pb"
-import type { ResourceView } from "../model/resource"
+import { readingAgain, type ResourceView } from "../model/resource"
 import { where } from "./common"
 import { DecisionDialog } from "./DecisionDialog"
 
@@ -127,12 +127,14 @@ export function ApproveDialog({
       as={session.data?.kubernetesUsername ?? "…"}
       title={`Approve ${plan?.name ?? resource.plan?.name ?? "this plan"}?`}
       explanation={
-        plan
-          ? `Sends the exact plan you reviewed (${shortDigest(fingerprint)}). Admission records you as the approver.`
-          : "Reading the plan…"
+        !plan
+          ? "Reading the plan…"
+          : resource.approvalOpen
+            ? `Sends the exact plan you reviewed (${shortDigest(fingerprint)}). Admission records you as the approver.`
+            : `${readingAgain(resource)} Confirm waits for it.`
       }
       needsReview
-      ready={Boolean(plan)}
+      ready={Boolean(plan) && resource.approvalOpen}
       send={send}
       readBack={readBack}
       admittedTitle="Approval admitted"

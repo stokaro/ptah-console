@@ -95,11 +95,13 @@ test("a viewer follows releases, sees a plan without its SQL, and nothing of ano
   await page.getByRole("link", { name: "Developer" }).click()
   const releases = page.getByRole("list", { name: "Releases" })
   const inventory = releases.getByRole("listitem").filter({ hasText: "inventory" })
+  // The operator reads inventory again every interval, and while that read
+  // runs its plan step is in progress; Verify is done again when it ends.
   await expect(
     inventory.getByRole("list", { name: "Progress of inventory" }).getByText("Verify: done", {
       exact: true,
     })
-  ).toBeVisible()
+  ).toBeVisible({ timeout: planTimeout })
   await expect(
     releases
       .getByRole("listitem")

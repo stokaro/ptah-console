@@ -10,6 +10,7 @@ import (
 
 	qt "github.com/frankban/quicktest"
 	operatorv1alpha1 "github.com/stokaro/ptah-operator/api/v1alpha1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
@@ -457,8 +458,9 @@ func contains(list []consolev1.AttentionKind, kind consolev1.AttentionKind) bool
 
 // Each interval the operator refreshes the source and plans again: for a while
 // ApprovalRequired stays true and status.plan is empty. The schema still waits
-// for an approval, and the next step says the plan comes back first. The
-// conditions are the ones the operator wrote in the demo lab (run 39330236712).
+// for an approval, and the next step says the plan comes back first; while the
+// plan is still published, it says the read has to end first. The conditions
+// are the ones the operator wrote in the demo lab (run 39330236712).
 func TestAWaitingSchemaBeingPlannedAgainSaysSo(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -466,7 +468,7 @@ func TestAWaitingSchemaBeingPlannedAgainSaysSo(t *testing.T) {
 		plan *operatorv1alpha1.CurrentPlanStatus
 		next string
 	}{
-		{name: "with its plan published", plan: &operatorv1alpha1.CurrentPlanStatus{Name: "ptah-plan-32d8"}, next: "Review the plan and approve it"},
+		{name: "with its plan still published", plan: &operatorv1alpha1.CurrentPlanStatus{Name: "ptah-plan-32d8"}, next: "The operator is reading the schema again"},
 		{name: "while the plan is prepared again", plan: nil, next: "The operator is planning again"},
 	}
 	for _, test := range tests {
@@ -607,4 +609,107 @@ func TestMigrationRevisionsAreCarriedAsPublished(t *testing.T) {
 
 	migration.Status.History.Revisions = nil
 	c.Assert(model.Migration(migration).GetHistory().GetRevisions(), qt.IsNil)
+}
+
+// Admission admits an approval only while the operator waits for one: the
+// phase is AwaitingApproval and no operation runs. Each interval the operator
+// reads a waiting resource again, its plan still current and ApprovalRequired
+// still true, and admission refuses an approval until the read ends. The
+// migration readings are deliveries in the console's acceptance lab, before
+// and during that read, and one changed to run an operation; the schema rows
+// change the recovered reading in the one field each mistake would miss.
+func TestApprovalOpensOnlyWhileTheOperatorWaitsForIt(t *testing.T) {
+	t.Parallel()
+	recovered := func(change func(*operatorv1alpha1.PtahSchema)) *operatorv1alpha1.PtahSchema {
+		schema := &operatorv1alpha1.PtahSchema{}
+		reading(t, "alert-schema-recovered.json", schema)
+		change(schema)
+		return schema
+	}
+	schemas := []struct {
+		name   string
+		schema *operatorv1alpha1.PtahSchema
+		open   bool
+		next   string
+	}{
+		{name: "waiting for approval", schema: recovered(func(*operatorv1alpha1.PtahSchema) {}), open: true, next: "Review the plan and approve it"},
+		{name: "read again at its interval", schema: recovered(func(s *operatorv1alpha1.PtahSchema) {
+			s.Status.Phase = operatorv1alpha1.PhaseResolving
+		}), next: "The operator is reading the schema again"},
+		{name: "between two operations of the read", schema: recovered(func(s *operatorv1alpha1.PtahSchema) {
+			s.Status.Phase = operatorv1alpha1.PhasePlanning
+		}), next: "The operator is reading the schema again"},
+		{name: "with an operation running", schema: recovered(func(s *operatorv1alpha1.PtahSchema) {
+			s.Status.ActiveOperation = &operatorv1alpha1.ActiveOperationStatus{Type: operatorv1alpha1.OperationObserve, ID: "observe-1"}
+		}), next: "The operator is reading the schema again"},
+	}
+	for _, test := range schemas {
+		t.Run("a schema "+test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			schema := model.Schema(test.schema)
+
+			c.Assert(schema.GetApprovalOpen(), qt.Equals, test.open)
+			waiting := attentionOf(schema.GetAttention(), consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL)
+			c.Assert(waiting, qt.IsNotNil)
+			c.Assert(waiting.GetNextStep(), qt.Contains, test.next)
+		})
+	}
+	t.Run("a schema whose plan has its approval recorded", func(t *testing.T) {
+		t.Parallel()
+		schema := recovered(func(s *operatorv1alpha1.PtahSchema) {
+			s.Status.Plan.Approval = &operatorv1alpha1.ConsumedApprovalStatus{Name: "approve-1"}
+		})
+		qt.New(t).Assert(model.Schema(schema).GetApprovalOpen(), qt.IsFalse)
+	})
+	t.Run("a schema whose plan needs no approval", func(t *testing.T) {
+		t.Parallel()
+		schema := recovered(func(s *operatorv1alpha1.PtahSchema) {
+			apimeta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+				Type: operatorv1alpha1.ConditionApprovalRequired, Status: metav1.ConditionFalse, Reason: "NotRequired",
+			})
+		})
+		qt.New(t).Assert(model.Schema(schema).GetApprovalOpen(), qt.IsFalse)
+	})
+
+	unchanged := func(*operatorv1alpha1.PtahMigration) {}
+	running := func(m *operatorv1alpha1.PtahMigration) {
+		m.Status.ActiveOperation = &operatorv1alpha1.MigrationOperationStatus{Type: operatorv1alpha1.MigrationOperationHistory, ID: "history-1"}
+	}
+	migrations := []struct {
+		name   string
+		file   string
+		change func(*operatorv1alpha1.PtahMigration)
+		open   bool
+		next   string
+	}{
+		{name: "waiting for approval", file: "migration-awaiting-approval.json", change: unchanged, open: true, next: "Review the steps and approve them"},
+		{name: "read again at its interval", file: "migration-reading-again.json", change: unchanged, next: "The operator is reading the history again"},
+		{name: "between two operations of the read", file: "migration-between-read-operations.json", change: unchanged, next: "The operator is reading the history again"},
+		{name: "with an operation running", file: "migration-awaiting-approval.json", change: running, next: "The operator is reading the history again"},
+	}
+	for _, test := range migrations {
+		t.Run("a migration "+test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			read := &operatorv1alpha1.PtahMigration{}
+			reading(t, test.file, read)
+			test.change(read)
+			migration := model.Migration(read)
+
+			c.Assert(migration.GetApprovalOpen(), qt.Equals, test.open)
+			waiting := attentionOf(migration.GetAttention(), consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL)
+			c.Assert(waiting, qt.IsNotNil)
+			c.Assert(waiting.GetNextStep(), qt.Contains, test.next)
+		})
+	}
+}
+
+func attentionOf(attention []*consolev1.Attention, kind consolev1.AttentionKind) *consolev1.Attention {
+	for _, a := range attention {
+		if a.GetKind() == kind {
+			return a
+		}
+	}
+	return nil
 }

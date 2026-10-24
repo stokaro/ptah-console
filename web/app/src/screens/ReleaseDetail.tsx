@@ -158,12 +158,16 @@ interface SuspendDialogProps {
   onClose: () => void
 }
 
-/** Suspends or resumes the resource at the version the page shows. */
+/**
+ * Suspends or resumes the resource at the version the page shows. Which of
+ * the two is held from the moment the dialog opens: once the change lands,
+ * the page reads the resource again and it reads the other way.
+ */
 export function SuspendDialog({ resource, context, onClose }: SuspendDialogProps) {
   const session = useSession()
   const queryClient = useQueryClient()
   const setSuspended = useMutation(DecisionService.method.setSuspended)
-  const suspend = !resource.suspended
+  const [suspend] = useState(!resource.suspended)
   const gitops = resource.gitops?.controller
     ? ` ${resource.gitops.controller} manages this object; its next sync may set it back.`
     : ""

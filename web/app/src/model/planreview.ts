@@ -125,6 +125,11 @@ export interface ApprovalCheck {
 
 export function approvalChecks(input: {
   current: boolean
+  /**
+   * Whether the operator's admission admits an approval now; it refuses one
+   * while the operator reads the resource again at its interval.
+   */
+  open: boolean
   /** Whether the console reads the plan's contract; a migration plan has none it reads. */
   contractSupported?: boolean
   allowed: "allowed" | "read-only" | "denied" | "offline"
@@ -137,6 +142,13 @@ export function approvalChecks(input: {
           tone: "bad",
           label: "The plan you read is no longer current",
           note: "Read the current plan before approving anything.",
+        },
+    input.open
+      ? { tone: "ok", label: "The operator waits for the decision", note: "" }
+      : {
+          tone: "run",
+          label: "The operator is reading the resource again",
+          note: "It does so each interval, and admission refuses an approval until the read ends. This check follows it.",
         },
     input.contractSupported === undefined
       ? undefined

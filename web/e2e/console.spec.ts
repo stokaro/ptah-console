@@ -243,7 +243,8 @@ test("an approver reviews the new plans in the full console, approves them, and 
   // The revision row the run wrote, as the operator's history read found it.
   const ledgerSteps = page.getByRole("list", { name: "Migrations of ledger, newest first" })
   await expect(ledgerSteps.getByRole("listitem")).toHaveCount(1)
-  await expect(ledgerSteps.getByRole("listitem")).toContainText("create ledger entries")
+  // Ptah names the migration from its file, 0000000001_create_ledger_entries.
+  await expect(ledgerSteps.getByRole("listitem")).toContainText("Create Ledger Entries")
   await expect(ledgerSteps.getByRole("listitem")).toContainText("applied")
   const rows = page.getByRole("table", { name: "Revision rows of ledger" })
   await expect(rows.getByRole("row")).toHaveCount(2)

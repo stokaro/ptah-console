@@ -56,6 +56,36 @@ describe("Developer", () => {
       suspended: true,
     })
   })
+
+  it("still says Suspended once the page reads the resource suspended", async () => {
+    const user = userEvent.setup()
+    let current = waitingSchema()
+    renderConsole("/releases/application/schema/storefront", {
+      schemas: () => [current],
+      setSuspended: () => {
+        current = waitingSchema((schema) => {
+          schema.suspended = true
+          schema.ref!.resourceVersion = "42"
+        })
+        return { outcome: DecisionOutcome.ADMITTED, resourceVersion: "42" }
+      },
+    })
+
+    expect(
+      await screen.findByRole("list", { name: "What happened to storefront" })
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Suspend…" }))
+    const dialog = await screen.findByRole("alertdialog")
+    await user.click(within(dialog).getByRole("button", { name: "Confirm" }))
+    expect(await within(dialog).findByText("Suspended")).toBeInTheDocument()
+    // The page behind the dialog read the resource again, suspended.
+    expect(
+      await screen.findByRole("button", { name: "Resume…", hidden: true }, { timeout: 3000 })
+    ).toBeInTheDocument()
+
+    expect(within(dialog).getByRole("heading", { name: "Suspended" })).toBeInTheDocument()
+    expect(within(dialog).queryByText(/resumed/i)).not.toBeInTheDocument()
+  })
 })
 
 describe("What happened", () => {

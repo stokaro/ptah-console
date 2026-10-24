@@ -1,0 +1,244 @@
+{
+  "apiVersion": "operator.ptah.run/v1alpha1",
+  "kind": "PtahMigration",
+  "metadata": {
+    "annotations": {
+      "operator.ptah.run/last-spec-writer-username": "kubernetes-admin"
+    },
+    "creationTimestamp": "2026-10-24T18:16:13Z",
+    "finalizers": [
+      "operator.ptah.run/migration-operation"
+    ],
+    "generation": 2,
+    "name": "deliveries",
+    "namespace": "ptah-test-a-1-37-0-console-local-10242006-613d31842b",
+    "resourceVersion": "12643",
+    "uid": "d6421508-deed-4e25-8833-f7beb1bfa3a7"
+  },
+  "spec": {
+    "artifact": {
+      "ociRef": "oci://e2e-registry.ptah-test-a-1-37-0-console-local-10242006-613d31842b.svc.cluster.local:5000/migrations/deliveries@sha256:cdefe7a04038f0aa8f97f8dee7c739e45a756bf1f3bc963652ec887bd65183ad",
+      "registryAuthFrom": {
+        "dockerConfigJSONKey": ".dockerconfigjson",
+        "mode": "Environment",
+        "name": "demo-registry",
+        "passwordKey": "password",
+        "tokenKey": "token",
+        "usernameKey": "username"
+      },
+      "transport": {
+        "plainHTTP": true
+      },
+      "verificationPolicyFrom": {
+        "key": "policy.yaml",
+        "name": "demo-migration-verification-policy"
+      }
+    },
+    "execution": {
+      "activeDeadlineSeconds": 300,
+      "connectTimeout": "30s",
+      "failureRetryInterval": "10s"
+    },
+    "interval": "10m",
+    "policy": {
+      "apply": "OnApproval",
+      "lockTimeout": "30s",
+      "transactionMode": "none"
+    },
+    "suspend": false,
+    "target": {
+      "coordinationKey": "demo/deliveries/mysql",
+      "engine": "MySQL",
+      "sharedRealm": false,
+      "urlFrom": {
+        "key": "url",
+        "name": "demo-mysql-database"
+      }
+    }
+  },
+  "status": {
+    "artifact": {
+      "digest": "sha256:cdefe7a04038f0aa8f97f8dee7c739e45a756bf1f3bc963652ec887bd65183ad",
+      "registryAuthFrom": {
+        "dockerConfigJSONKey": ".dockerconfigjson",
+        "mode": "Environment",
+        "name": "demo-registry",
+        "passwordKey": "password",
+        "tokenKey": "token",
+        "usernameKey": "username"
+      },
+      "resolvedReference": "oci://e2e-registry.ptah-test-a-1-37-0-console-local-10242006-613d31842b.svc.cluster.local:5000/migrations/deliveries@sha256:cdefe7a04038f0aa8f97f8dee7c739e45a756bf1f3bc963652ec887bd65183ad",
+      "transport": {
+        "plainHTTP": true
+      }
+    },
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-10-24T18:45:32Z",
+        "message": "Nothing runs until a person writes the approval",
+        "observedGeneration": 2,
+        "reason": "AwaitingApproval",
+        "status": "False",
+        "type": "Progressing"
+      },
+      {
+        "lastTransitionTime": "2026-10-24T18:45:21Z",
+        "message": "The resolved artifact satisfied its verification policy",
+        "observedGeneration": 2,
+        "reason": "PolicySatisfied",
+        "status": "True",
+        "type": "ArtifactVerified"
+      },
+      {
+        "lastTransitionTime": "2026-10-24T18:34:31Z",
+        "message": "The history continues this artifact",
+        "observedGeneration": 2,
+        "reason": "HistoryMatched",
+        "status": "False",
+        "type": "Blocked"
+      },
+      {
+        "lastTransitionTime": "2026-10-24T18:17:53Z",
+        "message": "The plan is waiting for the approval its policy requires",
+        "observedGeneration": 2,
+        "reason": "AwaitingApproval",
+        "status": "False",
+        "type": "Ready"
+      },
+      {
+        "lastTransitionTime": "2026-10-24T18:35:01Z",
+        "message": "1 planned migrations need an approval naming this plan",
+        "observedGeneration": 2,
+        "reason": "AwaitingApproval",
+        "status": "True",
+        "type": "ApprovalRequired"
+      }
+    ],
+    "executionBinding": {
+      "controllerStateVersion": 1,
+      "epoch": "v1-ad9c7c3a78605d8d0f85c58d9b98488f",
+      "executorImage": "e2e-registry.ptah-test-a-1-37-0-console-local-10242006-613d31842b.svc.cluster.local:5000/ptah-executor@sha256:830cc5842eeb6271ee7927de23f397fa681d7a2612b8c91a846caec4f76e4c0a",
+      "ptahVersion": "v0.15.0",
+      "runnerProtocolVersion": 1
+    },
+    "history": {
+      "appliedCount": 1,
+      "contractVersion": 1,
+      "currentVersion": 1,
+      "fingerprint": "sha256:fdb580ecdddaf68bd469d94dd0ee11b411df111d55b1c2cc41b3804047f2a6bd",
+      "observedAt": "2026-10-24T18:45:32Z",
+      "pendingCount": 1,
+      "revisions": [
+        {
+          "checksum": "82d716605f9c339c1c58a6655b77a5e05833e0bc98d79d7862c1700150ce1b10",
+          "description": "Create Deliveries",
+          "state": "applied",
+          "version": 1
+        }
+      ],
+      "targetIdentityDigest": "sha256:a74dcf54701c31aaac591303c2ffe04f03c832a4e217d196b806ba5c55aad0f6"
+    },
+    "journal": {
+      "coveredSince": "2026-10-24T18:16:13Z",
+      "entries": [
+        {
+          "at": "2026-10-24T18:16:45Z",
+          "plan": "ptah-mplan-ad8b92c2238aa3a7bcc8d273",
+          "type": "PlanPublished"
+        },
+        {
+          "appliedVersions": 1,
+          "at": "2026-10-24T18:16:57Z",
+          "outcome": "Succeeded",
+          "startedAt": "2026-10-24T18:16:45Z",
+          "type": "RunFinished"
+        },
+        {
+          "at": "2026-10-24T18:17:53Z",
+          "plan": "ptah-mplan-3567113053310c1150e9bd6f",
+          "type": "PlanPublished"
+        },
+        {
+          "approval": "ptah-console-271819711b424a93f1b0",
+          "at": "2026-10-24T18:33:59Z",
+          "plan": "ptah-mplan-3567113053310c1150e9bd6f",
+          "type": "ApprovalAccepted"
+        },
+        {
+          "at": "2026-10-24T18:34:10Z",
+          "failure": {
+            "errorNumber": 1054,
+            "sqlState": "42S22",
+            "statement": 3,
+            "statements": 3,
+            "version": 2
+          },
+          "outcome": "Partial",
+          "startedAt": "2026-10-24T18:33:59Z",
+          "type": "RunFinished"
+        },
+        {
+          "at": "2026-10-24T18:34:10Z",
+          "outcome": "Unknown",
+          "plan": "ptah-mplan-3567113053310c1150e9bd6f",
+          "type": "RunFinished"
+        },
+        {
+          "acknowledgedBy": "e2e-approver",
+          "acknowledgment": "ptah-console-e8c58e738dda0b9000dd",
+          "at": "2026-10-24T18:34:31Z",
+          "type": "RunAcknowledged"
+        },
+        {
+          "at": "2026-10-24T18:35:01Z",
+          "plan": "ptah-mplan-3567113053310c1150e9bd6f",
+          "type": "PlanPublished"
+        }
+      ]
+    },
+    "lastRun": {
+      "dispatchedBy": {
+        "controllerImage": "e2e-registry.ptah-test-a-1-37-0-console-local-10242006-613d31842b.svc.cluster.local:5000/ptah-operator@sha256:9052140fad2c0851e4f13148c8589805bafc7e5c18cf66885684e0caa811ba8a",
+        "controllerRevision": "70bd7654e4a8a694ef8ab41e769535f456263c4b",
+        "runnerImage": "e2e-registry.ptah-test-a-1-37-0-console-local-10242006-613d31842b.svc.cluster.local:5000/ptah-runner@sha256:9052140fad2c0851e4f13148c8589805bafc7e5c18cf66885684e0caa811ba8a"
+      },
+      "failure": {
+        "errorNumber": 1054,
+        "sqlState": "42S22",
+        "statement": 3,
+        "statements": 3,
+        "version": 2
+      },
+      "finishedAt": "2026-10-24T18:34:10Z",
+      "jobName": "ptah-m-apply-deliveries-f5e957be3c3b0c07",
+      "jobUID": "3edf5f6d-debc-4fa3-a830-8c8a6910baad",
+      "message": "Migration 2 (Add Status) committed 2 of its 3 statements, then failed with SQLSTATE 42S22 (error 1054); retrying the file would run them twice",
+      "outcome": "Partial",
+      "startedAt": "2026-10-24T18:33:59Z"
+    },
+    "nextReconciliationTime": "2026-10-24T18:55:32Z",
+    "observedGeneration": 2,
+    "phase": "AwaitingApproval",
+    "plan": {
+      "name": "ptah-mplan-3567113053310c1150e9bd6f",
+      "uid": "01d77130-8052-4476-8afe-2578dca7bb3f"
+    },
+    "resolvedRun": {
+      "acknowledgedBy": {
+        "groups": [
+          "e2e:approvers",
+          "system:authenticated"
+        ],
+        "username": "e2e-approver"
+      },
+      "acknowledgmentRef": {
+        "name": "ptah-console-e8c58e738dda0b9000dd",
+        "uid": "fb5bff55-90b0-44c1-aa20-834bd360292b"
+      },
+      "operationID": "sha256:ee18292b535e211fe52eca2e032060dfa10db26686b7a679c593689168b93c6f",
+      "outcome": "Partial",
+      "resolution": "Acknowledged",
+      "resolvedAt": "2026-10-24T18:34:31Z"
+    }
+  }
+}
