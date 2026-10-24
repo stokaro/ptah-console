@@ -9,7 +9,7 @@ import {
 
 import { ClusterProvider, readClusterSearch, type ClusterSearch } from "./api/cluster"
 
-import { Home, Launch, Login } from "./screens/Auth"
+import { Home, Launch, Login, providerRefusals, type ProviderRefusal } from "./screens/Auth"
 import { Loading } from "./screens/common"
 import { RouteError } from "./screens/RouteError"
 import { readActivitySearch, readResourcesSearch } from "./screens/console/search"
@@ -109,7 +109,25 @@ function FocusRoute() {
 
 const indexRoute = createRoute({ getParentRoute: () => focus, path: "/", component: Home })
 const launch = createRoute({ getParentRoute: () => focus, path: "launch", component: Launch })
-const login = createRoute({ getParentRoute: () => focus, path: "login", component: Login })
+const login = createRoute({
+  getParentRoute: () => focus,
+  path: "login",
+  validateSearch: readLoginSearch,
+  component: LoginRoute,
+})
+
+/** The reason a sign-in with the provider came back with, when it is one the console names. */
+function readLoginSearch(search: Record<string, unknown>): { error?: ProviderRefusal } {
+  const error = search.error
+  return typeof error === "string" && (providerRefusals as readonly string[]).includes(error)
+    ? { error: error as ProviderRefusal }
+    : {}
+}
+
+function LoginRoute() {
+  const { error } = login.useSearch()
+  return <Login refused={error} />
+}
 
 const approve = createRoute({
   getParentRoute: () => focus,

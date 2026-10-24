@@ -37,6 +37,9 @@ type Options struct {
 	// RegistryCRDs installs the console's own registry CRDs, as the chart
 	// carries them.
 	RegistryCRDs bool
+	// APIServerFlags are set on the kube-apiserver beside envtest's own,
+	// such as --authentication-config.
+	APIServerFlags map[string]string
 }
 
 // Plane is a running control plane.
@@ -85,6 +88,9 @@ func Run(m *testing.M, options Options, plane **Plane) int {
 	}
 	if options.RegistryCRDs {
 		env.CRDDirectoryPaths = append(env.CRDDirectoryPaths, registryCRDs())
+	}
+	for flag, value := range options.APIServerFlags {
+		env.ControlPlane.GetAPIServer().Configure().Set(flag, value)
 	}
 	config, err := env.Start()
 	if err != nil {

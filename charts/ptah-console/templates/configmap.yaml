@@ -21,7 +21,23 @@ data:
     installationID: {{ .Values.installationID | quote }}
     publicURL: {{ .Values.publicURL | quote }}
     namespaces: {{ toJson .Values.namespaces }}
+    {{- if .Values.oidc.enabled }}
+    oidc:
+      issuerURL: {{ .Values.oidc.issuerURL | quote }}
+      clientID: {{ .Values.oidc.clientID | quote }}
+      {{- with .Values.oidc.displayName }}
+      displayName: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.oidc.issuerCA }}
+      issuerCA: |
+        {{- . | trim | nindent 8 }}
+      {{- end }}
+      {{- with .Values.oidc.extraScopes }}
+      extraScopes: {{ toJson . }}
+      {{- end }}
+    {{- else }}
     accounts: {{ toJson $accounts }}
+    {{- end }}
     {{- with .Values.trustedProxies }}
     trustedProxies: {{ toJson . }}
     {{- end }}

@@ -25,9 +25,19 @@ impersonates that username for every request the person makes, and nothing
 from the browser takes part in choosing it. Requests that carry
 `Impersonate-*` or `X-Remote-*` headers are refused.
 
+**Hosted mode with OpenID Connect.** People sign in with a provider the API
+server trusts, and every request carries the person's own ID token. The API
+server maps it to a username and groups; the console reads no claim to decide
+anything and impersonates nobody, so its ServiceAccount has no `impersonate`
+rule. The client that acts for a person holds the API server's address and CA
+and the person's token, and nothing else of the console's own identity. A
+token that cannot be renewed, or that the API server refuses, ends the
+session. [Sign in with OpenID Connect](hosted/oidc.md) has the details.
+
 What admission records on an approval or an acknowledgment is the identity
 the request ran as: the kubeconfig's user in local mode, the account's
-username in hosted mode.
+username in hosted mode, and the user the API server maps the token to with
+OpenID Connect.
 
 ## What the console holds
 
@@ -40,6 +50,10 @@ username in hosted mode.
   hours after sign-in, on sign-out, and when the process restarts.
 - In hosted mode, the bcrypt hashes from the passwords Secret and the
   ServiceAccount token Kubernetes mounts.
+- With OpenID Connect, each signed-in person's ID token and refresh token, in
+  memory, for as long as the session, and the client secret when there is one.
+  A sign-in still at the provider is a state, a nonce and a PKCE verifier,
+  kept for ten minutes and used once.
 - Nothing on disk in hosted mode. Local mode keeps one state file, mode 0600,
   with the credential plugins the person agreed to run.
 

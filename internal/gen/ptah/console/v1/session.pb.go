@@ -242,7 +242,8 @@ type GetSessionResponse struct {
 	KubeconfigImpersonates string `protobuf:"bytes,8,opt,name=kubeconfig_impersonates,json=kubeconfigImpersonates,proto3" json:"kubeconfig_impersonates,omitempty"`
 	// True when the kubeconfig turns off verification of the API server's
 	// certificate.
-	InsecureTls   bool `protobuf:"varint,9,opt,name=insecure_tls,json=insecureTls,proto3" json:"insecure_tls,omitempty"`
+	InsecureTls   bool   `protobuf:"varint,9,opt,name=insecure_tls,json=insecureTls,proto3" json:"insecure_tls,omitempty"`
+	SignIn        SignIn `protobuf:"varint,10,opt,name=sign_in,json=signIn,proto3,enum=ptah.console.v1.SignIn" json:"sign_in,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -340,6 +341,13 @@ func (x *GetSessionResponse) GetInsecureTls() bool {
 	return false
 }
 
+func (x *GetSessionResponse) GetSignIn() SignIn {
+	if x != nil {
+		return x.SignIn
+	}
+	return SignIn_SIGN_IN_UNSPECIFIED
+}
+
 type LogoutRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -424,7 +432,7 @@ const file_ptah_console_v1_session_proto_rawDesc = "" +
 	"\x05login\x18\x01 \x01(\tR\x05login\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\"\x0f\n" +
 	"\rLoginResponse\"\x13\n" +
-	"\x11GetSessionRequest\"\xf2\x02\n" +
+	"\x11GetSessionRequest\"\xa4\x03\n" +
 	"\x12GetSessionResponse\x12)\n" +
 	"\x04mode\x18\x01 \x01(\x0e2\x15.ptah.console.v1.ModeR\x04mode\x12\x18\n" +
 	"\acontext\x18\x02 \x01(\tR\acontext\x12/\n" +
@@ -435,7 +443,9 @@ const file_ptah_console_v1_session_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x06 \x01(\tR\vdisplayName\x12\x1b\n" +
 	"\tread_only\x18\a \x01(\bR\breadOnly\x127\n" +
 	"\x17kubeconfig_impersonates\x18\b \x01(\tR\x16kubeconfigImpersonates\x12!\n" +
-	"\finsecure_tls\x18\t \x01(\bR\vinsecureTls\"\x0f\n" +
+	"\finsecure_tls\x18\t \x01(\bR\vinsecureTls\x120\n" +
+	"\asign_in\x18\n" +
+	" \x01(\x0e2\x17.ptah.console.v1.SignInR\x06signIn\"\x0f\n" +
 	"\rLogoutRequest\"\x10\n" +
 	"\x0eLogoutResponse2\xf7\x02\n" +
 	"\x0eSessionService\x12r\n" +
@@ -468,22 +478,24 @@ var file_ptah_console_v1_session_proto_goTypes = []any{
 	(*LogoutRequest)(nil),               // 6: ptah.console.v1.LogoutRequest
 	(*LogoutResponse)(nil),              // 7: ptah.console.v1.LogoutResponse
 	(Mode)(0),                           // 8: ptah.console.v1.Mode
+	(SignIn)(0),                         // 9: ptah.console.v1.SignIn
 }
 var file_ptah_console_v1_session_proto_depIdxs = []int32{
 	8, // 0: ptah.console.v1.GetSessionResponse.mode:type_name -> ptah.console.v1.Mode
-	0, // 1: ptah.console.v1.SessionService.ExchangeLaunchToken:input_type -> ptah.console.v1.ExchangeLaunchTokenRequest
-	2, // 2: ptah.console.v1.SessionService.Login:input_type -> ptah.console.v1.LoginRequest
-	4, // 3: ptah.console.v1.SessionService.GetSession:input_type -> ptah.console.v1.GetSessionRequest
-	6, // 4: ptah.console.v1.SessionService.Logout:input_type -> ptah.console.v1.LogoutRequest
-	1, // 5: ptah.console.v1.SessionService.ExchangeLaunchToken:output_type -> ptah.console.v1.ExchangeLaunchTokenResponse
-	3, // 6: ptah.console.v1.SessionService.Login:output_type -> ptah.console.v1.LoginResponse
-	5, // 7: ptah.console.v1.SessionService.GetSession:output_type -> ptah.console.v1.GetSessionResponse
-	7, // 8: ptah.console.v1.SessionService.Logout:output_type -> ptah.console.v1.LogoutResponse
-	5, // [5:9] is the sub-list for method output_type
-	1, // [1:5] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	9, // 1: ptah.console.v1.GetSessionResponse.sign_in:type_name -> ptah.console.v1.SignIn
+	0, // 2: ptah.console.v1.SessionService.ExchangeLaunchToken:input_type -> ptah.console.v1.ExchangeLaunchTokenRequest
+	2, // 3: ptah.console.v1.SessionService.Login:input_type -> ptah.console.v1.LoginRequest
+	4, // 4: ptah.console.v1.SessionService.GetSession:input_type -> ptah.console.v1.GetSessionRequest
+	6, // 5: ptah.console.v1.SessionService.Logout:input_type -> ptah.console.v1.LogoutRequest
+	1, // 6: ptah.console.v1.SessionService.ExchangeLaunchToken:output_type -> ptah.console.v1.ExchangeLaunchTokenResponse
+	3, // 7: ptah.console.v1.SessionService.Login:output_type -> ptah.console.v1.LoginResponse
+	5, // 8: ptah.console.v1.SessionService.GetSession:output_type -> ptah.console.v1.GetSessionResponse
+	7, // 9: ptah.console.v1.SessionService.Logout:output_type -> ptah.console.v1.LogoutResponse
+	6, // [6:10] is the sub-list for method output_type
+	2, // [2:6] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_ptah_console_v1_session_proto_init() }

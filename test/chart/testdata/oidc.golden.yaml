@@ -1,0 +1,406 @@
+---
+# Source: ptah-console/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: console-ptah-console
+  namespace: ptah-console
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+
+---
+# Source: ptah-console/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: console-ptah-console
+  namespace: ptah-console
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+data:
+  configuration.yaml: |
+    apiVersion: console.ptah.run/v1alpha1
+    kind: HostedConfiguration
+    installationID: "prod"
+    publicURL: "https://console.example.com"
+    namespaces: ["storefront","billing"]
+    oidc:
+      issuerURL: "https://login.example.com/realms/ops"
+      clientID: "ptah-console"
+      displayName: "Example SSO"
+      extraScopes: ["groups"]
+
+---
+# Source: ptah-console/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: console-ptah-console-viewer
+  namespace: storefront
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+rules:
+  - apiGroups:
+    - operator.ptah.run
+    resources:
+    - ptahschemas
+    - ptahschemaplans
+    - ptahschemaapprovals
+    - ptahmigrations
+    - ptahmigrationplans
+    - ptahmigrationapprovals
+    - ptahmigrationrunacknowledgments
+    verbs:
+    - get
+    - list
+    - watch
+
+---
+# Source: ptah-console/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: console-ptah-console-plan-reader
+  namespace: storefront
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+rules:
+  - apiGroups:
+    - operator.ptah.run
+    resources:
+    - ptahschemas
+    - ptahschemaplans
+    - ptahschemaplanchunks
+    verbs:
+    - get
+
+---
+# Source: ptah-console/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: console-ptah-console-viewer
+  namespace: billing
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+rules:
+  - apiGroups:
+    - operator.ptah.run
+    resources:
+    - ptahschemas
+    - ptahschemaplans
+    - ptahschemaapprovals
+    - ptahmigrations
+    - ptahmigrationplans
+    - ptahmigrationapprovals
+    - ptahmigrationrunacknowledgments
+    verbs:
+    - get
+    - list
+    - watch
+
+---
+# Source: ptah-console/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: console-ptah-console-plan-reader
+  namespace: billing
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+rules:
+  - apiGroups:
+    - operator.ptah.run
+    resources:
+    - ptahschemas
+    - ptahschemaplans
+    - ptahschemaplanchunks
+    verbs:
+    - get
+
+---
+# Source: ptah-console/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: console-ptah-console-viewer
+  namespace: storefront
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: console-ptah-console-viewer
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: oidc:ptah-approvers
+
+---
+# Source: ptah-console/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: console-ptah-console-plan-reader
+  namespace: storefront
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: console-ptah-console-plan-reader
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: oidc:sam@example.com
+
+---
+# Source: ptah-console/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: console-ptah-console-approver
+  namespace: storefront
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ptah-operator-ptah-operator-approver
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: oidc:ptah-approvers
+
+---
+# Source: ptah-console/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: console-ptah-console-viewer
+  namespace: billing
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: console-ptah-console-viewer
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: oidc:ptah-approvers
+
+---
+# Source: ptah-console/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: console-ptah-console-plan-reader
+  namespace: billing
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: console-ptah-console-plan-reader
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: oidc:sam@example.com
+
+---
+# Source: ptah-console/templates/roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: console-ptah-console-approver
+  namespace: billing
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ptah-operator-ptah-operator-approver
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: oidc:ptah-approvers
+
+---
+# Source: ptah-console/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: console-ptah-console
+  namespace: ptah-console
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+  ports:
+    - name: https
+      port: 443
+      targetPort: https
+      protocol: TCP
+
+---
+# Source: ptah-console/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: console-ptah-console
+  namespace: ptah-console
+  labels:
+    app.kubernetes.io/name: ptah-console
+    app.kubernetes.io/instance: console
+    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ptah-console-0.2.0
+spec:
+  # Sessions live in the one replica's memory; a rollout replaces it whole.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ptah-console
+      app.kubernetes.io/instance: console
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ptah-console
+        app.kubernetes.io/instance: console
+      annotations:
+        checksum/configuration: e6d96236225a15f7defaf13c9f1798a8c583346b966c4a3eda3f51e460b2ed88
+    spec:
+      serviceAccountName: console-ptah-console
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: console
+          image: ghcr.io/stokaro/ptah-console:0.2.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - serve
+            - --config=/etc/ptah-console/configuration/configuration.yaml
+            - --oidc-client-secret-file=/etc/ptah-console/oidc/client-secret
+            - --listen=:8443
+            - --tls-cert-file=/etc/ptah-console/tls/tls.crt
+            - --tls-key-file=/etc/ptah-console/tls/tls.key
+          ports:
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            periodSeconds: 20
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - name: configuration
+              mountPath: /etc/ptah-console/configuration
+              readOnly: true
+            - name: oidc
+              mountPath: /etc/ptah-console/oidc
+              readOnly: true
+            - name: tls
+              mountPath: /etc/ptah-console/tls
+              readOnly: true
+      volumes:
+        - name: configuration
+          configMap:
+            name: console-ptah-console
+        - name: oidc
+          secret:
+            secretName: ptah-console-oidc
+            items:
+              - key: client-secret
+                path: client-secret
+        - name: tls
+          secret:
+            secretName: ptah-console-tls
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key

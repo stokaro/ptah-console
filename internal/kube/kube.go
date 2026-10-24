@@ -29,13 +29,16 @@ const (
 	ModeLocal Mode = "local"
 	// ModeHosted impersonates the person's mapped identity.
 	ModeHosted Mode = "hosted"
+	// ModeOIDC acts with the person's own ID token, without impersonation.
+	ModeOIDC Mode = "oidc"
 )
 
 // Principal is whom a request acts for. It comes from the verified session
 // and the server's configuration, never from the request.
 type Principal struct {
 	Mode Mode
-	// AccountID is the Console account in hosted mode; empty in local mode.
+	// AccountID is the Console account in hosted mode, and the sign-in in
+	// OIDC mode; empty in local mode.
 	AccountID string
 	// Context names the kubeconfig context in local mode, or the connection
 	// in hosted mode.
@@ -55,6 +58,10 @@ func (p Principal) Validate() error {
 	case ModeHosted:
 		if p.AccountID == "" {
 			return errors.New("kube: a hosted principal needs a Console account")
+		}
+	case ModeOIDC:
+		if p.AccountID == "" {
+			return errors.New("kube: an OIDC principal needs its sign-in")
 		}
 	default:
 		return fmt.Errorf("kube: unknown mode %q", p.Mode)

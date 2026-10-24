@@ -126,7 +126,7 @@ func golden(t *testing.T, path, rendered string) string {
 
 func TestRendersMatchTheirGoldenFiles(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"minimal", "full", "registry", "agents"} {
+	for _, name := range []string{"minimal", "full", "registry", "agents", "oidc"} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			c := qt.New(t)
@@ -152,7 +152,7 @@ func TestTheChartLints(t *testing.T) {
 // group, resource, verb or name.
 func TestNoRenderedRuleHasAWildcard(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"minimal", "full", "registry", "agents"} {
+	for _, name := range []string{"minimal", "full", "registry", "agents", "oidc"} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			c := qt.New(t)
@@ -212,6 +212,50 @@ func TestTheConsoleImpersonatesExactlyItsAccounts(t *testing.T) {
 	c.Assert(binding.Subjects, qt.DeepEquals, []rbacv1.Subject{
 		{Kind: "ServiceAccount", Name: "console-ptah-console", Namespace: namespace},
 	})
+}
+
+// A console whose people sign in with OpenID Connect impersonates nobody: it
+// renders no impersonation grant, reads no passwords, mounts the client
+// secret, and binds the roles to the users and groups the API server maps
+// the tokens to, in every namespace of the ceiling.
+func TestAnOIDCConsoleImpersonatesNobody(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	all := objects(t, mustRender(t, values("oidc")))
+
+	c.Assert(ofKind(all, "ClusterRole"), qt.HasLen, 0)
+	c.Assert(ofKind(all, "ClusterRoleBinding"), qt.HasLen, 0)
+	configMaps := ofKind(all, "ConfigMap")
+	c.Assert(configMaps, qt.HasLen, 1)
+	text, _, _ := unstructured.NestedString(configMaps[0].Object, "data", "configuration.yaml")
+	config, err := accounts.ParseConfig([]byte(text))
+	c.Assert(err, qt.IsNil)
+	c.Assert(config.Accounts, qt.HasLen, 0)
+	c.Assert(config.OIDC, qt.DeepEquals, &accounts.OIDC{
+		IssuerURL: "https://login.example.com/realms/ops", ClientID: "ptah-console",
+		DisplayName: "Example SSO", ExtraScopes: []string{"groups"},
+	})
+	deployments := ofKind(all, "Deployment")
+	c.Assert(deployments, qt.HasLen, 1)
+	containers, _, _ := unstructured.NestedSlice(deployments[0].Object, "spec", "template", "spec", "containers")
+	args, _, _ := unstructured.NestedStringSlice(containers[0].(map[string]any), "args")
+	c.Assert(args, qt.Contains, "--oidc-client-secret-file=/etc/ptah-console/oidc/client-secret")
+	c.Assert(slices.ContainsFunc(args, func(arg string) bool { return strings.HasPrefix(arg, "--passwords") }), qt.IsFalse)
+	bound := make(map[string][]string)
+	for _, object := range ofKind(all, "RoleBinding") {
+		binding := convert[rbacv1.RoleBinding](t, object)
+		for _, subject := range binding.Subjects {
+			key := binding.Namespace + " " + binding.RoleRef.Kind + "/" + binding.RoleRef.Name
+			bound[key] = append(bound[key], subject.Kind+" "+subject.Name)
+		}
+	}
+	want := make(map[string][]string)
+	for _, ns := range []string{"storefront", "billing"} {
+		want[ns+" Role/console-ptah-console-viewer"] = []string{"Group oidc:ptah-approvers"}
+		want[ns+" Role/console-ptah-console-plan-reader"] = []string{"User oidc:sam@example.com"}
+		want[ns+" ClusterRole/ptah-operator-ptah-operator-approver"] = []string{"Group oidc:ptah-approvers"}
+	}
+	c.Assert(bound, qt.DeepEquals, want)
 }
 
 // Each account is bound to the roles it was given, in every namespace of the
@@ -280,6 +324,17 @@ func numbered(prefix string, n int) string {
 	return strings.Join(names, ", ")
 }
 
+// oidcOverlay turns the minimal values to OIDC and leaves the rest as it is;
+// oidcWithout clears what OIDC has no use for.
+const (
+	oidcOverlay = "oidc: {enabled: true, issuerURL: 'https://login.example.com', clientID: ptah-console}"
+	oidcWithout = "accounts: []\npasswords: {secretName: ''}"
+)
+
+func oidcWith(subject string) string {
+	return "oidc: {enabled: true, issuerURL: 'https://login.example.com', clientID: ptah-console, subjects: [" + subject + "]}"
+}
+
 func TestEachRefusal(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -336,6 +391,22 @@ func TestEachRefusal(t *testing.T) {
 			says: `agents: tls.secretName names the agent listener's certificate`},
 		{name: "a node port on a ClusterIP Service", overlay: "agents: {service: {nodePort: 31443}}",
 			says: `/agents/service/nodePort.*got number, want null`},
+		{name: "oidc beside accounts", overlay: oidcOverlay,
+			says: `/accounts.*maxItems`},
+		{name: "oidc beside a passwords Secret", overlay: oidcOverlay + "\naccounts: []",
+			says: `oidc: people sign in through the provider, so passwords.secretName stays empty`},
+		{name: "oidc beside the registry", overlay: oidcOverlay + "\n" + oidcWithout + "\nregistry: {enabled: true}",
+			says: `oidc: the registry and agents act as Console accounts; leave registry and agents off`},
+		{name: "oidc with a plain HTTP issuer", overlay: oidcWithout + "\noidc: {enabled: true, issuerURL: 'http://login.example.com', clientID: ptah-console}",
+			says: `/oidc/issuerURL.*does not match pattern`},
+		{name: "oidc without a client", overlay: oidcWithout + "\noidc: {enabled: true, issuerURL: 'https://login.example.com'}",
+			says: `/oidc.*clientID`},
+		{name: "oidc roles for every authenticated user", overlay: oidcWithout + "\n" + oidcWith("{kind: Group, name: 'system:authenticated', roles: [viewer]}"),
+			says: `/oidc/subjects/0/name.*'not' failed`},
+		{name: "oidc roles for a ServiceAccount", overlay: oidcWithout + "\n" + oidcWith("{kind: ServiceAccount, name: console, roles: [viewer]}"),
+			says: `/oidc/subjects/0/kind.*value must be one of`},
+		{name: "the connection-admin role in oidc", overlay: oidcWithout + "\n" + oidcWith("{kind: User, name: 'oidc:alex', roles: [connection-admin]}"),
+			says: `/oidc/subjects/0/roles/0.*value must be one of`},
 		{name: "agents without what an enrollment tells them",
 			overlay: "registry: {enabled: true}\nagents: {enabled: true, tls: {secretName: agents-tls}, address: 'https://agents.example.com'}",
 			says:    `agents: address, serverName and caBundle are what an enrollment file tells agents`},

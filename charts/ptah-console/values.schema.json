@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "additionalProperties": false,
-  "required": ["installationID", "publicURL", "namespaces", "accounts", "passwords", "tls"],
+  "required": ["installationID", "publicURL", "namespaces", "tls"],
   "definitions": {
     "label": {
       "type": "string",
@@ -46,7 +46,6 @@
     },
     "accounts": {
       "type": "array",
-      "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -64,7 +63,14 @@
             "minItems": 1,
             "uniqueItems": true,
             "items": {
-              "enum": ["viewer", "plan-reader", "desired-state-author", "diagnostic-reader", "approver", "connection-admin"]
+              "enum": [
+                "viewer",
+                "plan-reader",
+                "desired-state-author",
+                "diagnostic-reader",
+                "approver",
+                "connection-admin"
+              ]
             }
           }
         }
@@ -117,10 +123,68 @@
     "passwords": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["secretName"],
       "properties": {
-        "secretName": { "type": "string", "minLength": 1 },
+        "secretName": { "type": "string" },
         "key": { "type": "string", "minLength": 1 }
+      }
+    },
+    "oidc": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "issuerURL": { "type": "string" },
+        "clientID": { "type": "string", "pattern": "^[!-~]{0,255}$" },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "issuerCA": { "type": "string" },
+        "extraScopes": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[\\x21\\x23-\\x5B\\x5D-\\x7E]{1,128}$",
+            "not": { "const": "openid" }
+          }
+        },
+        "clientSecret": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "secretName": { "type": "string" },
+            "key": { "type": "string", "minLength": 1 }
+          }
+        },
+        "subjects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "name", "roles"],
+            "properties": {
+              "kind": { "enum": ["User", "Group"] },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "not": { "pattern": "^[Ss][Yy][Ss][Tt][Ee][Mm]:" }
+              },
+              "roles": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "enum": [
+                    "viewer",
+                    "plan-reader",
+                    "desired-state-author",
+                    "diagnostic-reader",
+                    "approver"
+                  ]
+                }
+              }
+            }
+          }
+        }
       }
     },
     "tls": {
@@ -181,7 +245,10 @@
           "additionalProperties": false,
           "properties": {
             "cidrs": { "type": "array", "items": { "type": "string" } },
-            "ports": { "type": "array", "items": { "type": "integer", "minimum": 1, "maximum": 65535 } }
+            "ports": {
+              "type": "array",
+              "items": { "type": "integer", "minimum": 1, "maximum": 65535 }
+            }
           }
         }
       }
@@ -191,5 +258,33 @@
     "tolerations": { "type": "array" },
     "affinity": { "type": "object" },
     "podAnnotations": { "type": "object" }
+  },
+  "if": {
+    "properties": {
+      "oidc": { "properties": { "enabled": { "const": true } }, "required": ["enabled"] }
+    },
+    "required": ["oidc"]
+  },
+  "then": {
+    "properties": {
+      "accounts": { "maxItems": 0 },
+      "oidc": {
+        "required": ["issuerURL", "clientID"],
+        "properties": {
+          "issuerURL": { "pattern": "^https://" },
+          "clientID": { "minLength": 1 }
+        }
+      }
+    }
+  },
+  "else": {
+    "required": ["accounts", "passwords"],
+    "properties": {
+      "accounts": { "minItems": 1 },
+      "passwords": {
+        "required": ["secretName"],
+        "properties": { "secretName": { "minLength": 1 } }
+      }
+    }
   }
 }

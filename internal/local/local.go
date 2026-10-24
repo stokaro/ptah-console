@@ -104,6 +104,7 @@ func Run(ctx context.Context, options Options) error {
 	cookies := session.Cookies{Secure: false}
 	sessions := api.NewLocalSession(store, cookies, launcher, principal, factory, api.SessionFacts{
 		Mode:         consolev1.Mode_MODE_LOCAL,
+		SignIn:       consolev1.SignIn_SIGN_IN_LAUNCH_LINK,
 		ReadOnly:     options.ReadOnly,
 		Impersonates: resolved.Impersonates,
 		InsecureTLS:  resolved.InsecureTLS,
@@ -120,6 +121,7 @@ func Run(ctx context.Context, options Options) error {
 	}
 	handler, err := server.New(server.Options{
 		Mode:         consolev1.Mode_MODE_LOCAL,
+		Info:         api.InfoFacts{SignIn: consolev1.SignIn_SIGN_IN_LAUNCH_LINK},
 		ReadOnly:     options.ReadOnly,
 		Assets:       options.Assets,
 		Origins:      origins,

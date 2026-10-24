@@ -9,7 +9,7 @@ import { useConnections } from "../api/cluster"
 import { LiveUpdates, useLive } from "../api/live"
 import { useHosted, useScope, useSession } from "../api/resources"
 import { BuildFooter } from "../BuildFooter"
-import { Mode } from "../gen/ptah/console/v1/info_pb"
+import { Mode, SignIn } from "../gen/ptah/console/v1/info_pb"
 import { SessionService } from "../gen/ptah/console/v1/session_pb"
 import { useTheme } from "../appearance"
 import { themes } from "../theme"
@@ -155,7 +155,13 @@ export function SessionChips({ identityOnNarrowOnly = false }: SessionChipsProps
           <span className="text-mute">as</span>
           <b className="font-mono font-semibold">{identity.kubernetesUsername}</b>
           <span className="text-mute">
-            · {identity.mode === Mode.LOCAL ? "kubeconfig" : "Console-managed"} {identity.context}
+            ·{" "}
+            {identity.mode === Mode.LOCAL
+              ? "kubeconfig"
+              : identity.signIn === SignIn.OIDC
+                ? "OIDC"
+                : "Console-managed"}{" "}
+            {identity.context}
           </span>
         </span>
       ) : null}

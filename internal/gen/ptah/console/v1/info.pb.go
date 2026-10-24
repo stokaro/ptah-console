@@ -28,7 +28,8 @@ const (
 	Mode_MODE_UNSPECIFIED Mode = 0
 	// The user's own kubeconfig, on a loopback listener.
 	Mode_MODE_LOCAL Mode = 1
-	// Beside the operator, with personal Console accounts and impersonation.
+	// Beside the operator, with personal Console accounts and impersonation,
+	// or with an OpenID Connect provider and the person's own token.
 	Mode_MODE_HOSTED Mode = 2
 )
 
@@ -71,6 +72,62 @@ func (x Mode) Number() protoreflect.EnumNumber {
 // Deprecated: Use Mode.Descriptor instead.
 func (Mode) EnumDescriptor() ([]byte, []int) {
 	return file_ptah_console_v1_info_proto_rawDescGZIP(), []int{0}
+}
+
+// SignIn is how a person signs in.
+type SignIn int32
+
+const (
+	SignIn_SIGN_IN_UNSPECIFIED SignIn = 0
+	// The link ptah-console local prints.
+	SignIn_SIGN_IN_LAUNCH_LINK SignIn = 1
+	// A Console account's login and password.
+	SignIn_SIGN_IN_ACCOUNTS SignIn = 2
+	// An OpenID Connect provider, at /auth/oidc/login.
+	SignIn_SIGN_IN_OIDC SignIn = 3
+)
+
+// Enum value maps for SignIn.
+var (
+	SignIn_name = map[int32]string{
+		0: "SIGN_IN_UNSPECIFIED",
+		1: "SIGN_IN_LAUNCH_LINK",
+		2: "SIGN_IN_ACCOUNTS",
+		3: "SIGN_IN_OIDC",
+	}
+	SignIn_value = map[string]int32{
+		"SIGN_IN_UNSPECIFIED": 0,
+		"SIGN_IN_LAUNCH_LINK": 1,
+		"SIGN_IN_ACCOUNTS":    2,
+		"SIGN_IN_OIDC":        3,
+	}
+)
+
+func (x SignIn) Enum() *SignIn {
+	p := new(SignIn)
+	*p = x
+	return p
+}
+
+func (x SignIn) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SignIn) Descriptor() protoreflect.EnumDescriptor {
+	return file_ptah_console_v1_info_proto_enumTypes[1].Descriptor()
+}
+
+func (SignIn) Type() protoreflect.EnumType {
+	return &file_ptah_console_v1_info_proto_enumTypes[1]
+}
+
+func (x SignIn) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SignIn.Descriptor instead.
+func (SignIn) EnumDescriptor() ([]byte, []int) {
+	return file_ptah_console_v1_info_proto_rawDescGZIP(), []int{1}
 }
 
 type GetInfoRequest struct {
@@ -127,6 +184,10 @@ type GetInfoResponse struct {
 	// The Kubernetes minors this console release was tested against, oldest
 	// first, from its support record.
 	KubernetesMinors []string `protobuf:"bytes,7,rep,name=kubernetes_minors,json=kubernetesMinors,proto3" json:"kubernetes_minors,omitempty"`
+	SignIn           SignIn   `protobuf:"varint,8,opt,name=sign_in,json=signIn,proto3,enum=ptah.console.v1.SignIn" json:"sign_in,omitempty"`
+	// The provider's name, for the sign-in page, when people sign in with
+	// OpenID Connect.
+	SignInProvider string `protobuf:"bytes,9,opt,name=sign_in_provider,json=signInProvider,proto3" json:"sign_in_provider,omitempty"`
 	// The plan contracts this console's plan reader reads, oldest first. A
 	// schema plan of another contract is shown without its SQL and is not
 	// approved here.
@@ -214,6 +275,20 @@ func (x *GetInfoResponse) GetKubernetesMinors() []string {
 	return nil
 }
 
+func (x *GetInfoResponse) GetSignIn() SignIn {
+	if x != nil {
+		return x.SignIn
+	}
+	return SignIn_SIGN_IN_UNSPECIFIED
+}
+
+func (x *GetInfoResponse) GetSignInProvider() string {
+	if x != nil {
+		return x.SignInProvider
+	}
+	return ""
+}
+
 func (x *GetInfoResponse) GetPlanContractVersions() []int32 {
 	if x != nil {
 		return x.PlanContractVersions
@@ -226,7 +301,7 @@ var File_ptah_console_v1_info_proto protoreflect.FileDescriptor
 const file_ptah_console_v1_info_proto_rawDesc = "" +
 	"\n" +
 	"\x1aptah/console/v1/info.proto\x12\x0fptah.console.v1\"\x10\n" +
-	"\x0eGetInfoRequest\"\xcd\x02\n" +
+	"\x0eGetInfoRequest\"\xa9\x03\n" +
 	"\x0fGetInfoResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
 	"\x06commit\x18\x02 \x01(\tR\x06commit\x12)\n" +
@@ -234,14 +309,21 @@ const file_ptah_console_v1_info_proto_rawDesc = "" +
 	"\tread_only\x18\x04 \x01(\bR\breadOnly\x12)\n" +
 	"\x10operator_version\x18\x05 \x01(\tR\x0foperatorVersion\x122\n" +
 	"\x15plan_contract_version\x18\x06 \x01(\x05R\x13planContractVersion\x12+\n" +
-	"\x11kubernetes_minors\x18\a \x03(\tR\x10kubernetesMinors\x124\n" +
+	"\x11kubernetes_minors\x18\a \x03(\tR\x10kubernetesMinors\x120\n" +
+	"\asign_in\x18\b \x01(\x0e2\x17.ptah.console.v1.SignInR\x06signIn\x12(\n" +
+	"\x10sign_in_provider\x18\t \x01(\tR\x0esignInProvider\x124\n" +
 	"\x16plan_contract_versions\x18\n" +
 	" \x03(\x05R\x14planContractVersions*=\n" +
 	"\x04Mode\x12\x14\n" +
 	"\x10MODE_UNSPECIFIED\x10\x00\x12\x0e\n" +
 	"\n" +
 	"MODE_LOCAL\x10\x01\x12\x0f\n" +
-	"\vMODE_HOSTED\x10\x022`\n" +
+	"\vMODE_HOSTED\x10\x02*b\n" +
+	"\x06SignIn\x12\x17\n" +
+	"\x13SIGN_IN_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13SIGN_IN_LAUNCH_LINK\x10\x01\x12\x14\n" +
+	"\x10SIGN_IN_ACCOUNTS\x10\x02\x12\x10\n" +
+	"\fSIGN_IN_OIDC\x10\x032`\n" +
 	"\vInfoService\x12Q\n" +
 	"\aGetInfo\x12\x1f.ptah.console.v1.GetInfoRequest\x1a .ptah.console.v1.GetInfoResponse\"\x03\x90\x02\x01BHZFgithub.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1b\x06proto3"
 
@@ -257,22 +339,24 @@ func file_ptah_console_v1_info_proto_rawDescGZIP() []byte {
 	return file_ptah_console_v1_info_proto_rawDescData
 }
 
-var file_ptah_console_v1_info_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_ptah_console_v1_info_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_ptah_console_v1_info_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_ptah_console_v1_info_proto_goTypes = []any{
 	(Mode)(0),               // 0: ptah.console.v1.Mode
-	(*GetInfoRequest)(nil),  // 1: ptah.console.v1.GetInfoRequest
-	(*GetInfoResponse)(nil), // 2: ptah.console.v1.GetInfoResponse
+	(SignIn)(0),             // 1: ptah.console.v1.SignIn
+	(*GetInfoRequest)(nil),  // 2: ptah.console.v1.GetInfoRequest
+	(*GetInfoResponse)(nil), // 3: ptah.console.v1.GetInfoResponse
 }
 var file_ptah_console_v1_info_proto_depIdxs = []int32{
 	0, // 0: ptah.console.v1.GetInfoResponse.mode:type_name -> ptah.console.v1.Mode
-	1, // 1: ptah.console.v1.InfoService.GetInfo:input_type -> ptah.console.v1.GetInfoRequest
-	2, // 2: ptah.console.v1.InfoService.GetInfo:output_type -> ptah.console.v1.GetInfoResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	1, // 1: ptah.console.v1.GetInfoResponse.sign_in:type_name -> ptah.console.v1.SignIn
+	2, // 2: ptah.console.v1.InfoService.GetInfo:input_type -> ptah.console.v1.GetInfoRequest
+	3, // 3: ptah.console.v1.InfoService.GetInfo:output_type -> ptah.console.v1.GetInfoResponse
+	3, // [3:4] is the sub-list for method output_type
+	2, // [2:3] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_ptah_console_v1_info_proto_init() }
@@ -285,7 +369,7 @@ func file_ptah_console_v1_info_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ptah_console_v1_info_proto_rawDesc), len(file_ptah_console_v1_info_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   1,

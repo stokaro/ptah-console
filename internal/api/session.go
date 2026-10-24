@@ -20,6 +20,7 @@ import (
 // acts as.
 type SessionFacts struct {
 	Mode     consolev1.Mode
+	SignIn   consolev1.SignIn
 	ReadOnly bool
 	// Impersonates is who the kubeconfig itself asks to impersonate.
 	Impersonates string
@@ -43,10 +44,14 @@ type Session struct {
 	principal kube.Principal
 
 	// Hosted mode signs a browser in with an account's login and password.
-	verifier     *signin.Verifier
-	generation   uint64
-	displayNames map[string]string
-	addresses    clientaddr.Resolver
+	verifier   *signin.Verifier
+	generation uint64
+	addresses  clientaddr.Resolver
+
+	// nameOf is how the page names the person a principal stands for.
+	nameOf func(kube.Principal) string
+	// provider, in OIDC mode, is where people sign in instead.
+	provider string
 }
 
 // NewLocalSession returns the SessionService of ptah-console local.
@@ -61,7 +66,7 @@ func NewLocalSession(
 ) *Session {
 	return &Session{
 		store: store, cookies: cookies, factory: factory, facts: facts, audit: auditLog,
-		launcher: launcher, principal: principal,
+		launcher: launcher, principal: principal, nameOf: func(kube.Principal) string { return "" },
 	}
 }
 
@@ -87,8 +92,26 @@ func NewHostedSession(
 ) *Session {
 	return &Session{
 		store: store, cookies: cookies, factory: factory, facts: facts, audit: auditLog,
-		verifier: hosted.Verifier, generation: hosted.Generation, displayNames: hosted.DisplayNames,
-		addresses: hosted.Addresses,
+		verifier: hosted.Verifier, generation: hosted.Generation, addresses: hosted.Addresses,
+		nameOf: func(principal kube.Principal) string { return hosted.DisplayNames[principal.AccountID] },
+	}
+}
+
+// NewOIDCSession returns the SessionService of a hosted console whose people
+// sign in with an OpenID Connect provider, at pages of their own; it signs
+// nobody in itself. nameOf names a sign-in's person as the provider did.
+func NewOIDCSession(
+	store *session.Store,
+	cookies session.Cookies,
+	provider string,
+	nameOf func(kube.Principal) string,
+	factory kube.ClientFactory,
+	facts SessionFacts,
+	auditLog *audit.Logger,
+) *Session {
+	return &Session{
+		store: store, cookies: cookies, factory: factory, facts: facts, audit: auditLog,
+		provider: provider, nameOf: nameOf,
 	}
 }
 
@@ -96,7 +119,10 @@ func NewHostedSession(
 // and password is the same answer; too many attempts get their own, which
 // says nothing about the account either.
 func (s *Session) Login(ctx context.Context, request *consolev1.LoginRequest) (*consolev1.LoginResponse, error) {
-	if s.verifier == nil {
+	switch {
+	case s.provider != "":
+		return nil, connect.NewError(connect.CodeUnimplemented, "this console signs in with "+s.provider+", not a password")
+	case s.verifier == nil:
 		return nil, connect.NewError(connect.CodeUnimplemented, "this console signs in with the link ptah-console local prints")
 	}
 	info, _ := connect.CallInfoForServerContext(ctx)
@@ -177,10 +203,11 @@ func (s *Session) GetSession(ctx context.Context, _ *consolev1.GetSessionRequest
 		KubernetesUsername:     identity.Username,
 		KubernetesGroups:       identity.Groups,
 		AccountId:              principal.AccountID,
-		DisplayName:            s.displayNames[principal.AccountID],
+		DisplayName:            s.nameOf(principal),
 		ReadOnly:               s.facts.ReadOnly,
 		KubeconfigImpersonates: s.facts.Impersonates,
 		InsecureTls:            s.facts.InsecureTLS,
+		SignIn:                 s.facts.SignIn,
 	}, nil
 }
 

@@ -164,13 +164,48 @@ func TestConfigValidateReportsEveryProblem(t *testing.T) {
 		"  - accounts[1] (sam) has no password\n")
 }
 
-func TestConfigValidateNeedsBothFiles(t *testing.T) {
+func TestConfigValidateWithAccountsNeedsThePasswords(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
 	configPath, _ := hostedFiles(t, "")
 
 	code, _, stderr := run("config", "validate", "--config", configPath)
 
+	c.Assert(code, qt.Equals, cli.ExitFailed)
+	c.Assert(stderr, qt.Contains, "lists accounts, whose passwords are a file of their own; give --passwords")
+}
+
+func TestConfigValidateNeedsAConfiguration(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+
+	code, _, stderr := run("config", "validate")
+
 	c.Assert(code, qt.Equals, cli.ExitUsage)
-	c.Assert(stderr, qt.Contains, "--config and --passwords are both required")
+	c.Assert(stderr, qt.Contains, "--config is required, and --passwords with accounts")
+}
+
+// A configuration with oidc reads no passwords, and validate says what the
+// API server has to trust for the sign-ins to work.
+func TestConfigValidateSaysWhatAnOIDCConsoleNeedsTheAPIServerToTrust(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	configPath := filepath.Join(t.TempDir(), "configuration.yaml")
+	c.Assert(os.WriteFile(configPath, []byte(`apiVersion: console.ptah.run/v1alpha1
+kind: HostedConfiguration
+installationID: staging
+publicURL: https://console.staging.example.com
+namespaces: [storefront]
+oidc:
+  issuerURL: https://login.example.com/realms/ops
+  clientID: ptah-console
+  displayName: Example SSO
+`), 0o600), qt.IsNil)
+
+	code, stdout, stderr := run("config", "validate", "--config", configPath)
+
+	c.Assert(code, qt.Equals, cli.ExitOK, qt.Commentf("%s", stderr))
+	c.Assert(stdout, qt.Equals, "Valid for installation staging, in namespaces storefront.\n"+
+		"People sign in with Example SSO. The API server has to trust issuer https://login.example.com/realms/ops with audience ptah-console;\n"+
+		"RBAC bindings name the usernames and groups it maps the tokens to.\n")
 }

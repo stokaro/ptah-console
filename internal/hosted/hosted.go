@@ -1,5 +1,6 @@
 // Package hosted runs the console beside the operator, for people who sign in
-// with a Console account and act as the account's Kubernetes username.
+// with a Console account and act as the account's Kubernetes username, or
+// sign in with an OpenID Connect provider and act with their own ID token.
 //
 // It serves HTTPS or nothing: its own TLS from certificate files it reads
 // again when they change, or plain HTTP behind a proxy the installer declares
@@ -48,6 +49,10 @@ const generation = 1
 type Options struct {
 	ConfigPath    string
 	PasswordsPath string
+	// OIDCClientSecretFile holds the console's client secret at the
+	// provider, for a configuration with oidc. Empty, the console is a public
+	// client, which PKCE protects.
+	OIDCClientSecretFile string
 	// Listen is the address to serve on, such as ":8443".
 	Listen string
 	// TLSCertFile and TLSKeyFile serve HTTPS with a certificate read again
@@ -111,7 +116,7 @@ func Run(ctx context.Context, options Options) error {
 	if err != nil {
 		return err
 	}
-	if err := options.agentsProblem(config); err != nil {
+	if err := options.configurationProblem(config); err != nil {
 		return err
 	}
 	kubeConfig := options.Kube
@@ -127,7 +132,7 @@ func Run(ctx context.Context, options Options) error {
 	if err != nil {
 		return err
 	}
-	browser, err := options.browser(config, passwords, kubeConfig, agentListener)
+	browser, err := options.browserFor(ctx, config, passwords, kubeConfig, agentListener)
 	if err != nil {
 		if agentListener != nil {
 			_ = agentListener.listener.Close()
@@ -190,6 +195,23 @@ func (o *Options) defaults() {
 	}
 }
 
+// configurationProblem says why the options do not fit the configuration.
+func (o Options) configurationProblem(config *accounts.Config) error {
+	if config.OIDC == nil && o.OIDCClientSecretFile != "" {
+		return errors.New("--oidc-client-secret-file is for a configuration with oidc; this one lists accounts")
+	}
+	return o.agentsProblem(config)
+}
+
+// browserFor is the browser's side for how the configuration signs people
+// in: with an OpenID Connect provider, or with Console accounts.
+func (o Options) browserFor(ctx context.Context, config *accounts.Config, passwords *accounts.Passwords, kubeConfig *rest.Config, agents *agents) (*browserSide, error) {
+	if config.OIDC != nil {
+		return o.oidcBrowser(ctx, config, kubeConfig)
+	}
+	return o.browser(config, passwords, kubeConfig, agents)
+}
+
 // browserSide is what serves people: the web app and the console's services
 // behind a session, on the browser's listener.
 type browserSide struct {
@@ -230,7 +252,7 @@ func (o Options) browser(config *accounts.Config, passwords *accounts.Passwords,
 	sessions := api.NewHostedSession(store, cookies, api.HostedAccounts{
 		Verifier: verifier, Generation: generation, DisplayNames: displayNames,
 		Addresses: clientaddr.New(config.Proxies()),
-	}, factory, api.SessionFacts{Mode: consolev1.Mode_MODE_HOSTED, ReadOnly: o.ReadOnly}, o.Audit)
+	}, factory, api.SessionFacts{Mode: consolev1.Mode_MODE_HOSTED, SignIn: consolev1.SignIn_SIGN_IN_ACCOUNTS, ReadOnly: o.ReadOnly}, o.Audit)
 	scope := api.Scope{Candidates: config.Namespaces, Ceiling: config.Namespaces}
 	interceptors := []connect.ServerInterceptor{
 		session.Interceptor(store, cookies,
@@ -262,6 +284,7 @@ func (o Options) browser(config *accounts.Config, passwords *accounts.Passwords,
 	}
 	handler, err := server.New(server.Options{
 		Mode:         consolev1.Mode_MODE_HOSTED,
+		Info:         api.InfoFacts{SignIn: consolev1.SignIn_SIGN_IN_ACCOUNTS},
 		ReadOnly:     o.ReadOnly,
 		Assets:       o.Assets,
 		Origins:      []string{origin},

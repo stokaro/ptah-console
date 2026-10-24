@@ -88,7 +88,10 @@ func TestEachConfigurationRefusal(t *testing.T) {
 		{name: "a namespace twice", change: func(c *accounts.Config) { c.Namespaces[1] = "storefront" },
 			want: `namespaces[1]: repeats namespaces[0]`},
 		{name: "no account", change: func(c *accounts.Config) { c.Accounts = nil },
-			want: "accounts: lists no account"},
+			want: "accounts: lists no account, and there is no oidc to sign people in with"},
+		{name: "accounts beside oidc", change: func(c *accounts.Config) {
+			c.OIDC = &accounts.OIDC{IssuerURL: "https://login.example.com", ClientID: "ptah-console"}
+		}, want: "accounts: a configuration with oidc signs people in through the provider and lists no account"},
 		{name: "an account without an ID", change: func(c *accounts.Config) { c.Accounts[1].ID = "" },
 			want: `accounts[1].id: ` + label},
 		{name: "a system: ID", change: func(c *accounts.Config) { c.Accounts[1].ID = "system:masters" },
@@ -260,4 +263,125 @@ func TestEveryProblemIsReportedAtOnce(t *testing.T) {
 		"  - publicURL: must be an https URL; a hosted console serves HTTPS only\n"+
 		"  - accounts[1].id: repeats accounts[0].id\n"+
 		"  - accounts[1].login: repeats accounts[0].login, ignoring case")
+}
+
+func exampleOIDC(t *testing.T) []byte {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", "oidc.yaml"))
+	qt.New(t).Assert(err, qt.IsNil)
+	return data
+}
+
+// A configuration with oidc signs people in through the provider: it lists
+// no account and reads no passwords file.
+func TestAnOIDCConfigurationIsRead(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+
+	config, err := accounts.ParseConfig(exampleOIDC(t))
+
+	c.Assert(err, qt.IsNil)
+	c.Assert(config.Accounts, qt.HasLen, 0)
+	c.Assert(config.OIDC, qt.DeepEquals, &accounts.OIDC{
+		IssuerURL: "https://login.example.com/realms/ops", ClientID: "ptah-console",
+		DisplayName: "Example SSO", ExtraScopes: []string{"groups", "offline_access"},
+	})
+}
+
+func TestEachOIDCRefusal(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		change func(*accounts.Config)
+		want   string
+	}{
+		{name: "a registry beside oidc", change: func(c *accounts.Config) {
+			c.Registry = &accounts.Registry{Namespace: "ptah-console", ThisCluster: "this-cluster-3f2c4b1e", ConnectionUID: registryConnection}
+		}, want: "registry: external clusters are reached through agents that act as Console accounts, so a configuration with oidc has no registry"},
+		{name: "no issuer", change: func(c *accounts.Config) { c.OIDC.IssuerURL = "" },
+			want: "oidc.issuerURL: is required"},
+		{name: "a plain HTTP issuer", change: func(c *accounts.Config) { c.OIDC.IssuerURL = "http://login.example.com" },
+			want: "oidc.issuerURL: must be an https URL; the API server fetches the issuer's keys over https only"},
+		{name: "an issuer with credentials", change: func(c *accounts.Config) { c.OIDC.IssuerURL = "https://a:b@login.example.com" },
+			want: "oidc.issuerURL: must not carry a user name or password"},
+		{name: "an issuer with a query", change: func(c *accounts.Config) { c.OIDC.IssuerURL = "https://login.example.com/?tenant=a" },
+			want: "oidc.issuerURL: must not carry a query or a fragment"},
+		{name: "no client ID", change: func(c *accounts.Config) { c.OIDC.ClientID = "" },
+			want: "oidc.clientID: is required"},
+		{name: "a client ID with a space", change: func(c *accounts.Config) { c.OIDC.ClientID = "ptah console" },
+			want: "oidc.clientID: must be ASCII letters, digits and punctuation, without spaces"},
+		{name: "a long client ID", change: func(c *accounts.Config) { c.OIDC.ClientID = strings.Repeat("c", 256) },
+			want: "oidc.clientID: is longer than 255 bytes"},
+		{name: "a control character in the provider's name", change: func(c *accounts.Config) { c.OIDC.DisplayName = "SSO\x1b[2J" },
+			want: "oidc.displayName: must not hold control characters"},
+		{name: "a CA that holds no certificate", change: func(c *accounts.Config) { c.OIDC.IssuerCA = "not a certificate" },
+			want: "oidc.issuerCA: holds no PEM certificate"},
+		{name: "a scope with a space", change: func(c *accounts.Config) { c.OIDC.ExtraScopes = []string{"read write"} },
+			want: "oidc.extraScopes[0]: is not a scope: printable ASCII without spaces, quotes or backslashes"},
+		{name: "a scope with a quote", change: func(c *accounts.Config) { c.OIDC.ExtraScopes = []string{`a"b`} },
+			want: "oidc.extraScopes[0]: is not a scope: printable ASCII without spaces, quotes or backslashes"},
+		{name: "openid as an extra scope", change: func(c *accounts.Config) { c.OIDC.ExtraScopes = []string{"openid"} },
+			want: "oidc.extraScopes[0]: is openid, which the console always asks for"},
+		{name: "a scope twice", change: func(c *accounts.Config) { c.OIDC.ExtraScopes = []string{"groups", "groups"} },
+			want: "oidc.extraScopes[1]: repeats extraScopes[0]"},
+		{name: "too many scopes", change: func(c *accounts.Config) {
+			c.OIDC.ExtraScopes = make([]string, 17)
+			for i := range c.OIDC.ExtraScopes {
+				c.OIDC.ExtraScopes[i] = fmt.Sprintf("scope-%d", i)
+			}
+		}, want: "oidc.extraScopes: lists more than 16 scopes"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			config, err := accounts.ParseConfig(exampleOIDC(t))
+			c.Assert(err, qt.IsNil)
+			test.change(config)
+			document, err := yaml.Marshal(config)
+			c.Assert(err, qt.IsNil)
+
+			parsed, err := accounts.ParseConfig(document)
+
+			c.Assert(parsed, qt.IsNil)
+			invalid := new(accounts.InvalidError)
+			c.Assert(err, qt.ErrorAs, &invalid)
+			c.Assert(invalid.Problems, qt.DeepEquals, []string{test.want}, qt.Commentf("%s", document))
+		})
+	}
+}
+
+// An issuer keeps its path and a final slash: the ID tokens name it exactly
+// so, and a provider such as one serving many tenants from a host has both.
+func TestAnIssuerIsKeptAsWritten(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	for _, issuer := range []string{"https://tenant.example.com/", "https://login.example.com/realms/ops"} {
+		config, err := accounts.ParseConfig(exampleOIDC(t))
+		c.Assert(err, qt.IsNil)
+		config.OIDC.IssuerURL = issuer
+		document, err := yaml.Marshal(config)
+		c.Assert(err, qt.IsNil)
+
+		parsed, err := accounts.ParseConfig(document)
+
+		c.Assert(err, qt.IsNil)
+		c.Assert(parsed.OIDC.IssuerURL, qt.Equals, issuer)
+	}
+}
+
+// A configuration with oidc reads no passwords file, and naming one is
+// refused rather than ignored.
+func TestAnOIDCConfigurationReadsNoPasswords(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	path := filepath.Join("testdata", "oidc.yaml")
+
+	config, passwords, err := accounts.Load(path, "")
+	c.Assert(err, qt.IsNil)
+	c.Assert(config.OIDC, qt.IsNotNil)
+	c.Assert(passwords, qt.IsNil)
+
+	_, _, err = accounts.Load(path, filepath.Join("testdata", "passwords"))
+	c.Assert(err, qt.ErrorMatches, `.*signs people in with oidc, which reads no passwords file; leave out --passwords`)
 }

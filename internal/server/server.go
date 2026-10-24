@@ -74,6 +74,13 @@ type Options struct {
 	Interceptors []connect.ServerInterceptor
 	// Services register the console's services beside InfoService.
 	Services []func(*connect.Server)
+	// Info says how people sign in, for GetInfo.
+	Info api.InfoFacts
+	// Pages are handlers outside the API by path pattern, such as a
+	// sign-in's redirects. They get the security headers, the Host check and
+	// no-store, and are not under the API's cross-origin refusal: a provider
+	// sends the browser back to one of them from another site.
+	Pages map[string]http.Handler
 }
 
 // New returns the console's HTTP handler.
@@ -106,7 +113,7 @@ func New(options Options) (http.Handler, error) {
 		recoverInterceptor(logger), unaryTimeoutInterceptor(options.UnaryTimeout),
 	}, options.Interceptors...)
 	rpc := connect.NewServer(interceptors...)
-	consolev1connect.RegisterInfoServiceHandler(rpc, api.NewInfo(options.Mode, options.ReadOnly))
+	consolev1connect.RegisterInfoServiceHandler(rpc, api.NewInfo(options.Mode, options.ReadOnly, options.Info))
 	for _, register := range options.Services {
 		register(rpc)
 	}
@@ -133,6 +140,9 @@ func New(options Options) (http.Handler, error) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = w.Write([]byte("ok\n"))
 	})
+	for pattern, page := range options.Pages {
+		mux.Handle(pattern, noStore(page))
+	}
 	mux.Handle("/", app(options.Assets))
 
 	var handler http.Handler = mux

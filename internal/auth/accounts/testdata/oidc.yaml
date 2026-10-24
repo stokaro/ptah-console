@@ -1,0 +1,14 @@
+apiVersion: console.ptah.run/v1alpha1
+kind: HostedConfiguration
+installationID: prod-eu-1
+publicURL: https://console.example.com
+namespaces:
+  - storefront
+  - billing
+oidc:
+  issuerURL: https://login.example.com/realms/ops
+  clientID: ptah-console
+  displayName: Example SSO
+  extraScopes:
+    - groups
+    - offline_access

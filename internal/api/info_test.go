@@ -32,7 +32,7 @@ func TestGetInfoReportsTheModeItWasGiven(t *testing.T) {
 			t.Parallel()
 			c := qt.New(t)
 			server := connect.NewServer()
-			consolev1connect.RegisterInfoServiceHandler(server, api.NewInfo(test.mode, test.readOnly))
+			consolev1connect.RegisterInfoServiceHandler(server, api.NewInfo(test.mode, test.readOnly, api.InfoFacts{}))
 			client := consolev1connect.NewInfoServiceClient(connect.NewClient(connectinprocess.New(server)))
 
 			info, err := client.GetInfo(t.Context(), &consolev1.GetInfoRequest{})
@@ -56,7 +56,7 @@ func TestGetInfoNamesTheOperatorItWasBuiltAgainst(t *testing.T) {
 	required := regexp.MustCompile(`(?m)^\s*github\.com/stokaro/ptah-operator (v\S+)`).FindSubmatch(goMod)
 	c.Assert(required, qt.HasLen, 2)
 	server := connect.NewServer()
-	consolev1connect.RegisterInfoServiceHandler(server, api.NewInfo(consolev1.Mode_MODE_LOCAL, false))
+	consolev1connect.RegisterInfoServiceHandler(server, api.NewInfo(consolev1.Mode_MODE_LOCAL, false, api.InfoFacts{}))
 	client := consolev1connect.NewInfoServiceClient(connect.NewClient(connectinprocess.New(server)))
 
 	info, err := client.GetInfo(t.Context(), &consolev1.GetInfoRequest{})
@@ -82,7 +82,7 @@ func TestGetInfoSaysWhatTheReleaseWasTestedAgainst(t *testing.T) {
 	c.Assert(parsed.Releases, qt.Not(qt.HasLen), 0)
 	c.Assert(parsed.Releases[0].Kubernetes, qt.Not(qt.HasLen), 0)
 	server := connect.NewServer()
-	consolev1connect.RegisterInfoServiceHandler(server, api.NewInfo(consolev1.Mode_MODE_LOCAL, false))
+	consolev1connect.RegisterInfoServiceHandler(server, api.NewInfo(consolev1.Mode_MODE_LOCAL, false, api.InfoFacts{}))
 	client := consolev1connect.NewInfoServiceClient(connect.NewClient(connectinprocess.New(server)))
 
 	info, err := client.GetInfo(t.Context(), &consolev1.GetInfoRequest{})

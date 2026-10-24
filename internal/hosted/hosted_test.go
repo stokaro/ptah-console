@@ -216,6 +216,8 @@ type answer struct {
 	status  int
 	code    string
 	message string
+	// body is the answer as JSON, for a call that succeeded.
+	body    map[string]any
 	cookies []*http.Cookie
 	serial  *big.Int
 }
@@ -249,10 +251,12 @@ func (s *console) callForwarded(t *testing.T, procedure, body string, forwardedF
 	response, err := client.Do(request)
 	c.Assert(err, qt.IsNil)
 	defer response.Body.Close()
-	var failure struct{ Code, Message string }
-	_ = json.NewDecoder(response.Body).Decode(&failure)
+	var decoded map[string]any
+	_ = json.NewDecoder(response.Body).Decode(&decoded)
+	code, _ := decoded["code"].(string)
+	message, _ := decoded["message"].(string)
 	return answer{
-		status: response.StatusCode, code: failure.Code, message: failure.Message,
+		status: response.StatusCode, code: code, message: message, body: decoded,
 		cookies: response.Cookies(), serial: response.TLS.PeerCertificates[0].SerialNumber,
 	}
 }

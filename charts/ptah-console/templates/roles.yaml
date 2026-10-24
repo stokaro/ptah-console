@@ -1,7 +1,8 @@
 {{- /*
 In every namespace of the ceiling: a Role for each role some account has, and
-a RoleBinding from those accounts' usernames to it. The approver role binds
-the operator chart's ClusterRole there instead of a Role of its own.
+a RoleBinding from those accounts' usernames to it; with oidc, from the users
+and groups oidc.subjects names. The approver role binds the operator chart's
+ClusterRole there instead of a Role of its own.
 */ -}}
 {{- $operator := .Files.Get "files/operator-roles.yaml" | fromYaml -}}
 {{- $rules := dict
@@ -17,9 +18,17 @@ the operator chart's ClusterRole there instead of a Role of its own.
 {{- range $namespace := .Values.namespaces }}
 {{- range $role := list "viewer" "plan-reader" "desired-state-author" "diagnostic-reader" "approver" }}
 {{- $subjects := list -}}
+{{- if $.Values.oidc.enabled -}}
+{{- range $.Values.oidc.subjects -}}
+{{- if has $role .roles -}}
+{{- $subjects = append $subjects (dict "apiGroup" "rbac.authorization.k8s.io" "kind" .kind "name" .name) -}}
+{{- end -}}
+{{- end -}}
+{{- else -}}
 {{- range $.Values.accounts -}}
 {{- if has $role .roles -}}
 {{- $subjects = append $subjects (dict "apiGroup" "rbac.authorization.k8s.io" "kind" "User" "name" (include "ptah-console.username" (dict "installationID" $.Values.installationID "id" .id))) -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- if $subjects }}
