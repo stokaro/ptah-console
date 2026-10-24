@@ -95,6 +95,18 @@ export default [
     },
   },
   {
+    // A region that scrolls has to be reachable by keyboard, which takes a
+    // tab stop on an element that is not interactive. ScrollRegion is the one
+    // place that does it; everything else that scrolls goes through it.
+    files: ["packages/ui/src/ScrollRegion.tsx"],
+    rules: {
+      "jsx-a11y/no-noninteractive-tabindex": [
+        "error",
+        { tags: [], roles: ["tabpanel", "group"], allowExpressionValues: true },
+      ],
+    },
+  },
+  {
     files: ["**/*.test.{ts,tsx}", "test/**/*.ts"],
     languageOptions: {
       globals: { ...globals.browser, ...globals.node, ...globals.es2022 },

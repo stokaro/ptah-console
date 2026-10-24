@@ -7,6 +7,7 @@ import {
   Card,
   copyWords,
   Pill,
+  ScrollRegion,
   shortDigest,
   StatusGlyph,
   Terminal,
@@ -227,7 +228,7 @@ export function ConditionsCard({ conditions, now }: { conditions: Condition[]; n
       {conditions.length === 0 ? (
         <span className="text-sm text-fg2">The operator has reported no condition yet.</span>
       ) : (
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Conditions">
           <table className="w-full border-collapse text-left text-[13px]">
             <caption className="sr-only">Conditions</caption>
             <thead>
@@ -270,7 +271,7 @@ export function ConditionsCard({ conditions, now }: { conditions: Condition[]; n
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
     </Card>
   )

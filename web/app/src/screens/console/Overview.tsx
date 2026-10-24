@@ -1,4 +1,4 @@
-import { Button, Eyebrow, Segmented, StatusGlyph, type Tone } from "@ptah/console-ui"
+import { Button, Eyebrow, ScrollRegion, Segmented, StatusGlyph, type Tone } from "@ptah/console-ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react"
@@ -375,7 +375,7 @@ function AttentionSection({ resources, now }: { resources: ResourceView[]; now: 
           Nothing needs a person right now.
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Resources that need attention">
           <table className="w-full border-collapse text-left text-sm">
             <caption className="sr-only">Resources that need attention</caption>
             <thead>
@@ -429,7 +429,7 @@ function AttentionSection({ resources, now }: { resources: ResourceView[]; now: 
               })}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
       <span className="flex flex-wrap items-center gap-3 text-xs text-mute">
         {rows.length > attentionRows
@@ -554,7 +554,7 @@ function NamespaceSection({
           />
         </label>
       ) : null}
-      <div className="overflow-x-auto">
+      <ScrollRegion label="Resource states by namespace">
         <table className="w-full border-collapse text-left text-[13px]">
           <caption className="sr-only">Resource states by namespace</caption>
           <thead>
@@ -610,7 +610,7 @@ function NamespaceSection({
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
       {matched.length === 0 ? (
         <p className="m-0 text-sm text-fg2">No namespace matches “{query.trim()}”.</p>
       ) : null}

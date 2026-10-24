@@ -1,6 +1,14 @@
 import { ConnectError } from "@connectrpc/connect"
 import { skipToken, useQuery } from "@connectrpc/connect-query"
-import { Button, Card, Pill, StatusGlyph, StepRail, type Tone } from "@ptah/console-ui"
+import {
+  Button,
+  Card,
+  Pill,
+  ScrollRegion,
+  StatusGlyph,
+  StepRail,
+  type Tone,
+} from "@ptah/console-ui"
 import { Link } from "@tanstack/react-router"
 import { useState, type ReactNode } from "react"
 
@@ -272,7 +280,7 @@ export function MigrationDetail({ namespace, name }: MigrationDetailProps) {
               : "Nothing to show until the operator reads the history."}
           </span>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollRegion label={`Steps of ${resource.name}`}>
             <table className="w-full border-collapse text-left text-[13px]">
               <caption className="sr-only">Steps of {resource.name}</caption>
               <thead>
@@ -308,7 +316,7 @@ export function MigrationDetail({ namespace, name }: MigrationDetailProps) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
         {history && history.currentVersion > 0n ? (
           <span className="text-xs text-mute">

@@ -1,4 +1,4 @@
-import { Eyebrow } from "@ptah/console-ui"
+import { Eyebrow, ScrollRegion } from "@ptah/console-ui"
 import type { ReactNode } from "react"
 
 /** Where the operator's own documentation explains each part in full. */
@@ -215,7 +215,7 @@ export function Architecture() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Two kinds of resource" sub="A schema converges; a migration advances">
-          <div className="overflow-x-auto">
+          <ScrollRegion label="What a PtahSchema and a PtahMigration each declare">
             <table className="w-full border-collapse text-left text-[13px]">
               <caption className="sr-only">
                 What a PtahSchema and a PtahMigration each declare
@@ -243,7 +243,7 @@ export function Architecture() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </Panel>
         <Panel title="Security boundaries" sub="Who decides what">
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
