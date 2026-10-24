@@ -11,6 +11,12 @@
 #   - journal's run failed and was not retried behind anyone's back
 #   - deliveries' partial run was settled by the approver's acknowledgment
 #   - reports' interrupted run was settled the same way, and then applied
+#   - catalog and ledger, which the author created through the console's form,
+#     have a spec the console's field manager alone wrote and admission's
+#     record of the author as their writer; each was approved once, by the
+#     approver, and reached its database, and catalog ends resumed and in sync
+#   - inventory's read on request was answered: the operator recorded the
+#     value the console wrote, under the console's field manager
 #   - inventory v2 was approved once, by the hosted approver's mapped
 #     username, and applied after the console was uninstalled
 #   - on the second cluster, inventory was approved twice, both times by the
@@ -93,6 +99,44 @@ consumed=$(ns get ptahmigrationrunacknowledgment "$acknowledgment" \
 deliveries=$(ns get ptahmigrationapprovals -o json |
 	jq '[.items[] | select(.spec.migrationRef.name == "deliveries")] | length')
 [ "$deliveries" = 1 ] || fail "deliveries has $deliveries approvals, not one"
+
+# The resources the console created. A spec another manager touched would
+# mean the console's form was not what made it.
+for resource in ptahschema/catalog ptahmigration/ledger; do
+	object=$(ns get "$resource" -o json)
+	writer=$(printf '%s' "$object" | jq -r '.metadata.annotations["operator.ptah.run/last-spec-writer-username"] // ""')
+	[ "$writer" = "$AUTHOR" ] || fail "admission recorded ${writer:-nobody} as $resource's writer, not $AUTHOR"
+	managers=$(printf '%s' "$object" | jq -r '[.metadata.managedFields[] | select(.fieldsV1["f:spec"] != null) | .manager] | unique | join(",")')
+	[ "$managers" = ptah-console ] || fail "$resource's spec was written by '$managers', not by the console alone"
+done
+wait_condition ptahschema catalog InSync
+[ "$(ns get ptahschema catalog -o jsonpath='{.spec.suspend}')" != true ] || fail 'catalog is still suspended'
+catalog=$(ns get ptahschemaapprovals -o json |
+	jq -r '[.items[] | select(.spec.schemaRef.name == "catalog") | .spec.approver.username] | join(",")')
+[ "$catalog" = "$APPROVER" ] || fail "catalog's approvals read '$catalog', not one by $APPROVER"
+products=$(postgres -d catalog -c \
+	"SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'products'")
+[ "$products" = 1 ] || fail 'catalog has no products table'
+wait_condition ptahmigration ledger Ready
+ledger=$(ns get ptahmigrationapprovals -o json |
+	jq -r '[.items[] | select(.spec.migrationRef.name == "ledger") | .spec.approver.username] | join(",")')
+[ "$ledger" = "$APPROVER" ] || fail "ledger's approvals read '$ledger', not one by $APPROVER"
+entries=$(postgres -d ledger -c \
+	"SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ledger_entries'")
+[ "$entries" = 1 ] || fail 'ledger has no ledger_entries table'
+
+# The read the author asked of inventory: the operator answered exactly the
+# value the console wrote, and the console's field manager owns that
+# annotation and nothing else it set there.
+read=$(ns get ptahschema inventory -o json | jq -r '
+	(.metadata.annotations["operator.ptah.run/read-requested-at"] // "") as $asked
+	| [.metadata.managedFields[] | select(.manager == "ptah-console") | .fieldsV1
+		| paths(type == "object" and length == 0) | select(last != ".") | join(".")] as $owned
+	| if $asked == "" then "no request"
+	elif (.status.lastReadRequest // "") != $asked then "unanswered: \($asked)"
+	elif $owned != ["f:metadata.f:annotations.f:operator.ptah.run/read-requested-at"] then "the console owns \($owned)"
+	else "answered" end')
+[ "$read" = answered ] || fail "inventory's read on request: $read"
 
 wait_condition ptahmigration reports Ready
 reports=$(ns get ptahmigration reports -o json |
