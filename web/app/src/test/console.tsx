@@ -20,6 +20,7 @@ import {
 } from "../gen/ptah/console/v1/decisions_pb"
 import {
   DiagnosticsService,
+  type GetDiagnosticsRequest,
   type GetDiagnosticsResponseSchema,
 } from "../gen/ptah/console/v1/diagnostics_pb"
 import { connectionHeader } from "../api/cluster"
@@ -239,7 +240,10 @@ export interface Fixture {
   setSuspended?: (
     request: SetSuspendedRequest
   ) => MessageInitShape<typeof SetSuspendedResponseSchema>
-  diagnostics?: MessageInitShape<typeof GetDiagnosticsResponseSchema>
+  /** What diagnostics answer, or how they answer the request they were sent. */
+  diagnostics?:
+    | MessageInitShape<typeof GetDiagnosticsResponseSchema>
+    | ((request: GetDiagnosticsRequest) => MessageInitShape<typeof GetDiagnosticsResponseSchema>)
   /** What discovery says; served in full by default. */
   operatorApi?: MessageInitShape<typeof OperatorApiSchema>
   /** Namespaces whose lists stopped short. */
@@ -504,7 +508,12 @@ export function consoleTransport(fixture: Fixture) {
       acknowledgeMigrationRun: (request) => ({ result: fixture.acknowledge?.(request) }),
       setSuspended: (request) => fixture.setSuspended?.(request) ?? {},
     })
-    service(DiagnosticsService, { getDiagnostics: () => fixture.diagnostics ?? {} })
+    service(DiagnosticsService, {
+      getDiagnostics: (request) =>
+        typeof fixture.diagnostics === "function"
+          ? fixture.diagnostics(request)
+          : (fixture.diagnostics ?? {}),
+    })
     service(WatchService, {
       subscribe: (_request, context) => (fixture.watch ?? quietWatch)(context.signal),
     })

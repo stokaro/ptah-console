@@ -58,6 +58,10 @@ const ConsolePlanReview = lazyRouteComponent(
   () => import("./screens/console/PlanReview"),
   "ConsolePlanReview"
 )
+const ExecutionDiagnosis = lazyRouteComponent(
+  () => import("./screens/console/ExecutionDiagnosis"),
+  "ExecutionDiagnosis"
+)
 
 /** The plan a link named, kept in the address so the page can say when it is gone. */
 interface PlanSearch {
@@ -242,6 +246,28 @@ function MigrationHistoryRoute() {
   return <ExecutionHistory kind="migration" namespace={namespace} name={name} />
 }
 
+const schemaExecution = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "schemas/$namespace/$name/execution",
+  component: SchemaExecutionRoute,
+})
+
+function SchemaExecutionRoute() {
+  const { namespace, name } = schemaExecution.useParams()
+  return <ExecutionDiagnosis kind="schema" namespace={namespace} name={name} />
+}
+
+const migrationExecution = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "migrations/$namespace/$name/execution",
+  component: MigrationExecutionRoute,
+})
+
+function MigrationExecutionRoute() {
+  const { namespace, name } = migrationExecution.useParams()
+  return <ExecutionDiagnosis kind="migration" namespace={namespace} name={name} />
+}
+
 const schemaPlan = createRoute({
   getParentRoute: () => consoleRoute,
   path: "schemas/$namespace/$name/plan",
@@ -337,6 +363,8 @@ export const routeTree = rootRoute.addChildren([
     schemaHistory,
     consoleMigration,
     migrationHistory,
+    schemaExecution,
+    migrationExecution,
     schemaPlan,
     migrationPlan,
     consolePreflight,

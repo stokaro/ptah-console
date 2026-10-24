@@ -208,6 +208,26 @@ admission and the operator decide again either way. A link that names a plan
 by `?plan=` says when that plan is no longer current, what replaced it, and
 what the journal and the decisions record of it, and approves nothing from it.
 
+## Full console: execution and diagnosis
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| The operation running now, its attempt and how long it has run; the last outcome; when the database is read next | the resource's status and `status.journal` | get |
+| Every Job the status names, by its own conditions, and its first failed container | `jobs`, `pods`, as on call | get, list |
+| A log excerpt, asked for only by an identity RBAC lets read logs | `pods/log` | get |
+| What the database was last found to be: a fresh read still due, drift from the last read, or the migration history | the resource's status | get |
+| The objects the status names, by name: plans, the approval, Jobs, the source, the Secret by its key, the realm | the resource's status | get |
+| Failure causes by operation and reason, and runs by where they stopped | the resource's `status.journal` | get |
+| Events about the resource | `events` for its UID | list with a field selector |
+
+The page reads the evidence the history page reads and answers a narrower
+question: what runs now and what a person may do about it. Its next steps are
+the attention the status raises, the plan review while a plan waits, and the
+acknowledgment of a run nobody can settle; it offers no retry, rollback or
+force, because the operator has none. The Secret the target names stays a
+name and a key. Failure causes count what the journal keeps and say from when
+it is complete; a resource whose operator keeps no journal shows none.
+
 ## Full console: execution and history
 
 | Shows | Reads | Verbs |

@@ -16,12 +16,12 @@ import { useState } from "react"
 import { can, offerText, useOffer, useResource, useSession } from "../api/resources"
 import { DecisionKind, DecisionService, ResourceKind } from "../gen/ptah/console/v1/decisions_pb"
 import {
-  type ContainerEvidence,
   DiagnosticsService,
   Evidence,
   type EventList as EventListMessage,
   type GetDiagnosticsResponse,
 } from "../gen/ptah/console/v1/diagnostics_pb"
+import { byRelevance, lastLog } from "../model/execution"
 import { AttentionKind } from "../gen/ptah/console/v1/resources_pb"
 import {
   attentionTitle,
@@ -246,50 +246,6 @@ export function evidence(response: GetDiagnosticsResponse): TimelineEvent[] {
     }
   }
   return rows
-}
-
-// The Jobs a status names, from the run an incident is about to the work in
-// flight: a failed or unsettled run is what a person reads first, and a
-// history read the operator started since is not.
-const jobOrder = [
-  "status.unresolvedRun",
-  "status.lastRun",
-  "status.pendingObservation",
-  "status.activeOperation",
-]
-
-function jobRank(namedBy: string) {
-  const rank = jobOrder.indexOf(namedBy)
-  return rank === -1 ? jobOrder.length : rank
-}
-
-/**
- * A Pod's containers, the most telling first: one that failed, then the
- * containers that did the work before the init containers that prepared
- * the Pod for them.
- */
-function byRelevance(containers: ContainerEvidence[]): ContainerEvidence[] {
-  const weight = (c: ContainerEvidence) => (c.exitCode !== 0 ? 0 : c.init ? 2 : 1)
-  return [...containers].sort((a, b) => weight(a) - weight(b))
-}
-
-/** The log excerpt of the run the incident is about, if any is kept. */
-function lastLog(response: GetDiagnosticsResponse) {
-  const jobs = [...response.jobs].sort((a, b) => jobRank(a.namedBy) - jobRank(b.namedBy))
-  for (const job of jobs) {
-    for (const pod of job.pods) {
-      for (const container of byRelevance(pod.containers)) {
-        if (container.log?.evidence === Evidence.SHOWN && container.log.text) {
-          return {
-            where: `${pod.name} / ${container.name}`,
-            text: container.log.text,
-            truncated: container.log.truncated,
-          }
-        }
-      }
-    }
-  }
-  return undefined
 }
 
 export function AcknowledgeDialog({

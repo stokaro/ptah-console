@@ -4,6 +4,7 @@ import type { Tone } from "@ptah/console-ui"
 
 import {
   Evidence,
+  type ContainerEvidence,
   type EventList,
   type GetDiagnosticsResponse,
   type JobEvidence,
@@ -354,6 +355,51 @@ export function originalError(resource: ResourceView, diagnostics?: GetDiagnosti
             title: `Container ${container.name} of Job ${job.name} exited ${container.exitCode}`,
             text: [container.reason, container.message].filter(Boolean).join(": "),
             at: undefined,
+          }
+        }
+      }
+    }
+  }
+  return undefined
+}
+
+// The Jobs a status names, from the run an incident is about to the work in
+// flight: a failed or unsettled run is what a person reads first, and a
+// history read the operator started since is not.
+const jobOrder = [
+  "status.unresolvedRun",
+  "status.lastRun",
+  "status.pendingObservation",
+  "status.activeOperation",
+]
+
+/** Where a Job falls in the order a person reads them. */
+export function jobRank(namedBy: string) {
+  const rank = jobOrder.indexOf(namedBy)
+  return rank === -1 ? jobOrder.length : rank
+}
+
+/**
+ * A Pod's containers, the most telling first: one that failed, then the
+ * containers that did the work before the init containers that prepared
+ * the Pod for them.
+ */
+export function byRelevance(containers: ContainerEvidence[]): ContainerEvidence[] {
+  const weight = (c: ContainerEvidence) => (c.exitCode !== 0 ? 0 : c.init ? 2 : 1)
+  return [...containers].sort((a, b) => weight(a) - weight(b))
+}
+
+/** The log excerpt of the run a person reads first, if any is kept. */
+export function lastLog(response: GetDiagnosticsResponse) {
+  const jobs = [...response.jobs].sort((a, b) => jobRank(a.namedBy) - jobRank(b.namedBy))
+  for (const job of jobs) {
+    for (const pod of job.pods) {
+      for (const container of byRelevance(pod.containers)) {
+        if (container.log?.evidence === Evidence.SHOWN && container.log.text) {
+          return {
+            where: `${pod.name} / ${container.name}`,
+            text: container.log.text,
+            truncated: container.log.truncated,
           }
         }
       }
