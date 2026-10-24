@@ -24,6 +24,7 @@ import (
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/yaml"
 
+	"github.com/stokaro/ptah-console/internal/api"
 	"github.com/stokaro/ptah-console/internal/auth/accounts"
 )
 
@@ -270,6 +271,15 @@ func TestTheChartsSupportTheOperatorsKubernetesWindow(t *testing.T) {
 	}
 }
 
+// numbered lists n names that differ only in their number.
+func numbered(prefix string, n int) string {
+	names := make([]string, n)
+	for i := range names {
+		names[i] = fmt.Sprintf("%s-%02d", prefix, i)
+	}
+	return strings.Join(names, ", ")
+}
+
 func TestEachRefusal(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -279,6 +289,8 @@ func TestEachRefusal(t *testing.T) {
 	}{
 		{name: "no account", overlay: "accounts: []", says: `/accounts.*minItems`},
 		{name: "a wildcard namespace", overlay: `namespaces: ["*"]`, says: `/namespaces/0.*does not match pattern`},
+		{name: "more namespaces than the console reads", overlay: "namespaces: [" + numbered("team", api.MaxNamespaces+1) + "]",
+			says: `/namespaces.*maxItems`},
 		{name: "a wildcard role", overlay: "accounts: [{id: alex, login: alex@example.com, roles: ['*']}]",
 			says: `/accounts/0/roles/0.*value must be one of`},
 		{name: "a system: account id", overlay: "accounts: [{id: 'system:masters', login: a@example.com, roles: [viewer]}]",

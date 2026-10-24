@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { useState, type ReactNode } from "react"
 
 import { createApiTransport } from "./api/transport"
+import { AppearanceProvider } from "./appearance"
 
 export interface AppProvidersProps {
   children: ReactNode
@@ -22,7 +23,7 @@ export function AppProviders({ children, transport, queryClient }: AppProvidersP
     <CSPProvider disableStyleElements>
       <TransportProvider transport={transport ?? defaultTransport}>
         <QueryClientProvider client={queryClient ?? defaultQueryClient}>
-          {children}
+          <AppearanceProvider>{children}</AppearanceProvider>
         </QueryClientProvider>
       </TransportProvider>
     </CSPProvider>

@@ -11,6 +11,7 @@ import (
 	qt "github.com/frankban/quicktest"
 	"sigs.k8s.io/yaml"
 
+	"github.com/stokaro/ptah-console/internal/api"
 	"github.com/stokaro/ptah-console/internal/auth/accounts"
 )
 
@@ -137,6 +138,9 @@ func TestEachConfigurationRefusal(t *testing.T) {
 				c.TrustedProxies[i] = fmt.Sprintf("10.%d.0.0/16", i)
 			}
 		}, want: "trustedProxies: lists more than 64 networks"},
+		{name: "more namespaces than the console reads", change: func(c *accounts.Config) {
+			c.Namespaces = numberedNamespaces(api.MaxNamespaces + 1)
+		}, want: fmt.Sprintf("namespaces: lists more than %d namespaces, the most the console reads", api.MaxNamespaces)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -155,6 +159,29 @@ func TestEachConfigurationRefusal(t *testing.T) {
 }
 
 const registryConnection = "3f2c4b1e-8d0a-4c2e-9b7f-1a2b3c4d5e6f"
+
+func numberedNamespaces(n int) []string {
+	names := make([]string, n)
+	for i := range names {
+		names[i] = fmt.Sprintf("team-%02d", i)
+	}
+	return names
+}
+
+// The ceiling may name as many namespaces as the console reads in one
+// request, and no more.
+func TestTheCeilingMayNameAsManyNamespacesAsTheConsoleReads(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	document := changed(t, func(config *accounts.Config) {
+		config.Namespaces = numberedNamespaces(api.MaxNamespaces)
+	})
+
+	config, err := accounts.ParseConfig([]byte(document))
+
+	c.Assert(err, qt.IsNil)
+	c.Assert(config.Namespaces, qt.HasLen, api.MaxNamespaces)
+}
 
 // A configuration that names a registry is read with it, and one that names
 // none has none: the console then reaches only the cluster it runs in.

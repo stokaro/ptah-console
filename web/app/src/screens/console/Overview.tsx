@@ -14,6 +14,7 @@ import {
 } from "../../model/overview"
 import type { NamespaceScope } from "../../gen/ptah/console/v1/resources_pb"
 import { age, conditionTone, type ResourceView } from "../../model/resource"
+import { namespacesRead } from "../../model/scope"
 import { Loading, ReadError, TruncatedNotice, useNow } from "../common"
 import { resourceLink } from "./links"
 
@@ -38,7 +39,7 @@ const attentionRows = 8
 const activityRows = 8
 
 export function Overview() {
-  const { resources, scope, truncated, loading, error } = useResources()
+  const { resources, scope, namespaces, truncated, loading, error } = useResources()
   const now = useNow()
   if (loading) {
     return <Loading what="the resources" />
@@ -55,8 +56,8 @@ export function Overview() {
           Overview
         </h1>
         <span className="text-[13.5px] text-fg2">
-          {total} {total === 1 ? "resource" : "resources"} in {scope.readable.length}{" "}
-          {scope.readable.length === 1 ? "namespace" : "namespaces"} this identity may read.
+          {total} {total === 1 ? "resource" : "resources"} in{" "}
+          {namespacesRead(namespaces.length, scope.readable.length)} this identity may read.
         </span>
       </section>
       <TruncatedNotice namespaces={truncated} />

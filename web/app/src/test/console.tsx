@@ -244,6 +244,14 @@ export interface Fixture {
   truncated?: string[]
   /** Namespaces in scope beside application, such as one the session may not read. */
   otherNamespaces?: { name: string; access: Access }[]
+  /** The identity may list more namespaces than the console offers. */
+  namespacesTruncated?: boolean
+  /** The session is answered only once this settles, after everything else. */
+  sessionAnswered?: Promise<void>
+  /** Called each time the console lists its namespaces. */
+  onListNamespaces?: () => void
+  /** The namespaces each list request named, in order; filled as the console asks. */
+  listed?: { method: "listSchemas" | "listMigrations"; namespaces: string[] }[]
   /** The live stream; one heartbeat, then quiet, by default. */
   watch?: (signal: AbortSignal) => AsyncIterable<MessageInitShape<typeof SubscribeResponseSchema>>
   /**
@@ -296,6 +304,11 @@ export function result(init: MessageInitShape<typeof DecisionResultSchema>) {
 
 /** The console's API in memory, answering from the fixture. */
 export function consoleTransport(fixture: Fixture) {
+  const access = (namespace: string) =>
+    namespace === "application"
+      ? Access.OK
+      : (fixture.otherNamespaces?.find((other) => other.name === namespace)?.access ??
+        Access.FORBIDDEN)
   const hosted = fixture.hosted
   let signedIn = hosted === undefined || hosted.signedIn === true
   const registry = fixture.registry
@@ -322,8 +335,9 @@ export function consoleTransport(fixture: Fixture) {
       }),
     })
     service(SessionService, {
-      getSession: () => {
+      getSession: async () => {
         requireSession()
+        await fixture.sessionAnswered
         return hosted
           ? {
               mode: Mode.HOSTED,
@@ -392,6 +406,7 @@ export function consoleTransport(fixture: Fixture) {
     service(ScopeService, {
       listNamespaces: (_request, context) => {
         requireSession()
+        fixture.onListNamespaces?.()
         const answer = registry?.clusters?.[cluster(context.requestHeader)]
         if (answer && answer !== "unavailable") {
           return answer
@@ -406,24 +421,28 @@ export function consoleTransport(fixture: Fixture) {
             ...(fixture.otherNamespaces ?? []),
           ],
           operatorApi: fixture.operatorApi ?? { served: true },
+          truncated: fixture.namespacesTruncated ?? false,
+          maxNamespaces: 64,
         }
       },
     })
     service(SchemaService, {
-      listSchemas: (_request, context) => {
+      listSchemas: (request, context) => {
         cluster(context.requestHeader)
+        fixture.listed?.push({ method: "listSchemas", namespaces: [...request.namespaces] })
         if (fixture.listForbidden) {
           throw new ConnectError("may not list ptahschemas", Code.PermissionDenied)
         }
         return {
-          schemas: fixture.schemas ?? [],
-          namespaces: [
-            {
-              namespace: "application",
-              access: Access.OK,
-              truncated: (fixture.truncated ?? []).includes("application"),
-            },
-          ],
+          // A list answers for the namespaces it names, as the server does.
+          schemas: (fixture.schemas ?? []).filter((schema) =>
+            request.namespaces.includes(schema.ref?.namespace ?? "")
+          ),
+          namespaces: request.namespaces.map((namespace) => ({
+            namespace,
+            access: access(namespace),
+            truncated: (fixture.truncated ?? []).includes(namespace),
+          })),
         }
       },
       getSchemaPlan: () => ({
@@ -440,7 +459,14 @@ export function consoleTransport(fixture: Fixture) {
     const migrations = () =>
       typeof fixture.migrations === "function" ? fixture.migrations() : (fixture.migrations ?? [])
     service(MigrationService, {
-      listMigrations: () => ({ migrations: migrations() }),
+      listMigrations: (request) => {
+        fixture.listed?.push({ method: "listMigrations", namespaces: [...request.namespaces] })
+        return {
+          migrations: migrations().filter((migration) =>
+            request.namespaces.includes(migration.ref?.namespace ?? "")
+          ),
+        }
+      },
       getMigration: (request) => {
         const found = migrations().find((migration) => migration.ref?.name === request.name)
         if (!found) {

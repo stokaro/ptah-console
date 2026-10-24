@@ -24,3 +24,5 @@ the console does the following instead.
 | "Re-read history (interval)" as an action | The operator has no such API. The console shows when the next read is due, from `status.nextReconciliationTime`. |
 | Fonts from Google Fonts | Bundled from npm packages, so the page loads nothing from another origin. |
 | SQL lines tagged "drops data", "changes access" | Tags come from the plan's own statement severity and reason, recorded by Ptah, and the plan-level findings. The console does not parse SQL to invent them. |
+| Each namespace's attention count in the namespace picker | What the identity may do in it. The console reads only the namespaces in scope, so it does not count what waits in the others. |
+| Namespace toggles that apply at once | A selection applies when the viewer says so, and never as none, so no page reads nothing by accident. |

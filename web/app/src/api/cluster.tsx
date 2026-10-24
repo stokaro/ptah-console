@@ -119,6 +119,8 @@ export function useConnections() {
   return {
     ...query,
     registry: query.isSuccess,
+    /** Whether the clusters are known: a console without a registry has only its own. */
+    known: hosted === false || query.isSuccess || query.isError,
     absent,
     connections: query.data?.connections ?? [],
     manage: query.data?.manage ?? false,
