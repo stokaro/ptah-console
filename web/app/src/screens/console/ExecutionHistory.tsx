@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router"
 import { can, useResource } from "../../api/resources"
 import { ResourceKind } from "../../gen/ptah/console/v1/decisions_pb"
 import { DiagnosticsService } from "../../gen/ptah/console/v1/diagnostics_pb"
+import { coverage } from "../../model/activity"
 import { lanes, originalError, timeline, type Entry, type Lane } from "../../model/execution"
 import type { ResourceKind as Kind } from "../../model/resource"
 import { Loading, ReadError, useNow } from "../common"
@@ -55,6 +56,7 @@ export function ExecutionHistory({ kind, namespace, name }: ExecutionHistoryProp
     )
   }
   const entries = timeline(resource, diagnostics.data)
+  const kept = coverage([resource])
   const pinned = originalError(resource, diagnostics.data)
   const next = resource.attention[0]?.nextStep
   return (
@@ -143,6 +145,9 @@ export function ExecutionHistory({ kind, namespace, name }: ExecutionHistoryProp
           </table>
         </div>
         <p className="m-0 border-t border-line px-4 py-2.5 text-xs text-mute">
+          {kept.complete
+            ? `The operator's journal of ${resource.name} is complete since ${kept.complete.toLocaleString()}, and keeps its latest 64 events. `
+            : `The operator keeps no journal of ${resource.name}, so only what the status and Kubernetes hold now is here. `}
           Kubernetes keeps Events for about an hour, and a Job&apos;s Pods until the Job is removed.
           The status keeps each condition&apos;s last change only. &ldquo;Not retained&rdquo; means
           Kubernetes no longer keeps it, not that it never happened.

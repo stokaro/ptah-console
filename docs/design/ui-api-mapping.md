@@ -192,14 +192,18 @@ because the operator has no such action, and no retry, rollback or force.
 | The controller's conditions and Events, the claimed operation and the next reconciliation | the resource's status, `events` for its UID | get; list with a field selector |
 | The Jobs status names, their Pods, containers and log excerpts | `jobs`, `pods`, `events`, `pods/log`, as on call | get, list, get |
 | What status records about the database: the applied plan, the last read, a fresh read due, the history and the last run | the resource's status | get |
+| The resource's journal: plans, approvals, Applies and runs with how long they took, verifications, acknowledgments and failed attempts | the resource's `status.journal` | get |
 
 The three lanes are the evidence the on-call page reads, laid out by who
-left it. Entries with a time come oldest first; a container's end keeps no
+left it, and the journal's events: what the controller decided on the
+controller lane, what reached the database on the database lane. A run the
+journal records is listed once, from the journal, with its start. Entries with a time come oldest first; a container's end keeps no
 time of its own and follows them; evidence that is gone stays as an entry
 that says why: not retained, not granted or unreadable. The original error is
-pinned above the lanes: a failed run's own message for a migration, the
-failure condition otherwise, and failing those the first container that
-exited with an error.
+pinned above the lanes: a failed run's own message for a migration, with
+where it stopped when the run recorded it, the failure condition otherwise,
+and failing those the first container that exited with an error. The page
+says from when the journal is complete, or that none is kept.
 
 ## Full console: activity
 

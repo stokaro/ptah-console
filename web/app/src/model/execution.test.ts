@@ -3,7 +3,11 @@ import { timestampFromDate } from "@bufbuild/protobuf/wkt"
 import { describe, expect, it } from "vitest"
 
 import { Evidence, GetDiagnosticsResponseSchema } from "../gen/ptah/console/v1/diagnostics_pb"
-import { ConditionSchema } from "../gen/ptah/console/v1/resources_pb"
+import {
+  ConditionSchema,
+  JournalSchema,
+  MigrationRunSchema,
+} from "../gen/ptah/console/v1/resources_pb"
 import { minutesAgo, syncedMigration, waitingSchema } from "../test/console"
 import { originalError, timeline } from "./execution"
 import { fromMigration, fromSchema } from "./resource"
@@ -192,5 +196,61 @@ describe("originalError", () => {
     )
     expect(originalError(applied)).toBeUndefined()
     expect(originalError(fromSchema(waitingSchema()))).toBeUndefined()
+  })
+})
+
+describe("the journal on the timeline", () => {
+  const finished = minutesAgo(8)
+  const journaled = syncedMigration((m) => {
+    m.lastRun = create(MigrationRunSchema, {
+      outcome: "Failed",
+      startedAt: minutesAgo(9),
+      finishedAt: finished,
+      message: "Migration 2 failed and committed nothing",
+      failure: { version: 2n, statement: 1, statements: 3, sqlState: "23505" },
+    })
+    m.journal = create(JournalSchema, {
+      coveredSince: minutesAgo(600),
+      entries: [
+        { type: "PlanPublished", at: minutesAgo(20), plan: "billing-p-1", statements: 2 },
+        {
+          type: "RunFinished",
+          at: finished,
+          startedAt: minutesAgo(9),
+          outcome: "Failed",
+          failure: { version: 2n, statement: 1, statements: 3, sqlState: "23505" },
+        },
+      ],
+    })
+  })
+
+  it("puts each event on its lane, with how long a run took", () => {
+    const entries = timeline(fromMigration(journaled))
+
+    expect(entries.find((e) => e.title === "Plan published")?.lane).toBe("controller")
+    const run = entries.find((e) => e.title.startsWith("Run failed at migration 2"))
+    expect(run).toMatchObject({ lane: "database", tone: "bad" })
+    expect(run?.detail).toContain("took 1 min")
+  })
+
+  it("lists a run the journal records once, not again from the last run", () => {
+    const titles = timeline(fromMigration(journaled)).map((e) => e.title)
+
+    expect(titles.filter((title) => title.startsWith("Run ended"))).toEqual([])
+    expect(titles.filter((title) => title.startsWith("Run failed"))).toHaveLength(1)
+  })
+
+  it("keeps the last run where the journal does not record it", () => {
+    const unjournaled = syncedMigration((m) => {
+      m.lastRun = journaled.lastRun
+    })
+
+    expect(timeline(fromMigration(unjournaled)).map((e) => e.title)).toContain("Run ended Failed")
+  })
+
+  it("pins where the run stopped beside its own account", () => {
+    expect(originalError(fromMigration(journaled))?.text).toBe(
+      "Migration 2 failed and committed nothing. Stopped at migration 2, statement 1 of 3, SQLSTATE 23505."
+    )
   })
 })
