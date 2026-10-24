@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf"
-import { screen, waitFor } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { axe } from "jest-axe"
 import { describe, expect, it } from "vitest"
@@ -27,7 +27,8 @@ describe("Read again now", () => {
       },
     })
 
-    await user.click(await screen.findByRole("button", { name: "Read again now" }))
+    await user.click(await screen.findByRole("button", { name: "Actions" }))
+    await user.click(await screen.findByRole("menuitem", { name: "Read again now" }))
 
     await waitFor(() => expect(sent).toHaveLength(1))
     expect(sent[0]).toMatchObject({
@@ -81,7 +82,8 @@ describe("Read again now", () => {
       }),
     })
 
-    await user.click(await screen.findByRole("button", { name: "Read again now" }))
+    await user.click(await screen.findByRole("button", { name: "Actions" }))
+    await user.click(await screen.findByRole("menuitem", { name: "Read again now" }))
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Another object holds this name now."
@@ -89,13 +91,18 @@ describe("Read again now", () => {
   })
 
   it("is not offered to an identity that may not patch the resource", async () => {
+    const user = userEvent.setup()
     renderConsole("/console/schemas/application/storefront", {
       schemas: [waitingSchema()],
       migrations: [],
       capabilities: { listSchemas: Answer.ALLOWED, listMigrations: Answer.ALLOWED },
     })
 
-    await screen.findByRole("heading", { level: 1, name: /PtahSchema \/ storefront/ })
-    expect(screen.queryByRole("button", { name: "Read again now" })).not.toBeInTheDocument()
+    await user.click(await screen.findByRole("button", { name: "Actions" }))
+
+    const menu = await screen.findByRole("menu")
+    expect(within(menu).getByRole("menuitem", { name: "Copy link" })).toBeVisible()
+    expect(within(menu).queryByRole("menuitem", { name: "Read again now" })).not.toBeInTheDocument()
+    expect(within(menu).queryByRole("menuitem", { name: "Suspend…" })).not.toBeInTheDocument()
   })
 })

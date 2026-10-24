@@ -161,6 +161,12 @@ the identity may not read is named above the list rather than left out.
 | Review the plan | the approver's plan review | as above |
 | Suspend or resume | `ptahschemas` | patch, as below |
 
+The page's Actions menu suspends or resumes the resource and asks for a read
+where RBAC lets this identity patch it, and copies the page's link or the
+`kubectl ptah` command that shows the same state; a migration's page has the
+same menu. Reviewing the plan, execution and diagnosis, and the history stay
+beside it as links.
+
 The spec is shown read-only, as the API server stores it; a target in it
 names its Secret and key, never their content. "Copy as patch" copies a
 `kubectl patch --type merge` command that sets the spec to what the page

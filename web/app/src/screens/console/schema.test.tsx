@@ -109,10 +109,31 @@ YAML`
   })
 
   it("offers no suspend to a read-only console", async () => {
+    const user = userEvent.setup()
     renderConsole("/console/schemas/application/storefront", { schemas: [schema], readOnly: true })
 
-    await screen.findByRole("heading", { name: /PtahSchema \/ storefront/ })
-    expect(screen.queryByRole("button", { name: "Suspend…" })).toBeNull()
+    await user.click(await screen.findByRole("button", { name: "Actions" }))
+
+    const menu = await screen.findByRole("menu")
+    expect(within(menu).getByRole("menuitem", { name: "Copy kubectl command" })).toBeVisible()
+    expect(within(menu).queryByRole("menuitem", { name: "Suspend…" })).toBeNull()
+  })
+
+  it("suspends from the Actions menu, and copies the kubectl command that shows the same state", async () => {
+    const user = userEvent.setup()
+    const write = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue()
+    const { container } = renderConsole("/console/schemas/application/storefront", {
+      schemas: [schema],
+    })
+
+    await user.click(await screen.findByRole("button", { name: "Actions" }))
+    expect(await axe(container)).toHaveNoViolations()
+    await user.click(screen.getByRole("menuitem", { name: "Copy kubectl command" }))
+
+    expect(write).toHaveBeenCalledWith("kubectl ptah schema storefront -n application")
+    await user.click(screen.getByRole("button", { name: "Actions" }))
+    await user.click(await screen.findByRole("menuitem", { name: "Suspend…" }))
+    expect(await screen.findByRole("alertdialog")).toHaveTextContent("Suspend storefront?")
   })
 
   it("says so when there is no such schema", async () => {

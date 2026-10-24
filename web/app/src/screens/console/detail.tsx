@@ -1,5 +1,6 @@
 import type { Timestamp } from "@bufbuild/protobuf/wkt"
 import { timestampDate } from "@bufbuild/protobuf/wkt"
+import { Menu } from "@base-ui/react/menu"
 import { ConnectError } from "@connectrpc/connect"
 import { useMutation } from "@connectrpc/connect-query"
 import {
@@ -120,6 +121,16 @@ export function DetailHeader({ resource, kind, chips, actions }: DetailHeaderPro
       resource.kind === "schema" ? "suspendSchemas" : "suspendMigrations"
     ) === "allowed"
   const command = `kubectl ptah ${resource.kind} ${resource.name} -n ${resource.namespace}`
+  const queryClient = useQueryClient()
+  const ask = useMutation(DecisionService.method.requestRead, {
+    onSuccess: () => void queryClient.invalidateQueries(),
+  })
+  const refused =
+    ask.data && ask.data.outcome !== DecisionOutcome.ADMITTED
+      ? ask.data.message
+      : ask.error
+        ? ConnectError.from(ask.error).rawMessage
+        : ""
   return (
     <section className="flex flex-col gap-3">
       <nav aria-label="Breadcrumb" className="text-xs text-mute">
@@ -167,20 +178,31 @@ export function DetailHeader({ resource, kind, chips, actions }: DetailHeaderPro
         >
           Execution and history
         </Link>
-        {maySuspend ? (
-          <Button onClick={() => setSuspending(true)}>
-            {resource.suspended ? "Resume…" : "Suspend…"}
-          </Button>
-        ) : null}
-        {maySuspend ? <ReadAgainButton resource={resource} /> : null}
-        <Button onClick={() => void copy(window.location.href)}>Copy link</Button>
-        <Button onClick={() => void copy(command)} title={command}>
-          Copy kubectl command
-        </Button>
+        <ActionsMenu
+          resource={resource}
+          maySuspend={maySuspend}
+          reading={ask.isPending}
+          command={command}
+          onSuspend={() => setSuspending(true)}
+          onRead={() =>
+            ask.mutate({
+              kind: resource.kind === "schema" ? ResourceKind.SCHEMA : ResourceKind.MIGRATION,
+              namespace: resource.namespace,
+              name: resource.name,
+              uid: resource.ref.uid,
+            })
+          }
+          onCopy={(text) => void copy(text)}
+        />
         <span role="status" className="text-[12.5px] text-mute">
-          {copyWords[state]}
+          {ask.isPending ? "Asking for a read…" : copyWords[state]}
         </span>
       </div>
+      {refused ? (
+        <span role="alert" className="text-[12.5px] text-red">
+          {refused}
+        </span>
+      ) : null}
       <ReadAgainState resource={resource} />
       {suspending ? (
         <SuspendDialog
@@ -474,38 +496,61 @@ YAML`
  * read-requested-at annotation, rather than at its next interval. It changes
  * nothing else; the operator answers once no operation is running.
  */
-function ReadAgainButton({ resource }: { resource: ResourceView }) {
-  const queryClient = useQueryClient()
-  const ask = useMutation(DecisionService.method.requestRead, {
-    onSuccess: () => void queryClient.invalidateQueries(),
-  })
-  const refused =
-    ask.data && ask.data.outcome !== DecisionOutcome.ADMITTED
-      ? ask.data.message
-      : ask.error
-        ? ConnectError.from(ask.error).rawMessage
-        : ""
+/**
+ * What a person may do to the resource from its page: suspend or resume it
+ * and ask for a read where RBAC lets this identity patch it, and copy its
+ * link or the kubectl command that shows the same state.
+ */
+function ActionsMenu({
+  resource,
+  maySuspend,
+  reading,
+  command,
+  onSuspend,
+  onRead,
+  onCopy,
+}: {
+  resource: ResourceView
+  maySuspend: boolean
+  reading: boolean
+  command: string
+  onSuspend: () => void
+  onRead: () => void
+  onCopy: (text: string) => void
+}) {
+  const item =
+    "flex cursor-pointer flex-col gap-0.5 rounded-[10px] px-2.5 py-2 text-sm text-fg outline-none data-disabled:cursor-not-allowed data-disabled:opacity-45 data-highlighted:bg-hover"
   return (
-    <>
-      <Button
-        disabled={ask.isPending}
-        onClick={() =>
-          ask.mutate({
-            kind: resource.kind === "schema" ? ResourceKind.SCHEMA : ResourceKind.MIGRATION,
-            namespace: resource.namespace,
-            name: resource.name,
-            uid: resource.ref.uid,
-          })
-        }
-      >
-        {ask.isPending ? "Asking…" : "Read again now"}
-      </Button>
-      {refused ? (
-        <span role="alert" className="text-[12.5px] text-red">
-          {refused}
+    <Menu.Root>
+      <Menu.Trigger className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-[11px] border border-line bg-card px-3.5 text-[13.5px] font-medium text-fg focus-visible:outline-2 focus-visible:outline-pri">
+        Actions
+        <span aria-hidden="true" className="text-mute">
+          ▾
         </span>
-      ) : null}
-    </>
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner sideOffset={6} align="end" className="z-40">
+          <Menu.Popup className="flex min-w-[260px] flex-col rounded-[14px] border border-line bg-card p-1 shadow-card">
+            {maySuspend ? (
+              <Menu.Item onClick={onSuspend} className={item}>
+                {resource.suspended ? "Resume…" : "Suspend…"}
+              </Menu.Item>
+            ) : null}
+            {maySuspend ? (
+              <Menu.Item onClick={onRead} disabled={reading} className={item}>
+                Read again now
+              </Menu.Item>
+            ) : null}
+            <Menu.Item onClick={() => onCopy(window.location.href)} className={item}>
+              Copy link
+            </Menu.Item>
+            <Menu.Item onClick={() => onCopy(command)} title={command} className={item}>
+              Copy kubectl command
+            </Menu.Item>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   )
 }
 
