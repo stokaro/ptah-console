@@ -27,6 +27,9 @@ const (
 	// DiagnosticsServiceGetDiagnosticsProcedure is the procedure name of the DiagnosticsService's
 	// GetDiagnostics RPC.
 	DiagnosticsServiceGetDiagnosticsProcedure = "/ptah.console.v1.DiagnosticsService/GetDiagnostics"
+	// DiagnosticsServiceListEventsProcedure is the procedure name of the DiagnosticsService's
+	// ListEvents RPC.
+	DiagnosticsServiceListEventsProcedure = "/ptah.console.v1.DiagnosticsService/ListEvents"
 )
 
 var (
@@ -38,11 +41,22 @@ var (
 			IdempotencyLevel: connect.IdempotencyNoSideEffects,
 		}
 	})
+	diagnosticsServiceListEventsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType:       connect.StreamTypeUnary,
+			Schema:           v1.File_ptah_console_v1_diagnostics_proto.Services().ByName("DiagnosticsService").Methods().ByName("ListEvents"),
+			Procedure:        DiagnosticsServiceListEventsProcedure,
+			IdempotencyLevel: connect.IdempotencyNoSideEffects,
+		}
+	})
 )
 
 // DiagnosticsServiceClient is a client for the ptah.console.v1.DiagnosticsService service.
 type DiagnosticsServiceClient interface {
 	GetDiagnostics(context.Context, *v1.GetDiagnosticsRequest) (*v1.GetDiagnosticsResponse, error)
+	// ListEvents lists the events Kubernetes still keeps about the operator's
+	// objects in each namespace named, newest first.
+	ListEvents(context.Context, *v1.ListEventsRequest) (*v1.ListEventsResponse, error)
 }
 
 // NewDiagnosticsServiceClient constructs a client for the ptah.console.v1.DiagnosticsService
@@ -54,6 +68,9 @@ func NewDiagnosticsServiceClient(client *connect.Client) DiagnosticsServiceClien
 // DiagnosticsServiceHandler is an implementation of the ptah.console.v1.DiagnosticsService service.
 type DiagnosticsServiceHandler interface {
 	GetDiagnostics(context.Context, *v1.GetDiagnosticsRequest) (*v1.GetDiagnosticsResponse, error)
+	// ListEvents lists the events Kubernetes still keeps about the operator's
+	// objects in each namespace named, newest first.
+	ListEvents(context.Context, *v1.ListEventsRequest) (*v1.ListEventsResponse, error)
 }
 
 // RegisterDiagnosticsServiceHandler registers svc as the ptah.console.v1.DiagnosticsService
@@ -62,6 +79,7 @@ func RegisterDiagnosticsServiceHandler(server *connect.Server, svc DiagnosticsSe
 	adapter := diagnosticsServiceHandler{svc: svc}
 	server.Register(
 		connect.Method{Spec: diagnosticsServiceGetDiagnosticsSpec(), Handler: adapter.getDiagnostics},
+		connect.Method{Spec: diagnosticsServiceListEventsSpec(), Handler: adapter.listEvents},
 	)
 }
 
@@ -70,6 +88,10 @@ type UnimplementedDiagnosticsServiceHandler struct{}
 
 func (UnimplementedDiagnosticsServiceHandler) GetDiagnostics(context.Context, *v1.GetDiagnosticsRequest) (*v1.GetDiagnosticsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.DiagnosticsService.GetDiagnostics is not implemented")
+}
+
+func (UnimplementedDiagnosticsServiceHandler) ListEvents(context.Context, *v1.ListEventsRequest) (*v1.ListEventsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.DiagnosticsService.ListEvents is not implemented")
 }
 
 type diagnosticsServiceClient struct {
@@ -84,6 +106,14 @@ func (c *diagnosticsServiceClient) GetDiagnostics(ctx context.Context, req *v1.G
 	return &res, nil
 }
 
+func (c *diagnosticsServiceClient) ListEvents(ctx context.Context, req *v1.ListEventsRequest) (*v1.ListEventsResponse, error) {
+	var res v1.ListEventsResponse
+	if err := c.client.CallUnary(ctx, diagnosticsServiceListEventsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 type diagnosticsServiceHandler struct{ svc DiagnosticsServiceHandler }
 
 func (h diagnosticsServiceHandler) getDiagnostics(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
@@ -92,6 +122,18 @@ func (h diagnosticsServiceHandler) getDiagnostics(ctx context.Context, _ connect
 		return err
 	}
 	res, err := h.svc.GetDiagnostics(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h diagnosticsServiceHandler) listEvents(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListEventsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListEvents(ctx, &req)
 	if err != nil {
 		return err
 	}

@@ -261,8 +261,17 @@ says from when the journal is complete, or that none is kept.
 | --- | --- | --- |
 | Plans, Applies and runs, verifications and failures | `ptahschemas`, `ptahmigrations`, their `status.journal` | list, watch |
 | Approvals and acknowledgments, with who decided | `ptahschemaapprovals`, `ptahmigrationapprovals`, `ptahmigrationrunacknowledgments` | list |
+| Kubernetes Events about the operator's objects | `events`, selected by `involvedObject.apiVersion=operator.ptah.run/v1alpha1` | list with a field selector |
 
-The feed reads nothing the resource list and the decision list do not. Each
+Besides the Events, the feed reads nothing the resource list and the
+decision list do not. The API server keeps Events for an hour by default, so
+they reach back less far than the journals; the API server selects them by
+the involved object's API version, so a Job's or a Pod's are not among them
+and stay with the diagnosis of the resource that names the Job. An Event
+about an approval names the approval and links nothing, since the Event does
+not say whose it is. Each namespace's list keeps its newest 100, and the page
+says where it kept fewer than there are, and where the identity may not list
+Events at all. Each
 resource's journal is the operator's own bounded record of its lifecycle:
 significant events only, at most 64 of them, none more than 30 days older
 than the newest. The page says from when the journals it read are complete,

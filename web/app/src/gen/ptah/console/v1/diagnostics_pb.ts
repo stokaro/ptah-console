@@ -8,7 +8,7 @@ import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { ResourceKind } from "./decisions_pb";
 import { file_ptah_console_v1_decisions } from "./decisions_pb";
-import type { Condition } from "./resources_pb";
+import type { Condition, NamespaceResult } from "./resources_pb";
 import { file_ptah_console_v1_resources } from "./resources_pb";
 import type { Message, UnknownEnum } from "@bufbuild/protobuf";
 
@@ -16,7 +16,7 @@ import type { Message, UnknownEnum } from "@bufbuild/protobuf";
  * Describes the file ptah/console/v1/diagnostics.proto.
  */
 export const file_ptah_console_v1_diagnostics: GenFile = /*@__PURE__*/
-  fileDesc("CiFwdGFoL2NvbnNvbGUvdjEvZGlhZ25vc3RpY3MucHJvdG8SD3B0YWguY29uc29sZS52MSKIAQoVR2V0RGlhZ25vc3RpY3NSZXF1ZXN0EisKBGtpbmQYASABKA4yHS5wdGFoLmNvbnNvbGUudjEuUmVzb3VyY2VLaW5kEhEKCW5hbWVzcGFjZRgCIAEoCRIMCgRuYW1lGAMgASgJEgsKA3VpZBgEIAEoCRIUCgxpbmNsdWRlX2xvZ3MYBSABKAgicAoWR2V0RGlhZ25vc3RpY3NSZXNwb25zZRIqCgZldmVudHMYASABKAsyGi5wdGFoLmNvbnNvbGUudjEuRXZlbnRMaXN0EioKBGpvYnMYAiADKAsyHC5wdGFoLmNvbnNvbGUudjEuSm9iRXZpZGVuY2UidQoJRXZlbnRMaXN0EisKCGV2aWRlbmNlGAEgASgOMhkucHRhaC5jb25zb2xlLnYxLkV2aWRlbmNlEg8KB3Byb2JsZW0YAiABKAkSKgoGZXZlbnRzGAMgAygLMhoucHRhaC5jb25zb2xlLnYxLkt1YmVFdmVudCK6AQoJS3ViZUV2ZW50EgwKBHR5cGUYASABKAkSDgoGcmVhc29uGAIgASgJEg8KB21lc3NhZ2UYAyABKAkSDQoFY291bnQYBCABKAUSLgoKZmlyc3Rfc2VlbhgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJbGFzdF9zZWVuGAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghyZXBvcnRlchgHIAEoCSLCAgoLSm9iRXZpZGVuY2USEAoIbmFtZWRfYnkYASABKAkSDAoEbmFtZRgCIAEoCRILCgN1aWQYAyABKAkSKwoIZXZpZGVuY2UYBCABKA4yGS5wdGFoLmNvbnNvbGUudjEuRXZpZGVuY2USDwoHcHJvYmxlbRgFIAEoCRIoCgVzdGF0ZRgGIAEoCzIZLnB0YWguY29uc29sZS52MS5Kb2JTdGF0ZRIqCgZldmVudHMYByABKAsyGi5wdGFoLmNvbnNvbGUudjEuRXZlbnRMaXN0EjAKDXBvZHNfZXZpZGVuY2UYCCABKA4yGS5wdGFoLmNvbnNvbGUudjEuRXZpZGVuY2USFAoMcG9kc19wcm9ibGVtGAkgASgJEioKBHBvZHMYCiADKAsyHC5wdGFoLmNvbnNvbGUudjEuUG9kRXZpZGVuY2UizwEKCEpvYlN0YXRlEg4KBmFjdGl2ZRgBIAEoBRIRCglzdWNjZWVkZWQYAiABKAUSDgoGZmFpbGVkGAMgASgFEi4KCnN0YXJ0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKDGNvbXBsZXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKY29uZGl0aW9ucxgGIAMoCzIaLnB0YWguY29uc29sZS52MS5Db25kaXRpb24ivAEKC1BvZEV2aWRlbmNlEgwKBG5hbWUYASABKAkSCwoDdWlkGAIgASgJEg0KBXBoYXNlGAMgASgJEg4KBnJlYXNvbhgEIAEoCRIPCgdtZXNzYWdlGAUgASgJEjYKCmNvbnRhaW5lcnMYBiADKAsyIi5wdGFoLmNvbnNvbGUudjEuQ29udGFpbmVyRXZpZGVuY2USKgoGZXZlbnRzGAcgASgLMhoucHRhaC5jb25zb2xlLnYxLkV2ZW50TGlzdCLCAQoRQ29udGFpbmVyRXZpZGVuY2USDAoEbmFtZRgBIAEoCRINCgVyZWFkeRgCIAEoCBIVCg1yZXN0YXJ0X2NvdW50GAMgASgFEg0KBXN0YXRlGAQgASgJEg4KBnJlYXNvbhgFIAEoCRIPCgdtZXNzYWdlGAYgASgJEhEKCWV4aXRfY29kZRgHIAEoBRIoCgNsb2cYCCABKAsyGy5wdGFoLmNvbnNvbGUudjEuTG9nRXhjZXJwdBIMCgRpbml0GAkgASgIImsKCkxvZ0V4Y2VycHQSKwoIZXZpZGVuY2UYASABKA4yGS5wdGFoLmNvbnNvbGUudjEuRXZpZGVuY2USDwoHcHJvYmxlbRgCIAEoCRIMCgR0ZXh0GAMgASgJEhEKCXRydW5jYXRlZBgEIAEoCCqGAQoIRXZpZGVuY2USGAoURVZJREVOQ0VfVU5TUEVDSUZJRUQQABISCg5FVklERU5DRV9TSE9XThABEhgKFEVWSURFTkNFX05PVF9HUkFOVEVEEAISGQoVRVZJREVOQ0VfTk9UX1JFVEFJTkVEEAMSFwoTRVZJREVOQ0VfVU5SRUFEQUJMRRAEMnwKEkRpYWdub3N0aWNzU2VydmljZRJmCg5HZXREaWFnbm9zdGljcxImLnB0YWguY29uc29sZS52MS5HZXREaWFnbm9zdGljc1JlcXVlc3QaJy5wdGFoLmNvbnNvbGUudjEuR2V0RGlhZ25vc3RpY3NSZXNwb25zZSIDkAIBQkhaRmdpdGh1Yi5jb20vc3Rva2Fyby9wdGFoLWNvbnNvbGUvaW50ZXJuYWwvZ2VuL3B0YWgvY29uc29sZS92MTtjb25zb2xldjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_ptah_console_v1_decisions, file_ptah_console_v1_resources]);
+  fileDesc("CiFwdGFoL2NvbnNvbGUvdjEvZGlhZ25vc3RpY3MucHJvdG8SD3B0YWguY29uc29sZS52MSKIAQoVR2V0RGlhZ25vc3RpY3NSZXF1ZXN0EisKBGtpbmQYASABKA4yHS5wdGFoLmNvbnNvbGUudjEuUmVzb3VyY2VLaW5kEhEKCW5hbWVzcGFjZRgCIAEoCRIMCgRuYW1lGAMgASgJEgsKA3VpZBgEIAEoCRIUCgxpbmNsdWRlX2xvZ3MYBSABKAgicAoWR2V0RGlhZ25vc3RpY3NSZXNwb25zZRIqCgZldmVudHMYASABKAsyGi5wdGFoLmNvbnNvbGUudjEuRXZlbnRMaXN0EioKBGpvYnMYAiADKAsyHC5wdGFoLmNvbnNvbGUudjEuSm9iRXZpZGVuY2UidQoJRXZlbnRMaXN0EisKCGV2aWRlbmNlGAEgASgOMhkucHRhaC5jb25zb2xlLnYxLkV2aWRlbmNlEg8KB3Byb2JsZW0YAiABKAkSKgoGZXZlbnRzGAMgAygLMhoucHRhaC5jb25zb2xlLnYxLkt1YmVFdmVudCK6AQoJS3ViZUV2ZW50EgwKBHR5cGUYASABKAkSDgoGcmVhc29uGAIgASgJEg8KB21lc3NhZ2UYAyABKAkSDQoFY291bnQYBCABKAUSLgoKZmlyc3Rfc2VlbhgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJbGFzdF9zZWVuGAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghyZXBvcnRlchgHIAEoCSLCAgoLSm9iRXZpZGVuY2USEAoIbmFtZWRfYnkYASABKAkSDAoEbmFtZRgCIAEoCRILCgN1aWQYAyABKAkSKwoIZXZpZGVuY2UYBCABKA4yGS5wdGFoLmNvbnNvbGUudjEuRXZpZGVuY2USDwoHcHJvYmxlbRgFIAEoCRIoCgVzdGF0ZRgGIAEoCzIZLnB0YWguY29uc29sZS52MS5Kb2JTdGF0ZRIqCgZldmVudHMYByABKAsyGi5wdGFoLmNvbnNvbGUudjEuRXZlbnRMaXN0EjAKDXBvZHNfZXZpZGVuY2UYCCABKA4yGS5wdGFoLmNvbnNvbGUudjEuRXZpZGVuY2USFAoMcG9kc19wcm9ibGVtGAkgASgJEioKBHBvZHMYCiADKAsyHC5wdGFoLmNvbnNvbGUudjEuUG9kRXZpZGVuY2UizwEKCEpvYlN0YXRlEg4KBmFjdGl2ZRgBIAEoBRIRCglzdWNjZWVkZWQYAiABKAUSDgoGZmFpbGVkGAMgASgFEi4KCnN0YXJ0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKDGNvbXBsZXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKY29uZGl0aW9ucxgGIAMoCzIaLnB0YWguY29uc29sZS52MS5Db25kaXRpb24ivAEKC1BvZEV2aWRlbmNlEgwKBG5hbWUYASABKAkSCwoDdWlkGAIgASgJEg0KBXBoYXNlGAMgASgJEg4KBnJlYXNvbhgEIAEoCRIPCgdtZXNzYWdlGAUgASgJEjYKCmNvbnRhaW5lcnMYBiADKAsyIi5wdGFoLmNvbnNvbGUudjEuQ29udGFpbmVyRXZpZGVuY2USKgoGZXZlbnRzGAcgASgLMhoucHRhaC5jb25zb2xlLnYxLkV2ZW50TGlzdCLCAQoRQ29udGFpbmVyRXZpZGVuY2USDAoEbmFtZRgBIAEoCRINCgVyZWFkeRgCIAEoCBIVCg1yZXN0YXJ0X2NvdW50GAMgASgFEg0KBXN0YXRlGAQgASgJEg4KBnJlYXNvbhgFIAEoCRIPCgdtZXNzYWdlGAYgASgJEhEKCWV4aXRfY29kZRgHIAEoBRIoCgNsb2cYCCABKAsyGy5wdGFoLmNvbnNvbGUudjEuTG9nRXhjZXJwdBIMCgRpbml0GAkgASgIImsKCkxvZ0V4Y2VycHQSKwoIZXZpZGVuY2UYASABKA4yGS5wdGFoLmNvbnNvbGUudjEuRXZpZGVuY2USDwoHcHJvYmxlbRgCIAEoCRIMCgR0ZXh0GAMgASgJEhEKCXRydW5jYXRlZBgEIAEoCCInChFMaXN0RXZlbnRzUmVxdWVzdBISCgpuYW1lc3BhY2VzGAEgAygJIngKEkxpc3RFdmVudHNSZXNwb25zZRIsCgZldmVudHMYASADKAsyHC5wdGFoLmNvbnNvbGUudjEuT2JqZWN0RXZlbnQSNAoKbmFtZXNwYWNlcxgCIAMoCzIgLnB0YWguY29uc29sZS52MS5OYW1lc3BhY2VSZXN1bHQidAoLT2JqZWN0RXZlbnQSEQoJbmFtZXNwYWNlGAEgASgJEgwKBGtpbmQYAiABKAkSDAoEbmFtZRgDIAEoCRILCgN1aWQYBCABKAkSKQoFZXZlbnQYBSABKAsyGi5wdGFoLmNvbnNvbGUudjEuS3ViZUV2ZW50KoYBCghFdmlkZW5jZRIYChRFVklERU5DRV9VTlNQRUNJRklFRBAAEhIKDkVWSURFTkNFX1NIT1dOEAESGAoURVZJREVOQ0VfTk9UX0dSQU5URUQQAhIZChVFVklERU5DRV9OT1RfUkVUQUlORUQQAxIXChNFVklERU5DRV9VTlJFQURBQkxFEAQy2AEKEkRpYWdub3N0aWNzU2VydmljZRJmCg5HZXREaWFnbm9zdGljcxImLnB0YWguY29uc29sZS52MS5HZXREaWFnbm9zdGljc1JlcXVlc3QaJy5wdGFoLmNvbnNvbGUudjEuR2V0RGlhZ25vc3RpY3NSZXNwb25zZSIDkAIBEloKCkxpc3RFdmVudHMSIi5wdGFoLmNvbnNvbGUudjEuTGlzdEV2ZW50c1JlcXVlc3QaIy5wdGFoLmNvbnNvbGUudjEuTGlzdEV2ZW50c1Jlc3BvbnNlIgOQAgFCSFpGZ2l0aHViLmNvbS9zdG9rYXJvL3B0YWgtY29uc29sZS9pbnRlcm5hbC9nZW4vcHRhaC9jb25zb2xlL3YxO2NvbnNvbGV2MWIGcHJvdG8z", [file_google_protobuf_timestamp, file_ptah_console_v1_decisions, file_ptah_console_v1_resources]);
 
 /**
  * @generated from message ptah.console.v1.GetDiagnosticsRequest
@@ -412,6 +412,91 @@ export const LogExcerptSchema: GenMessage<LogExcerpt> = /*@__PURE__*/
   messageDesc(file_ptah_console_v1_diagnostics, 8);
 
 /**
+ * @generated from message ptah.console.v1.ListEventsRequest
+ */
+export type ListEventsRequest = Message<"ptah.console.v1.ListEventsRequest"> & {
+  /**
+   * @generated from field: repeated string namespaces = 1;
+   */
+  namespaces: string[];
+};
+
+/**
+ * Describes the message ptah.console.v1.ListEventsRequest.
+ * Use `create(ListEventsRequestSchema)` to create a new message.
+ */
+export const ListEventsRequestSchema: GenMessage<ListEventsRequest> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_diagnostics, 9);
+
+/**
+ * @generated from message ptah.console.v1.ListEventsResponse
+ */
+export type ListEventsResponse = Message<"ptah.console.v1.ListEventsResponse"> & {
+  /**
+   * Newest first, across the namespaces read.
+   *
+   * @generated from field: repeated ptah.console.v1.ObjectEvent events = 1;
+   */
+  events: ObjectEvent[];
+
+  /**
+   * Whether each namespace could be read, and whether it keeps more events
+   * than are shown.
+   *
+   * @generated from field: repeated ptah.console.v1.NamespaceResult namespaces = 2;
+   */
+  namespaces: NamespaceResult[];
+};
+
+/**
+ * Describes the message ptah.console.v1.ListEventsResponse.
+ * Use `create(ListEventsResponseSchema)` to create a new message.
+ */
+export const ListEventsResponseSchema: GenMessage<ListEventsResponse> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_diagnostics, 10);
+
+/**
+ * ObjectEvent is one event and the object of the operator's API it is about.
+ *
+ * @generated from message ptah.console.v1.ObjectEvent
+ */
+export type ObjectEvent = Message<"ptah.console.v1.ObjectEvent"> & {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace: string;
+
+  /**
+   * The object's kind, such as PtahSchema.
+   *
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string uid = 4;
+   */
+  uid: string;
+
+  /**
+   * @generated from field: ptah.console.v1.KubeEvent event = 5;
+   */
+  event?: KubeEvent | undefined;
+};
+
+/**
+ * Describes the message ptah.console.v1.ObjectEvent.
+ * Use `create(ObjectEventSchema)` to create a new message.
+ */
+export const ObjectEventSchema: GenMessage<ObjectEvent> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_diagnostics, 11);
+
+/**
  * Evidence is whether a piece of evidence could be shown.
  *
  * @generated from enum ptah.console.v1.Evidence
@@ -479,6 +564,17 @@ export const DiagnosticsService: GenService<{
     methodKind: "unary";
     input: typeof GetDiagnosticsRequestSchema;
     output: typeof GetDiagnosticsResponseSchema;
+  },
+  /**
+   * ListEvents lists the events Kubernetes still keeps about the operator's
+   * objects in each namespace named, newest first.
+   *
+   * @generated from rpc ptah.console.v1.DiagnosticsService.ListEvents
+   */
+  listEvents: {
+    methodKind: "unary";
+    input: typeof ListEventsRequestSchema;
+    output: typeof ListEventsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_ptah_console_v1_diagnostics, 0);

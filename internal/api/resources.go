@@ -70,12 +70,13 @@ func collect[T any](
 
 // pages lists one kind in one namespace, a page at a time, until the kind is
 // read or bound objects are, and says whether it stopped short. Each page goes
-// to each before the next is asked for.
-func pages[L client.ObjectList](ctx context.Context, c client.Client, namespace string, bound int, list func() L, each func(L)) (bool, error) {
+// to each before the next is asked for. Selection narrows what the API server
+// returns, such as by a field.
+func pages[L client.ObjectList](ctx context.Context, c client.Client, namespace string, bound int, list func() L, each func(L), selection ...client.ListOption) (bool, error) {
 	read, next := 0, ""
 	for {
 		page := list()
-		options := []client.ListOption{client.InNamespace(namespace), client.Limit(int64(min(listPage, bound-read)))}
+		options := append([]client.ListOption{client.InNamespace(namespace), client.Limit(int64(min(listPage, bound-read)))}, selection...)
 		if next != "" {
 			options = append(options, client.Continue(next))
 		}

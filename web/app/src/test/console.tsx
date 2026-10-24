@@ -22,6 +22,7 @@ import {
   DiagnosticsService,
   type GetDiagnosticsRequest,
   type GetDiagnosticsResponseSchema,
+  type ListEventsResponseSchema,
 } from "../gen/ptah/console/v1/diagnostics_pb"
 import { connectionHeader } from "../api/cluster"
 import {
@@ -244,6 +245,8 @@ export interface Fixture {
   diagnostics?:
     | MessageInitShape<typeof GetDiagnosticsResponseSchema>
     | ((request: GetDiagnosticsRequest) => MessageInitShape<typeof GetDiagnosticsResponseSchema>)
+  /** The events about the operator's objects, or the error listing them gives. */
+  events?: MessageInitShape<typeof ListEventsResponseSchema> | ConnectError
   /** What discovery says; served in full by default. */
   operatorApi?: MessageInitShape<typeof OperatorApiSchema>
   /** Namespaces whose lists stopped short. */
@@ -521,6 +524,12 @@ export function consoleTransport(fixture: Fixture) {
         typeof fixture.diagnostics === "function"
           ? fixture.diagnostics(request)
           : (fixture.diagnostics ?? {}),
+      listEvents: () => {
+        if (fixture.events instanceof ConnectError) {
+          throw fixture.events
+        }
+        return fixture.events ?? {}
+      },
     })
     service(WatchService, {
       subscribe: (_request, context) => (fixture.watch ?? quietWatch)(context.signal),

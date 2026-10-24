@@ -431,6 +431,7 @@ type Request struct {
 	//	*Request_SetSuspended
 	//	*Request_GetDiagnostics
 	//	*Request_Watch
+	//	*Request_ListEvents
 	Action        isRequest_Action `protobuf_oneof:"action"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -624,6 +625,15 @@ func (x *Request) GetWatch() *v1.SubscribeRequest {
 	return nil
 }
 
+func (x *Request) GetListEvents() *v1.ListEventsRequest {
+	if x != nil {
+		if x, ok := x.Action.(*Request_ListEvents); ok {
+			return x.ListEvents
+		}
+	}
+	return nil
+}
+
 type isRequest_Action interface {
 	isRequest_Action()
 }
@@ -693,6 +703,10 @@ type Request_Watch struct {
 	Watch *v1.SubscribeRequest `protobuf:"bytes,25,opt,name=watch,proto3,oneof"`
 }
 
+type Request_ListEvents struct {
+	ListEvents *v1.ListEventsRequest `protobuf:"bytes,26,opt,name=list_events,json=listEvents,proto3,oneof"`
+}
+
 func (*Request_WhoAmI) isRequest_Action() {}
 
 func (*Request_ListNamespaces) isRequest_Action() {}
@@ -724,6 +738,8 @@ func (*Request_SetSuspended) isRequest_Action() {}
 func (*Request_GetDiagnostics) isRequest_Action() {}
 
 func (*Request_Watch) isRequest_Action() {}
+
+func (*Request_ListEvents) isRequest_Action() {}
 
 // Cancel ends a request in flight.
 type Cancel struct {
@@ -887,6 +903,7 @@ type Result struct {
 	//	*Result_SetSuspended
 	//	*Result_GetDiagnostics
 	//	*Result_Watch
+	//	*Result_ListEvents
 	Outcome       isResult_Outcome `protobuf_oneof:"outcome"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1096,6 +1113,15 @@ func (x *Result) GetWatch() *v1.SubscribeResponse {
 	return nil
 }
 
+func (x *Result) GetListEvents() *v1.ListEventsResponse {
+	if x != nil {
+		if x, ok := x.Outcome.(*Result_ListEvents); ok {
+			return x.ListEvents
+		}
+	}
+	return nil
+}
+
 type isResult_Outcome interface {
 	isResult_Outcome()
 }
@@ -1168,6 +1194,10 @@ type Result_Watch struct {
 	Watch *v1.SubscribeResponse `protobuf:"bytes,25,opt,name=watch,proto3,oneof"`
 }
 
+type Result_ListEvents struct {
+	ListEvents *v1.ListEventsResponse `protobuf:"bytes,26,opt,name=list_events,json=listEvents,proto3,oneof"`
+}
+
 func (*Result_Failure) isResult_Outcome() {}
 
 func (*Result_WhoAmI) isResult_Outcome() {}
@@ -1201,6 +1231,8 @@ func (*Result_SetSuspended) isResult_Outcome() {}
 func (*Result_GetDiagnostics) isResult_Outcome() {}
 
 func (*Result_Watch) isResult_Outcome() {}
+
+func (*Result_ListEvents) isResult_Outcome() {}
 
 // Failure is how a request ended when it did not succeed: the Connect code
 // and message the console's own service would have returned, such as
@@ -1286,8 +1318,7 @@ const file_ptah_console_agent_v1_agent_proto_rawDesc = "" +
 	"\n" +
 	"account_id\x18\x04 \x01(\tR\taccountId\x125\n" +
 	"\bdeadline\x18\x05 \x01(\v2\x19.google.protobuf.DurationR\bdeadline\x123\n" +
-	"\asent_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x06sentAt\"\xe5\n" +
-	"\n" +
+	"\asent_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x06sentAt\"\xac\v\n" +
 	"\aRequest\x12;\n" +
 	"\benvelope\x18\x01 \x01(\v2\x1f.ptah.console.agent.v1.EnvelopeR\benvelope\x12@\n" +
 	"\bwho_am_i\x18\n" +
@@ -1307,7 +1338,9 @@ const file_ptah_console_agent_v1_agent_proto_rawDesc = "" +
 	"\x19acknowledge_migration_run\x18\x16 \x01(\v2/.ptah.console.v1.AcknowledgeMigrationRunRequestH\x00R\x17acknowledgeMigrationRun\x12K\n" +
 	"\rset_suspended\x18\x17 \x01(\v2$.ptah.console.v1.SetSuspendedRequestH\x00R\fsetSuspended\x12Q\n" +
 	"\x0fget_diagnostics\x18\x18 \x01(\v2&.ptah.console.v1.GetDiagnosticsRequestH\x00R\x0egetDiagnostics\x129\n" +
-	"\x05watch\x18\x19 \x01(\v2!.ptah.console.v1.SubscribeRequestH\x00R\x05watchB\b\n" +
+	"\x05watch\x18\x19 \x01(\v2!.ptah.console.v1.SubscribeRequestH\x00R\x05watch\x12E\n" +
+	"\vlist_events\x18\x1a \x01(\v2\".ptah.console.v1.ListEventsRequestH\x00R\n" +
+	"listEventsB\b\n" +
 	"\x06action\"'\n" +
 	"\x06Cancel\x12\x1d\n" +
 	"\n" +
@@ -1315,7 +1348,7 @@ const file_ptah_console_agent_v1_agent_proto_rawDesc = "" +
 	"\rWhoAmIRequest\"D\n" +
 	"\x0eWhoAmIResponse\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x16\n" +
-	"\x06groups\x18\x02 \x03(\tR\x06groups\"\xa7\v\n" +
+	"\x06groups\x18\x02 \x03(\tR\x06groups\"\xef\v\n" +
 	"\x06Result\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x12\n" +
@@ -1338,7 +1371,9 @@ const file_ptah_console_agent_v1_agent_proto_rawDesc = "" +
 	"\x19acknowledge_migration_run\x18\x16 \x01(\v20.ptah.console.v1.AcknowledgeMigrationRunResponseH\x00R\x17acknowledgeMigrationRun\x12L\n" +
 	"\rset_suspended\x18\x17 \x01(\v2%.ptah.console.v1.SetSuspendedResponseH\x00R\fsetSuspended\x12R\n" +
 	"\x0fget_diagnostics\x18\x18 \x01(\v2'.ptah.console.v1.GetDiagnosticsResponseH\x00R\x0egetDiagnostics\x12:\n" +
-	"\x05watch\x18\x19 \x01(\v2\".ptah.console.v1.SubscribeResponseH\x00R\x05watchB\t\n" +
+	"\x05watch\x18\x19 \x01(\v2\".ptah.console.v1.SubscribeResponseH\x00R\x05watch\x12F\n" +
+	"\vlist_events\x18\x1a \x01(\v2#.ptah.console.v1.ListEventsResponseH\x00R\n" +
+	"listEventsB\t\n" +
 	"\aoutcome\"7\n" +
 	"\aFailure\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
@@ -1388,21 +1423,23 @@ var file_ptah_console_agent_v1_agent_proto_goTypes = []any{
 	(*v1.SetSuspendedRequest)(nil),             // 25: ptah.console.v1.SetSuspendedRequest
 	(*v1.GetDiagnosticsRequest)(nil),           // 26: ptah.console.v1.GetDiagnosticsRequest
 	(*v1.SubscribeRequest)(nil),                // 27: ptah.console.v1.SubscribeRequest
-	(*v1.ListNamespacesResponse)(nil),          // 28: ptah.console.v1.ListNamespacesResponse
-	(*v1.ListSchemasResponse)(nil),             // 29: ptah.console.v1.ListSchemasResponse
-	(*v1.GetSchemaResponse)(nil),               // 30: ptah.console.v1.GetSchemaResponse
-	(*v1.GetSchemaPlanResponse)(nil),           // 31: ptah.console.v1.GetSchemaPlanResponse
-	(*v1.ListMigrationsResponse)(nil),          // 32: ptah.console.v1.ListMigrationsResponse
-	(*v1.GetMigrationResponse)(nil),            // 33: ptah.console.v1.GetMigrationResponse
-	(*v1.GetMigrationPlanResponse)(nil),        // 34: ptah.console.v1.GetMigrationPlanResponse
-	(*v1.ListDecisionsResponse)(nil),           // 35: ptah.console.v1.ListDecisionsResponse
-	(*v1.GetDecisionResponse)(nil),             // 36: ptah.console.v1.GetDecisionResponse
-	(*v1.ApproveSchemaPlanResponse)(nil),       // 37: ptah.console.v1.ApproveSchemaPlanResponse
-	(*v1.ApproveMigrationPlanResponse)(nil),    // 38: ptah.console.v1.ApproveMigrationPlanResponse
-	(*v1.AcknowledgeMigrationRunResponse)(nil), // 39: ptah.console.v1.AcknowledgeMigrationRunResponse
-	(*v1.SetSuspendedResponse)(nil),            // 40: ptah.console.v1.SetSuspendedResponse
-	(*v1.GetDiagnosticsResponse)(nil),          // 41: ptah.console.v1.GetDiagnosticsResponse
-	(*v1.SubscribeResponse)(nil),               // 42: ptah.console.v1.SubscribeResponse
+	(*v1.ListEventsRequest)(nil),               // 28: ptah.console.v1.ListEventsRequest
+	(*v1.ListNamespacesResponse)(nil),          // 29: ptah.console.v1.ListNamespacesResponse
+	(*v1.ListSchemasResponse)(nil),             // 30: ptah.console.v1.ListSchemasResponse
+	(*v1.GetSchemaResponse)(nil),               // 31: ptah.console.v1.GetSchemaResponse
+	(*v1.GetSchemaPlanResponse)(nil),           // 32: ptah.console.v1.GetSchemaPlanResponse
+	(*v1.ListMigrationsResponse)(nil),          // 33: ptah.console.v1.ListMigrationsResponse
+	(*v1.GetMigrationResponse)(nil),            // 34: ptah.console.v1.GetMigrationResponse
+	(*v1.GetMigrationPlanResponse)(nil),        // 35: ptah.console.v1.GetMigrationPlanResponse
+	(*v1.ListDecisionsResponse)(nil),           // 36: ptah.console.v1.ListDecisionsResponse
+	(*v1.GetDecisionResponse)(nil),             // 37: ptah.console.v1.GetDecisionResponse
+	(*v1.ApproveSchemaPlanResponse)(nil),       // 38: ptah.console.v1.ApproveSchemaPlanResponse
+	(*v1.ApproveMigrationPlanResponse)(nil),    // 39: ptah.console.v1.ApproveMigrationPlanResponse
+	(*v1.AcknowledgeMigrationRunResponse)(nil), // 40: ptah.console.v1.AcknowledgeMigrationRunResponse
+	(*v1.SetSuspendedResponse)(nil),            // 41: ptah.console.v1.SetSuspendedResponse
+	(*v1.GetDiagnosticsResponse)(nil),          // 42: ptah.console.v1.GetDiagnosticsResponse
+	(*v1.SubscribeResponse)(nil),               // 43: ptah.console.v1.SubscribeResponse
+	(*v1.ListEventsResponse)(nil),              // 44: ptah.console.v1.ListEventsResponse
 }
 var file_ptah_console_agent_v1_agent_proto_depIdxs = []int32{
 	0,  // 0: ptah.console.agent.v1.ChannelRequest.binding:type_name -> ptah.console.agent.v1.Binding
@@ -1430,30 +1467,32 @@ var file_ptah_console_agent_v1_agent_proto_depIdxs = []int32{
 	25, // 22: ptah.console.agent.v1.Request.set_suspended:type_name -> ptah.console.v1.SetSuspendedRequest
 	26, // 23: ptah.console.agent.v1.Request.get_diagnostics:type_name -> ptah.console.v1.GetDiagnosticsRequest
 	27, // 24: ptah.console.agent.v1.Request.watch:type_name -> ptah.console.v1.SubscribeRequest
-	10, // 25: ptah.console.agent.v1.Result.failure:type_name -> ptah.console.agent.v1.Failure
-	8,  // 26: ptah.console.agent.v1.Result.who_am_i:type_name -> ptah.console.agent.v1.WhoAmIResponse
-	28, // 27: ptah.console.agent.v1.Result.list_namespaces:type_name -> ptah.console.v1.ListNamespacesResponse
-	29, // 28: ptah.console.agent.v1.Result.list_schemas:type_name -> ptah.console.v1.ListSchemasResponse
-	30, // 29: ptah.console.agent.v1.Result.get_schema:type_name -> ptah.console.v1.GetSchemaResponse
-	31, // 30: ptah.console.agent.v1.Result.get_schema_plan:type_name -> ptah.console.v1.GetSchemaPlanResponse
-	32, // 31: ptah.console.agent.v1.Result.list_migrations:type_name -> ptah.console.v1.ListMigrationsResponse
-	33, // 32: ptah.console.agent.v1.Result.get_migration:type_name -> ptah.console.v1.GetMigrationResponse
-	34, // 33: ptah.console.agent.v1.Result.get_migration_plan:type_name -> ptah.console.v1.GetMigrationPlanResponse
-	35, // 34: ptah.console.agent.v1.Result.list_decisions:type_name -> ptah.console.v1.ListDecisionsResponse
-	36, // 35: ptah.console.agent.v1.Result.get_decision:type_name -> ptah.console.v1.GetDecisionResponse
-	37, // 36: ptah.console.agent.v1.Result.approve_schema_plan:type_name -> ptah.console.v1.ApproveSchemaPlanResponse
-	38, // 37: ptah.console.agent.v1.Result.approve_migration_plan:type_name -> ptah.console.v1.ApproveMigrationPlanResponse
-	39, // 38: ptah.console.agent.v1.Result.acknowledge_migration_run:type_name -> ptah.console.v1.AcknowledgeMigrationRunResponse
-	40, // 39: ptah.console.agent.v1.Result.set_suspended:type_name -> ptah.console.v1.SetSuspendedResponse
-	41, // 40: ptah.console.agent.v1.Result.get_diagnostics:type_name -> ptah.console.v1.GetDiagnosticsResponse
-	42, // 41: ptah.console.agent.v1.Result.watch:type_name -> ptah.console.v1.SubscribeResponse
-	1,  // 42: ptah.console.agent.v1.AgentService.Channel:input_type -> ptah.console.agent.v1.ChannelRequest
-	3,  // 43: ptah.console.agent.v1.AgentService.Channel:output_type -> ptah.console.agent.v1.ChannelResponse
-	43, // [43:44] is the sub-list for method output_type
-	42, // [42:43] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	28, // 25: ptah.console.agent.v1.Request.list_events:type_name -> ptah.console.v1.ListEventsRequest
+	10, // 26: ptah.console.agent.v1.Result.failure:type_name -> ptah.console.agent.v1.Failure
+	8,  // 27: ptah.console.agent.v1.Result.who_am_i:type_name -> ptah.console.agent.v1.WhoAmIResponse
+	29, // 28: ptah.console.agent.v1.Result.list_namespaces:type_name -> ptah.console.v1.ListNamespacesResponse
+	30, // 29: ptah.console.agent.v1.Result.list_schemas:type_name -> ptah.console.v1.ListSchemasResponse
+	31, // 30: ptah.console.agent.v1.Result.get_schema:type_name -> ptah.console.v1.GetSchemaResponse
+	32, // 31: ptah.console.agent.v1.Result.get_schema_plan:type_name -> ptah.console.v1.GetSchemaPlanResponse
+	33, // 32: ptah.console.agent.v1.Result.list_migrations:type_name -> ptah.console.v1.ListMigrationsResponse
+	34, // 33: ptah.console.agent.v1.Result.get_migration:type_name -> ptah.console.v1.GetMigrationResponse
+	35, // 34: ptah.console.agent.v1.Result.get_migration_plan:type_name -> ptah.console.v1.GetMigrationPlanResponse
+	36, // 35: ptah.console.agent.v1.Result.list_decisions:type_name -> ptah.console.v1.ListDecisionsResponse
+	37, // 36: ptah.console.agent.v1.Result.get_decision:type_name -> ptah.console.v1.GetDecisionResponse
+	38, // 37: ptah.console.agent.v1.Result.approve_schema_plan:type_name -> ptah.console.v1.ApproveSchemaPlanResponse
+	39, // 38: ptah.console.agent.v1.Result.approve_migration_plan:type_name -> ptah.console.v1.ApproveMigrationPlanResponse
+	40, // 39: ptah.console.agent.v1.Result.acknowledge_migration_run:type_name -> ptah.console.v1.AcknowledgeMigrationRunResponse
+	41, // 40: ptah.console.agent.v1.Result.set_suspended:type_name -> ptah.console.v1.SetSuspendedResponse
+	42, // 41: ptah.console.agent.v1.Result.get_diagnostics:type_name -> ptah.console.v1.GetDiagnosticsResponse
+	43, // 42: ptah.console.agent.v1.Result.watch:type_name -> ptah.console.v1.SubscribeResponse
+	44, // 43: ptah.console.agent.v1.Result.list_events:type_name -> ptah.console.v1.ListEventsResponse
+	1,  // 44: ptah.console.agent.v1.AgentService.Channel:input_type -> ptah.console.agent.v1.ChannelRequest
+	3,  // 45: ptah.console.agent.v1.AgentService.Channel:output_type -> ptah.console.agent.v1.ChannelResponse
+	45, // [45:46] is the sub-list for method output_type
+	44, // [44:45] is the sub-list for method input_type
+	44, // [44:44] is the sub-list for extension type_name
+	44, // [44:44] is the sub-list for extension extendee
+	0,  // [0:44] is the sub-list for field type_name
 }
 
 func init() { file_ptah_console_agent_v1_agent_proto_init() }
@@ -1486,6 +1525,7 @@ func file_ptah_console_agent_v1_agent_proto_init() {
 		(*Request_SetSuspended)(nil),
 		(*Request_GetDiagnostics)(nil),
 		(*Request_Watch)(nil),
+		(*Request_ListEvents)(nil),
 	}
 	file_ptah_console_agent_v1_agent_proto_msgTypes[9].OneofWrappers = []any{
 		(*Result_Failure)(nil),
@@ -1505,6 +1545,7 @@ func file_ptah_console_agent_v1_agent_proto_init() {
 		(*Result_SetSuspended)(nil),
 		(*Result_GetDiagnostics)(nil),
 		(*Result_Watch)(nil),
+		(*Result_ListEvents)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

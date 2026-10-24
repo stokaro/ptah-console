@@ -17,6 +17,11 @@ service DiagnosticsService {
   rpc GetDiagnostics(GetDiagnosticsRequest) returns (GetDiagnosticsResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
+  // ListEvents lists the events Kubernetes still keeps about the operator's
+  // objects in each namespace named, newest first.
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
 }
 
 // Evidence is whether a piece of evidence could be shown.
@@ -120,4 +125,26 @@ message LogExcerpt {
   string text = 3;
   // More was logged than is shown.
   bool truncated = 4;
+}
+
+message ListEventsRequest {
+  repeated string namespaces = 1;
+}
+
+message ListEventsResponse {
+  // Newest first, across the namespaces read.
+  repeated ObjectEvent events = 1;
+  // Whether each namespace could be read, and whether it keeps more events
+  // than are shown.
+  repeated NamespaceResult namespaces = 2;
+}
+
+// ObjectEvent is one event and the object of the operator's API it is about.
+message ObjectEvent {
+  string namespace = 1;
+  // The object's kind, such as PtahSchema.
+  string kind = 2;
+  string name = 3;
+  string uid = 4;
+  KubeEvent event = 5;
 }

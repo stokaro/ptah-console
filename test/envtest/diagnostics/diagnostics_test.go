@@ -149,12 +149,21 @@ func runPod(namespace, name string, job *batchv1.Job, controlled bool) *corev1.P
 	return pod
 }
 
+// apiVersions is the API version an event recorder writes for each kind.
+var apiVersions = map[string]string{
+	"PtahMigration": operatorv1alpha1.GroupVersion.String(),
+	"Job":           "batch/v1",
+	"Pod":           "v1",
+}
+
 func event(namespace, kind, name string, uid types.UID, reason string) *corev1.Event {
 	now := metav1.NewTime(time.Now())
 	return &corev1.Event{
-		ObjectMeta:     metav1.ObjectMeta{Namespace: namespace, GenerateName: "diag-"},
-		InvolvedObject: corev1.ObjectReference{Kind: kind, Namespace: namespace, Name: name, UID: uid},
-		Type:           corev1.EventTypeWarning, Reason: reason, Message: reason + " happened",
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, GenerateName: "diag-"},
+		InvolvedObject: corev1.ObjectReference{
+			APIVersion: apiVersions[kind], Kind: kind, Namespace: namespace, Name: name, UID: uid,
+		},
+		Type: corev1.EventTypeWarning, Reason: reason, Message: reason + " happened",
 		FirstTimestamp: now, LastTimestamp: now, Count: 1,
 		Source: corev1.EventSource{Component: "envtest"},
 	}
@@ -165,7 +174,8 @@ func fakeLogs(_ context.Context, _ *rest.Config, _, _, _ string) ([]byte, error)
 	return []byte("connecting\n\x1b[31mERROR\x1b[0m: relation \"orders\" does not exist\n"), nil
 }
 
-func diagnose(t *testing.T, user string, l lab) (*consolev1.GetDiagnosticsResponse, error) {
+// serviceAs serves the diagnostics as user, in process.
+func serviceAs(t *testing.T, user string) (consolev1connect.DiagnosticsServiceClient, context.Context) {
 	t.Helper()
 	c := qt.New(t)
 	config, err := plane.User(user)
@@ -179,7 +189,12 @@ func diagnose(t *testing.T, user string, l lab) (*consolev1.GetDiagnosticsRespon
 	consolev1connect.RegisterDiagnosticsServiceHandler(server, api.NewDiagnosticsService(factory{built}, api.Scope{}, fakeLogs))
 	ctx, info := connect.NewClientContext(t.Context())
 	info.RequestHeader().Set("Cookie", "ptah_console="+token)
-	diagnostics := consolev1connect.NewDiagnosticsServiceClient(connect.NewClient(connectinprocess.New(server)))
+	return consolev1connect.NewDiagnosticsServiceClient(connect.NewClient(connectinprocess.New(server))), ctx
+}
+
+func diagnose(t *testing.T, user string, l lab) (*consolev1.GetDiagnosticsResponse, error) {
+	t.Helper()
+	diagnostics, ctx := serviceAs(t, user)
 	return diagnostics.GetDiagnostics(ctx, &consolev1.GetDiagnosticsRequest{
 		Kind: consolev1.ResourceKind_RESOURCE_KIND_MIGRATION, Namespace: l.namespace, Name: "billing",
 		Uid: string(l.migration.UID), IncludeLogs: true,
@@ -269,4 +284,39 @@ func TestEvidenceNotGrantedIsMarked(t *testing.T) {
 	c.Assert(job.GetEvidence(), qt.Equals, consolev1.Evidence_EVIDENCE_SHOWN)
 	c.Assert(job.GetPodsEvidence(), qt.Equals, consolev1.Evidence_EVIDENCE_NOT_GRANTED)
 	c.Assert(job.GetPodsProblem(), qt.Contains, `cannot list resource "pods"`)
+}
+
+// The API server selects the events by the involved object's API version:
+// the migration's event is listed, and the Job's and the Pod's, which the
+// diagnosis of the migration reads, are not. A namespace whose events the
+// identity may not list is marked forbidden, not shown as quiet.
+func TestListEventsSelectsTheOperatorsObjects(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	listed := arrange(t, "feed", theJob, listEvents)
+	hidden := arrange(t, "feedless", theJob, readMigrations)
+	c.Assert(plane.Admin.Create(t.Context(), &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Namespace: hidden.namespace, Name: "feed"},
+		RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "Role", Name: "diag"},
+		Subjects:   []rbacv1.Subject{{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: "feed"}},
+	}), qt.IsNil)
+	diagnostics, ctx := serviceAs(t, "feed")
+
+	response, err := diagnostics.ListEvents(ctx, &consolev1.ListEventsRequest{Namespaces: []string{listed.namespace, hidden.namespace}})
+
+	c.Assert(err, qt.IsNil)
+	c.Assert(response.GetEvents(), qt.HasLen, 1)
+	event := response.GetEvents()[0]
+	c.Assert(event.GetNamespace(), qt.Equals, listed.namespace)
+	c.Assert(event.GetKind(), qt.Equals, "PtahMigration")
+	c.Assert(event.GetUid(), qt.Equals, string(listed.migration.UID))
+	c.Assert(event.GetEvent().GetReason(), qt.Equals, "ApplyFailed")
+	access := make(map[string]consolev1.Access)
+	for _, result := range response.GetNamespaces() {
+		access[result.GetNamespace()] = result.GetAccess()
+	}
+	c.Assert(access, qt.DeepEquals, map[string]consolev1.Access{
+		listed.namespace: consolev1.Access_ACCESS_OK,
+		hidden.namespace: consolev1.Access_ACCESS_FORBIDDEN,
+	})
 }

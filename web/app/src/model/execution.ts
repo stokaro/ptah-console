@@ -257,6 +257,9 @@ const journalLanes: Record<ActivityEntry["type"], Lane> = {
   failure: "controller",
   apply: "database",
   verification: "database",
+  // The operator's Events come to the lanes from the diagnosis, beside the
+  // Jobs' and Pods'; the journal holds none.
+  event: "controller",
 }
 
 /** The resource's journal on the lanes, each event at the time it records. */
