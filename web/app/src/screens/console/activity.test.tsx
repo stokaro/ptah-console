@@ -5,7 +5,10 @@ import userEvent from "@testing-library/user-event"
 import { axe } from "jest-axe"
 import { describe, expect, it } from "vitest"
 
+import { Code, ConnectError } from "@connectrpc/connect"
+
 import { DecisionKind, DecisionSchema, DecisionState } from "../../gen/ptah/console/v1/decisions_pb"
+import { Access } from "../../gen/ptah/console/v1/resources_pb"
 import { renderConsole, syncedMigration, waitingSchema } from "../../test/console"
 
 const minutesAgo = (minutes: number) => timestampFromDate(new Date(Date.now() - minutes * 60_000))
@@ -163,6 +166,98 @@ describe("Activity", () => {
         "The operator these resources run under keeps no journal, so only decisions are listed."
       )
     ).toBeVisible()
+  })
+
+  it("lists the Kubernetes Events about the operator's objects, and links only a resource", async () => {
+    const user = userEvent.setup()
+    renderConsole("/console/activity", {
+      schemas: [journaled()],
+      migrations: [],
+      events: {
+        events: [
+          {
+            namespace: "application",
+            kind: "PtahSchema",
+            name: "storefront",
+            uid: "uid-schema",
+            event: {
+              type: "Normal",
+              reason: "OperationStarted",
+              message: "Apply Job storefront-apply-1 started",
+              count: 1,
+              lastSeen: minutesAgo(1),
+            },
+          },
+          {
+            namespace: "application",
+            kind: "PtahSchemaApproval",
+            name: "approve-storefront",
+            uid: "uid-approval",
+            event: {
+              type: "Warning",
+              reason: "ApprovalStale",
+              message: "the plan changed",
+              count: 2,
+              lastSeen: minutesAgo(3),
+            },
+          },
+        ],
+        namespaces: [{ namespace: "application", access: Access.OK }],
+      },
+    })
+
+    await user.click(await screen.findByRole("button", { name: "Kubernetes Events 2" }))
+
+    const list = await screen.findByRole("region", { name: "Entries" })
+    const titles = within(list)
+      .getAllByRole("listitem")
+      .map((item) => item.querySelector("b")?.textContent)
+    expect(titles).toEqual(["OperationStarted", "ApprovalStale ×2"])
+    await user.click(within(list).getByText("ApprovalStale ×2"))
+    expect(within(list).getByText("the plan changed")).toBeVisible()
+    expect(
+      within(list).getByText("application/approve-storefront · PtahSchemaApproval")
+    ).toBeVisible()
+    expect(
+      within(list).queryByRole("link", { name: "Open application/approve-storefront" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("says where the Events could not be read, by reason", async () => {
+    renderConsole("/console/activity", {
+      schemas: [journaled()],
+      migrations: [],
+      events: {
+        namespaces: [
+          { namespace: "application", access: Access.OK, truncated: true },
+          { namespace: "payroll", access: Access.FORBIDDEN },
+          { namespace: "billing", access: Access.ERROR },
+        ],
+      },
+    })
+
+    expect(
+      await screen.findByText(
+        "Kubernetes Events are not listed in payroll: this identity may not list them. " +
+          "Kubernetes Events could not be read in billing: the API server did not answer. " +
+          "Only the newest Kubernetes Events are listed in application."
+      )
+    ).toBeVisible()
+  })
+
+  it("still lists the journals when the Events cannot be listed, and says so", async () => {
+    renderConsole("/console/activity", {
+      schemas: [journaled()],
+      migrations: [],
+      events: new ConnectError("the agent serves no such request", Code.Unimplemented),
+    })
+
+    expect(
+      await screen.findByText(
+        /Kubernetes Events are not listed: .*the agent serves no such request/
+      )
+    ).toBeVisible()
+    expect(screen.getByText("Apply succeeded")).toBeVisible()
   })
 
   it("is in the console's navigation", async () => {

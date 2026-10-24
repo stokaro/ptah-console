@@ -35,6 +35,12 @@ const (
 	eventsPerObject = 50
 	// podsPerJob bounds the Pods listed for one Job.
 	podsPerJob = 20
+	// eventsReadPerNamespace bounds the events one namespace's list reads.
+	// The API server returns them in no order of time, so the newest are
+	// chosen from what was read.
+	eventsReadPerNamespace = 500
+	// eventsPerNamespace bounds the events one namespace adds to the list.
+	eventsPerNamespace = 100
 )
 
 // LogReader reads the end of one container's log with the identity's own
@@ -300,6 +306,73 @@ func excerpt(data []byte) (string, bool) {
 	return strings.Join(lines, ""), truncated
 }
 
+// ListEvents lists the events Kubernetes still keeps about the operator's
+// objects in each namespace, newest first. The API server selects them by
+// the involved object's API version, so the events of the Jobs and Pods the
+// operator runs are not among them: those are read with the resource that
+// names the Job.
+func (d *DiagnosticsService) ListEvents(ctx context.Context, request *consolev1.ListEventsRequest) (*consolev1.ListEventsResponse, error) {
+	if err := d.scope.check(request.GetNamespaces()); err != nil {
+		return nil, err
+	}
+	c, _, err := actor(ctx, d.factory)
+	if err != nil {
+		return nil, err
+	}
+	found, results := collect(ctx, request.GetNamespaces(), func(ctx context.Context, namespace string) ([]*consolev1.ObjectEvent, bool, error) {
+		return operatorEvents(ctx, c, namespace)
+	}, func(event *consolev1.ObjectEvent) string { return event.GetNamespace() })
+	slices.SortStableFunc(found, func(a, b *consolev1.ObjectEvent) int {
+		return b.GetEvent().GetLastSeen().AsTime().Compare(a.GetEvent().GetLastSeen().AsTime())
+	})
+	return &consolev1.ListEventsResponse{Events: found, Namespaces: results}, nil
+}
+
+// operatorEvents reads one namespace's events about the operator's objects
+// and keeps the newest, saying whether it left any out.
+func operatorEvents(ctx context.Context, c client.Client, namespace string) ([]*consolev1.ObjectEvent, bool, error) {
+	var read []corev1.Event
+	truncated, err := pages(ctx, c, namespace, eventsReadPerNamespace, func() *corev1.EventList { return &corev1.EventList{} },
+		func(list *corev1.EventList) { read = append(read, list.Items...) },
+		client.MatchingFields{"involvedObject.apiVersion": operatorv1alpha1.GroupVersion.String()})
+	if err != nil {
+		return nil, false, err
+	}
+	newestFirst(read)
+	if len(read) > eventsPerNamespace {
+		read, truncated = read[:eventsPerNamespace], true
+	}
+	out := make([]*consolev1.ObjectEvent, 0, len(read))
+	for i := range read {
+		event := &read[i]
+		out = append(out, &consolev1.ObjectEvent{
+			Namespace: namespace, Kind: event.InvolvedObject.Kind, Name: event.InvolvedObject.Name,
+			Uid: string(event.InvolvedObject.UID), Event: kubeEvent(event),
+		})
+	}
+	return out, truncated, nil
+}
+
+// newestFirst orders events by when they last happened, newest first.
+func newestFirst(events []corev1.Event) {
+	slices.SortFunc(events, func(a, b corev1.Event) int {
+		return cmp.Compare(lastSeen(&b).UnixNano(), lastSeen(&a).UnixNano())
+	})
+}
+
+// kubeEvent is one event as the console shows it.
+func kubeEvent(event *corev1.Event) *consolev1.KubeEvent {
+	reporter := event.ReportingController
+	if reporter == "" {
+		reporter = event.Source.Component
+	}
+	last := lastSeen(event)
+	return &consolev1.KubeEvent{
+		Type: event.Type, Reason: event.Reason, Message: event.Message, Count: max(event.Count, 1),
+		FirstSeen: stamp(&event.FirstTimestamp), LastSeen: stamp(&last), Reporter: reporter,
+	}
+}
+
 // events lists what Kubernetes still keeps about one object, newest first.
 func events(ctx context.Context, c client.Client, namespace string, uid types.UID) *consolev1.EventList {
 	list := &corev1.EventList{}
@@ -308,20 +381,9 @@ func events(ctx context.Context, c client.Client, namespace string, uid types.UI
 	if out.Evidence, out.Problem = evidenceOf(err, "the events"); err != nil {
 		return out
 	}
-	slices.SortFunc(list.Items, func(a, b corev1.Event) int {
-		return cmp.Compare(lastSeen(&b).UnixNano(), lastSeen(&a).UnixNano())
-	})
+	newestFirst(list.Items)
 	for i := range list.Items[:min(len(list.Items), eventsPerObject)] {
-		event := &list.Items[i]
-		reporter := event.ReportingController
-		if reporter == "" {
-			reporter = event.Source.Component
-		}
-		last := lastSeen(event)
-		out.Events = append(out.Events, &consolev1.KubeEvent{
-			Type: event.Type, Reason: event.Reason, Message: event.Message, Count: max(event.Count, 1),
-			FirstSeen: stamp(&event.FirstTimestamp), LastSeen: stamp(&last), Reporter: reporter,
-		})
+		out.Events = append(out.Events, kubeEvent(&list.Items[i]))
 	}
 	return out
 }

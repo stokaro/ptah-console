@@ -1,7 +1,9 @@
 import { EmptyState, Eyebrow, Segmented, StatusGlyph } from "@ptah/console-ui"
 import { Link } from "@tanstack/react-router"
 
-import { useDecisions, useResources } from "../../api/resources"
+import { useDecisions, useOperatorEvents, useResources } from "../../api/resources"
+import type { ListEventsResponse } from "../../gen/ptah/console/v1/diagnostics_pb"
+import { Access } from "../../gen/ptah/console/v1/resources_pb"
 import {
   activity,
   activityPeriods,
@@ -32,16 +34,21 @@ export interface ActivityProps {
 export function Activity({ search, onSearch }: ActivityProps) {
   const { resources, loading, error } = useResources()
   const { decisions } = useDecisions()
+  const events = useOperatorEvents()
   const now = useNow()
-  // A feed that changed once the decisions arrived would move under the
-  // reader, so the page waits for them; one the API server refuses is said.
-  if (loading || (decisions.isPending && decisions.fetchStatus !== "idle")) {
+  // A feed that changed once the decisions and the events arrived would move
+  // under the reader, so the page waits for them; a refusal is said.
+  if (
+    loading ||
+    (decisions.isPending && decisions.fetchStatus !== "idle") ||
+    (events.isPending && events.fetchStatus !== "idle")
+  ) {
     return <Loading what="the activity" />
   }
   if (error) {
     return <ReadError error={error} what="the activity" />
   }
-  const all = activity(resources, decisions.data?.decisions ?? [])
+  const all = activity(resources, decisions.data?.decisions ?? [], events.data?.events ?? [])
   const shown = filterActivity(all, search, now)
   const kept = coverage(resources)
   const people = deciders(all)
@@ -56,9 +63,10 @@ export function Activity({ search, onSearch }: ActivityProps) {
           Activity
         </h1>
         <span className="max-w-[760px] text-[13.5px] text-fg2">
-          Plans, approvals, Applies and runs, verifications and failures across the namespaces the
-          console reads. Only what the operator kept is here: each resource keeps its latest 64
-          events, none more than 30 days older than its newest.
+          Plans, approvals, Applies and runs, verifications, failures and Kubernetes Events across
+          the namespaces the console reads. Only what was kept is here: each resource&apos;s journal
+          keeps its latest 64 events, none more than 30 days older than its newest, and the API
+          server keeps Events for an hour by default.
         </span>
         <CoverageLine coverage={kept} now={now} />
         {decisions.error ? (
@@ -66,6 +74,7 @@ export function Activity({ search, onSearch }: ActivityProps) {
             Approvals and acknowledgments are not listed: {decisions.error.message}
           </span>
         ) : null}
+        <EventsLine response={events.data} error={events.error} />
       </section>
 
       <section aria-label="Filters" className="flex flex-col gap-2.5">
@@ -162,6 +171,40 @@ function CoverageLine({ coverage: kept, now }: { coverage: Coverage; now: Date }
   )
 }
 
+/** Where the Kubernetes Events could not be read in full, and why. */
+function EventsLine({ response, error }: { response?: ListEventsResponse; error: Error | null }) {
+  if (error) {
+    return (
+      <span role="status" className="text-xs text-amber">
+        Kubernetes Events are not listed: {error.message}
+      </span>
+    )
+  }
+  const results = response?.namespaces ?? []
+  const named = (pick: (result: (typeof results)[number]) => boolean) =>
+    results
+      .filter(pick)
+      .map((result) => result.namespace)
+      .join(", ")
+  const forbidden = named((result) => result.access === Access.FORBIDDEN)
+  const failed = named((result) => result.access === Access.ERROR)
+  const cut = named((result) => result.access === Access.OK && result.truncated)
+  const lines = [
+    forbidden &&
+      `Kubernetes Events are not listed in ${forbidden}: this identity may not list them.`,
+    failed && `Kubernetes Events could not be read in ${failed}: the API server did not answer.`,
+    cut && `Only the newest Kubernetes Events are listed in ${cut}.`,
+  ].filter(Boolean)
+  if (lines.length === 0) {
+    return null
+  }
+  return (
+    <span role="status" className="text-xs text-amber">
+      {lines.join(" ")}
+    </span>
+  )
+}
+
 function Entry({ entry, now }: { entry: ActivityEntry; now: Date }) {
   const page =
     entry.kind === "schema"
@@ -175,7 +218,7 @@ function Entry({ entry, now }: { entry: ActivityEntry; now: Date }) {
           <span className="flex min-w-0 flex-col">
             <b className="truncate text-[13.5px] font-semibold">{entry.title}</b>
             <span className="truncate text-xs text-mute">
-              {entry.namespace}/{entry.name} · {entry.kind}
+              {entry.namespace}/{entry.name} · {entry.object ?? entry.kind}
               {entry.durationMs !== undefined ? ` · took ${duration(entry.durationMs)}` : ""}
             </span>
           </span>
@@ -194,13 +237,15 @@ function Entry({ entry, now }: { entry: ActivityEntry; now: Date }) {
             </span>
           ))}
           <span className="text-xs text-mute">{entry.at.toLocaleString()}</span>
-          <Link
-            to={page}
-            params={{ namespace: entry.namespace, name: entry.name }}
-            className="text-xs font-medium text-pri"
-          >
-            Open {entry.namespace}/{entry.name}
-          </Link>
+          {entry.object ? null : (
+            <Link
+              to={page}
+              params={{ namespace: entry.namespace, name: entry.name }}
+              className="text-xs font-medium text-pri"
+            >
+              Open {entry.namespace}/{entry.name}
+            </Link>
+          )}
         </div>
       </details>
     </li>

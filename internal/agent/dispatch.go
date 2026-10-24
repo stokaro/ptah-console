@@ -243,6 +243,8 @@ func namespacesOf(request *agentv1.Request) ([]string, bool) {
 		return []string{action.SetSuspended.GetNamespace()}, true
 	case *agentv1.Request_GetDiagnostics:
 		return []string{action.GetDiagnostics.GetNamespace()}, true
+	case *agentv1.Request_ListEvents:
+		return action.ListEvents.GetNamespaces(), true
 	case *agentv1.Request_Watch:
 		return action.Watch.GetNamespaces(), true
 	default:
@@ -297,6 +299,9 @@ func (d *Dispatcher) call(ctx context.Context, account string, request *agentv1.
 	case *agentv1.Request_GetDiagnostics:
 		response, err := d.diagnostics.GetDiagnostics(ctx, action.GetDiagnostics)
 		return &agentv1.Result{Outcome: &agentv1.Result_GetDiagnostics{GetDiagnostics: response}}, err
+	case *agentv1.Request_ListEvents:
+		response, err := d.diagnostics.ListEvents(ctx, action.ListEvents)
+		return &agentv1.Result{Outcome: &agentv1.Result_ListEvents{ListEvents: response}}, err
 	default:
 		return nil, connect.NewError(connect.CodeUnimplemented, "the agent serves no such request")
 	}

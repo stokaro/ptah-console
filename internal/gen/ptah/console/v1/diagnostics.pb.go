@@ -840,6 +840,183 @@ func (x *LogExcerpt) GetTruncated() bool {
 	return false
 }
 
+type ListEventsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Namespaces    []string               `protobuf:"bytes,1,rep,name=namespaces,proto3" json:"namespaces,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListEventsRequest) Reset() {
+	*x = ListEventsRequest{}
+	mi := &file_ptah_console_v1_diagnostics_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListEventsRequest) ProtoMessage() {}
+
+func (x *ListEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_diagnostics_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListEventsRequest.ProtoReflect.Descriptor instead.
+func (*ListEventsRequest) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_diagnostics_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListEventsRequest) GetNamespaces() []string {
+	if x != nil {
+		return x.Namespaces
+	}
+	return nil
+}
+
+type ListEventsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Newest first, across the namespaces read.
+	Events []*ObjectEvent `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	// Whether each namespace could be read, and whether it keeps more events
+	// than are shown.
+	Namespaces    []*NamespaceResult `protobuf:"bytes,2,rep,name=namespaces,proto3" json:"namespaces,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListEventsResponse) Reset() {
+	*x = ListEventsResponse{}
+	mi := &file_ptah_console_v1_diagnostics_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListEventsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListEventsResponse) ProtoMessage() {}
+
+func (x *ListEventsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_diagnostics_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListEventsResponse.ProtoReflect.Descriptor instead.
+func (*ListEventsResponse) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_diagnostics_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ListEventsResponse) GetEvents() []*ObjectEvent {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
+func (x *ListEventsResponse) GetNamespaces() []*NamespaceResult {
+	if x != nil {
+		return x.Namespaces
+	}
+	return nil
+}
+
+// ObjectEvent is one event and the object of the operator's API it is about.
+type ObjectEvent struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Namespace string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	// The object's kind, such as PtahSchema.
+	Kind          string     `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	Name          string     `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Uid           string     `protobuf:"bytes,4,opt,name=uid,proto3" json:"uid,omitempty"`
+	Event         *KubeEvent `protobuf:"bytes,5,opt,name=event,proto3" json:"event,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ObjectEvent) Reset() {
+	*x = ObjectEvent{}
+	mi := &file_ptah_console_v1_diagnostics_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ObjectEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ObjectEvent) ProtoMessage() {}
+
+func (x *ObjectEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_diagnostics_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ObjectEvent.ProtoReflect.Descriptor instead.
+func (*ObjectEvent) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_diagnostics_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ObjectEvent) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *ObjectEvent) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *ObjectEvent) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ObjectEvent) GetUid() string {
+	if x != nil {
+		return x.Uid
+	}
+	return ""
+}
+
+func (x *ObjectEvent) GetEvent() *KubeEvent {
+	if x != nil {
+		return x.Event
+	}
+	return nil
+}
+
 var File_ptah_console_v1_diagnostics_proto protoreflect.FileDescriptor
 
 const file_ptah_console_v1_diagnostics_proto_rawDesc = "" +
@@ -914,15 +1091,32 @@ const file_ptah_console_v1_diagnostics_proto_rawDesc = "" +
 	"\bevidence\x18\x01 \x01(\x0e2\x19.ptah.console.v1.EvidenceR\bevidence\x12\x18\n" +
 	"\aproblem\x18\x02 \x01(\tR\aproblem\x12\x12\n" +
 	"\x04text\x18\x03 \x01(\tR\x04text\x12\x1c\n" +
-	"\ttruncated\x18\x04 \x01(\bR\ttruncated*\x86\x01\n" +
+	"\ttruncated\x18\x04 \x01(\bR\ttruncated\"3\n" +
+	"\x11ListEventsRequest\x12\x1e\n" +
+	"\n" +
+	"namespaces\x18\x01 \x03(\tR\n" +
+	"namespaces\"\x8c\x01\n" +
+	"\x12ListEventsResponse\x124\n" +
+	"\x06events\x18\x01 \x03(\v2\x1c.ptah.console.v1.ObjectEventR\x06events\x12@\n" +
+	"\n" +
+	"namespaces\x18\x02 \x03(\v2 .ptah.console.v1.NamespaceResultR\n" +
+	"namespaces\"\x97\x01\n" +
+	"\vObjectEvent\x12\x1c\n" +
+	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x10\n" +
+	"\x03uid\x18\x04 \x01(\tR\x03uid\x120\n" +
+	"\x05event\x18\x05 \x01(\v2\x1a.ptah.console.v1.KubeEventR\x05event*\x86\x01\n" +
 	"\bEvidence\x12\x18\n" +
 	"\x14EVIDENCE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eEVIDENCE_SHOWN\x10\x01\x12\x18\n" +
 	"\x14EVIDENCE_NOT_GRANTED\x10\x02\x12\x19\n" +
 	"\x15EVIDENCE_NOT_RETAINED\x10\x03\x12\x17\n" +
-	"\x13EVIDENCE_UNREADABLE\x10\x042|\n" +
+	"\x13EVIDENCE_UNREADABLE\x10\x042\xd8\x01\n" +
 	"\x12DiagnosticsService\x12f\n" +
-	"\x0eGetDiagnostics\x12&.ptah.console.v1.GetDiagnosticsRequest\x1a'.ptah.console.v1.GetDiagnosticsResponse\"\x03\x90\x02\x01BHZFgithub.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1b\x06proto3"
+	"\x0eGetDiagnostics\x12&.ptah.console.v1.GetDiagnosticsRequest\x1a'.ptah.console.v1.GetDiagnosticsResponse\"\x03\x90\x02\x01\x12Z\n" +
+	"\n" +
+	"ListEvents\x12\".ptah.console.v1.ListEventsRequest\x1a#.ptah.console.v1.ListEventsResponse\"\x03\x90\x02\x01BHZFgithub.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1b\x06proto3"
 
 var (
 	file_ptah_console_v1_diagnostics_proto_rawDescOnce sync.Once
@@ -937,7 +1131,7 @@ func file_ptah_console_v1_diagnostics_proto_rawDescGZIP() []byte {
 }
 
 var file_ptah_console_v1_diagnostics_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_ptah_console_v1_diagnostics_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_ptah_console_v1_diagnostics_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_ptah_console_v1_diagnostics_proto_goTypes = []any{
 	(Evidence)(0),                  // 0: ptah.console.v1.Evidence
 	(*GetDiagnosticsRequest)(nil),  // 1: ptah.console.v1.GetDiagnosticsRequest
@@ -949,37 +1143,46 @@ var file_ptah_console_v1_diagnostics_proto_goTypes = []any{
 	(*PodEvidence)(nil),            // 7: ptah.console.v1.PodEvidence
 	(*ContainerEvidence)(nil),      // 8: ptah.console.v1.ContainerEvidence
 	(*LogExcerpt)(nil),             // 9: ptah.console.v1.LogExcerpt
-	(ResourceKind)(0),              // 10: ptah.console.v1.ResourceKind
-	(*timestamppb.Timestamp)(nil),  // 11: google.protobuf.Timestamp
-	(*Condition)(nil),              // 12: ptah.console.v1.Condition
+	(*ListEventsRequest)(nil),      // 10: ptah.console.v1.ListEventsRequest
+	(*ListEventsResponse)(nil),     // 11: ptah.console.v1.ListEventsResponse
+	(*ObjectEvent)(nil),            // 12: ptah.console.v1.ObjectEvent
+	(ResourceKind)(0),              // 13: ptah.console.v1.ResourceKind
+	(*timestamppb.Timestamp)(nil),  // 14: google.protobuf.Timestamp
+	(*Condition)(nil),              // 15: ptah.console.v1.Condition
+	(*NamespaceResult)(nil),        // 16: ptah.console.v1.NamespaceResult
 }
 var file_ptah_console_v1_diagnostics_proto_depIdxs = []int32{
-	10, // 0: ptah.console.v1.GetDiagnosticsRequest.kind:type_name -> ptah.console.v1.ResourceKind
+	13, // 0: ptah.console.v1.GetDiagnosticsRequest.kind:type_name -> ptah.console.v1.ResourceKind
 	3,  // 1: ptah.console.v1.GetDiagnosticsResponse.events:type_name -> ptah.console.v1.EventList
 	5,  // 2: ptah.console.v1.GetDiagnosticsResponse.jobs:type_name -> ptah.console.v1.JobEvidence
 	0,  // 3: ptah.console.v1.EventList.evidence:type_name -> ptah.console.v1.Evidence
 	4,  // 4: ptah.console.v1.EventList.events:type_name -> ptah.console.v1.KubeEvent
-	11, // 5: ptah.console.v1.KubeEvent.first_seen:type_name -> google.protobuf.Timestamp
-	11, // 6: ptah.console.v1.KubeEvent.last_seen:type_name -> google.protobuf.Timestamp
+	14, // 5: ptah.console.v1.KubeEvent.first_seen:type_name -> google.protobuf.Timestamp
+	14, // 6: ptah.console.v1.KubeEvent.last_seen:type_name -> google.protobuf.Timestamp
 	0,  // 7: ptah.console.v1.JobEvidence.evidence:type_name -> ptah.console.v1.Evidence
 	6,  // 8: ptah.console.v1.JobEvidence.state:type_name -> ptah.console.v1.JobState
 	3,  // 9: ptah.console.v1.JobEvidence.events:type_name -> ptah.console.v1.EventList
 	0,  // 10: ptah.console.v1.JobEvidence.pods_evidence:type_name -> ptah.console.v1.Evidence
 	7,  // 11: ptah.console.v1.JobEvidence.pods:type_name -> ptah.console.v1.PodEvidence
-	11, // 12: ptah.console.v1.JobState.started_at:type_name -> google.protobuf.Timestamp
-	11, // 13: ptah.console.v1.JobState.completed_at:type_name -> google.protobuf.Timestamp
-	12, // 14: ptah.console.v1.JobState.conditions:type_name -> ptah.console.v1.Condition
+	14, // 12: ptah.console.v1.JobState.started_at:type_name -> google.protobuf.Timestamp
+	14, // 13: ptah.console.v1.JobState.completed_at:type_name -> google.protobuf.Timestamp
+	15, // 14: ptah.console.v1.JobState.conditions:type_name -> ptah.console.v1.Condition
 	8,  // 15: ptah.console.v1.PodEvidence.containers:type_name -> ptah.console.v1.ContainerEvidence
 	3,  // 16: ptah.console.v1.PodEvidence.events:type_name -> ptah.console.v1.EventList
 	9,  // 17: ptah.console.v1.ContainerEvidence.log:type_name -> ptah.console.v1.LogExcerpt
 	0,  // 18: ptah.console.v1.LogExcerpt.evidence:type_name -> ptah.console.v1.Evidence
-	1,  // 19: ptah.console.v1.DiagnosticsService.GetDiagnostics:input_type -> ptah.console.v1.GetDiagnosticsRequest
-	2,  // 20: ptah.console.v1.DiagnosticsService.GetDiagnostics:output_type -> ptah.console.v1.GetDiagnosticsResponse
-	20, // [20:21] is the sub-list for method output_type
-	19, // [19:20] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	12, // 19: ptah.console.v1.ListEventsResponse.events:type_name -> ptah.console.v1.ObjectEvent
+	16, // 20: ptah.console.v1.ListEventsResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
+	4,  // 21: ptah.console.v1.ObjectEvent.event:type_name -> ptah.console.v1.KubeEvent
+	1,  // 22: ptah.console.v1.DiagnosticsService.GetDiagnostics:input_type -> ptah.console.v1.GetDiagnosticsRequest
+	10, // 23: ptah.console.v1.DiagnosticsService.ListEvents:input_type -> ptah.console.v1.ListEventsRequest
+	2,  // 24: ptah.console.v1.DiagnosticsService.GetDiagnostics:output_type -> ptah.console.v1.GetDiagnosticsResponse
+	11, // 25: ptah.console.v1.DiagnosticsService.ListEvents:output_type -> ptah.console.v1.ListEventsResponse
+	24, // [24:26] is the sub-list for method output_type
+	22, // [22:24] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_ptah_console_v1_diagnostics_proto_init() }
@@ -995,7 +1198,7 @@ func file_ptah_console_v1_diagnostics_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ptah_console_v1_diagnostics_proto_rawDesc), len(file_ptah_console_v1_diagnostics_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   9,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

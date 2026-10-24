@@ -2,6 +2,7 @@ import { Code, ConnectError } from "@connectrpc/connect"
 import { skipToken, useQuery } from "@connectrpc/connect-query"
 
 import { DecisionService } from "../gen/ptah/console/v1/decisions_pb"
+import { DiagnosticsService } from "../gen/ptah/console/v1/diagnostics_pb"
 import { InfoService, Mode } from "../gen/ptah/console/v1/info_pb"
 import { useLive } from "./live"
 import { useSelectedNamespaces } from "./selection"
@@ -133,6 +134,15 @@ export function useDecisions() {
       namespaces && namespaces.length > 0 ? { namespaces } : skipToken
     ),
   }
+}
+
+/** The events Kubernetes still keeps about the operator's objects, in every readable namespace. */
+export function useOperatorEvents() {
+  const scope = useScope()
+  return useQuery(
+    DiagnosticsService.method.listEvents,
+    scope.readable.length > 0 ? { namespaces: scope.readable } : skipToken
+  )
 }
 
 /**

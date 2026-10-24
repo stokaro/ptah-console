@@ -7,8 +7,8 @@ the console does the following instead.
 
 | The design shows | The console does |
 | --- | --- |
-| The Admin role: connections, Add cluster, Quarantine | Not in the first phase. External clusters arrive with the outbound agent in phase 2. |
-| "prod-ap-2 disconnected · outbound connector" | Phase 2. Phase 1 shows only a lost watch on the one API server. |
+| The Admin role: connections, Add cluster, Quarantine | Connections, Add cluster through enrollment, disable, quarantine and removal, for a hosted console that manages external clusters. A cluster is reached only through its own outbound agent; [external clusters](external-clusters.md) says what crosses the channel. |
+| "prod-ap-2 disconnected · outbound connector" | A cluster whose agent is not connected is shown as disconnected, with when it was last heard from, and its pages say it is out of reach instead of showing it empty. |
 | "Sign in to prod-eu-1" | A per-cluster sign-in belongs to the native-credentials profile, phase 3. |
 | A "Prototype outcome" switcher | Prototype only. |
 | Desired and observed object counts, a schema comparison chart, a schema profile radar | The drift the operator records from its last read, by category and severity. The operator publishes no per-object counts, and the console does not read the database to make them. |

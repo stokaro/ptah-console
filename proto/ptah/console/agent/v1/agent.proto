@@ -96,6 +96,7 @@ message Request {
     ptah.console.v1.GetDiagnosticsRequest get_diagnostics = 24;
     // Watch is one window: the agent watches until the deadline and ends.
     ptah.console.v1.SubscribeRequest watch = 25;
+    ptah.console.v1.ListEventsRequest list_events = 26;
   }
 }
 
@@ -138,6 +139,7 @@ message Result {
     ptah.console.v1.SetSuspendedResponse set_suspended = 23;
     ptah.console.v1.GetDiagnosticsResponse get_diagnostics = 24;
     ptah.console.v1.SubscribeResponse watch = 25;
+    ptah.console.v1.ListEventsResponse list_events = 26;
   }
 }
 

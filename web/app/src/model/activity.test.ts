@@ -3,6 +3,7 @@ import { timestampFromDate } from "@bufbuild/protobuf/wkt"
 import { describe, expect, it } from "vitest"
 
 import { DecisionKind, DecisionSchema, DecisionState } from "../gen/ptah/console/v1/decisions_pb"
+import { ObjectEventSchema } from "../gen/ptah/console/v1/diagnostics_pb"
 import {
   MigrationSchema,
   SchemaSchema,
@@ -331,5 +332,74 @@ describe("What moved for the tiles", () => {
 
   it("counts nothing without a journal", () => {
     expect(movement(entries, undefined, now)).toBeUndefined()
+  })
+})
+
+describe("Kubernetes Events in the activity", () => {
+  const event = (
+    kind: string,
+    name: string,
+    type: string,
+    reason: string,
+    minutes: number,
+    count = 1
+  ) =>
+    create(ObjectEventSchema, {
+      namespace: "application",
+      kind,
+      name,
+      uid: `uid-${name}`,
+      event: {
+        type,
+        reason,
+        message: `${reason} happened`,
+        count,
+        lastSeen: at(minutes),
+        reporter: "ptah-operator",
+      },
+    })
+
+  it("reads each event at its last time, beside the journal's entries", () => {
+    const feed = activity(
+      [schema("storefront", [{ type: "PlanPublished", at: at(5), plan: "ptah-plan-a" }])],
+      [],
+      [event("PtahSchema", "storefront", "Normal", "ApprovalRequired", 6)]
+    )
+    expect(feed.map((entry) => [entry.type, entry.title])).toEqual([
+      ["event", "ApprovalRequired"],
+      ["plan", "Plan published"],
+    ])
+    expect(feed[0]).toMatchObject({
+      kind: "schema",
+      namespace: "application",
+      name: "storefront",
+      object: undefined,
+      tone: "off",
+      details: ["ApprovalRequired happened", "Reported by ptah-operator"],
+    })
+  })
+
+  it("names an event about another of the operator's objects, and counts a folded one", () => {
+    const [entry] = activity(
+      [],
+      [],
+      [event("PtahSchemaApproval", "approve-1", "Warning", "ApprovalStale", 7, 3)]
+    )
+    expect(entry).toMatchObject({
+      kind: "schema",
+      name: "approve-1",
+      object: "PtahSchemaApproval",
+      tone: "warn",
+      title: "ApprovalStale ×3",
+    })
+  })
+
+  it("files a migration's approval under migrations", () => {
+    const [entry] = activity(
+      [],
+      [],
+      [event("PtahMigrationApproval", "approve-2", "Normal", "Accepted", 7)]
+    )
+    expect(entry).toMatchObject({ kind: "migration", object: "PtahMigrationApproval" })
   })
 })

@@ -205,6 +205,11 @@ func TestEachRefusalComesBeforeAnyCall(t *testing.T) {
 			request.Action = &agentv1.Request_ApproveSchemaPlan{ApproveSchemaPlan: &consolev1.ApproveSchemaPlanRequest{Namespace: "kube-system"}}
 			return request
 		}(), code: "permission_denied", says: `namespace "kube-system" is outside what this agent serves`},
+		{name: "events outside the ceiling", request: func() *agentv1.Request {
+			request := whoAmI("r1", "alex")
+			request.Action = &agentv1.Request_ListEvents{ListEvents: &consolev1.ListEventsRequest{Namespaces: []string{"storefront", "kube-system"}}}
+			return request
+		}(), code: "permission_denied", says: `namespace "kube-system" is outside what this agent serves`},
 		{name: "no operation", request: func() *agentv1.Request {
 			request := whoAmI("r1", "alex")
 			request.Action = nil

@@ -2,13 +2,14 @@ import { timestampDate, type Timestamp } from "@bufbuild/protobuf/wkt"
 import type { Tone } from "@ptah/console-ui"
 
 import { DecisionKind, type Decision } from "../gen/ptah/console/v1/decisions_pb"
+import type { ObjectEvent } from "../gen/ptah/console/v1/diagnostics_pb"
 import type { JournalEntry, RunFailure } from "../gen/ptah/console/v1/resources_pb"
 import { decisionState } from "./decision"
 import type { ResourceKind, ResourceView } from "./resource"
 
 /** What an entry is about, as the type filter groups them. */
 export type ActivityType =
-  "plan" | "approval" | "apply" | "verification" | "acknowledgment" | "failure"
+  "plan" | "approval" | "apply" | "verification" | "acknowledgment" | "failure" | "event"
 
 export const activityTypes: { value: ActivityType; label: string }[] = [
   { value: "plan", label: "Plans" },
@@ -17,6 +18,7 @@ export const activityTypes: { value: ActivityType; label: string }[] = [
   { value: "verification", label: "Verifications" },
   { value: "acknowledgment", label: "Acknowledgments" },
   { value: "failure", label: "Failures" },
+  { value: "event", label: "Kubernetes Events" },
 ]
 
 /** One thing that happened, from a journal entry or a decision. */
@@ -27,6 +29,12 @@ export interface ActivityEntry {
   kind: ResourceKind
   namespace: string
   name: string
+  /**
+   * The kind of object an event is about when it is not the schema or the
+   * migration itself, such as PtahSchemaApproval; the entry names it and
+   * links to no resource.
+   */
+  object?: string
   tone: Tone
   title: string
   /** The person who decided, as admission recorded it. */
@@ -244,7 +252,45 @@ function fromDecision(decision: Decision): ActivityEntry | undefined {
  * happened, newest first. Nothing is made up: an event no journal kept and no
  * decision records is not here.
  */
-export function activity(resources: ResourceView[], decisions: Decision[]): ActivityEntry[] {
+const resourceKinds: Record<string, ResourceKind> = {
+  PtahSchema: "schema",
+  PtahMigration: "migration",
+}
+
+/**
+ * An event Kubernetes keeps about one of the operator's objects. Its time is
+ * when it last happened, and one the API server folded counts as many times
+ * as it says.
+ */
+function fromEvent(event: ObjectEvent, index: number): ActivityEntry | undefined {
+  const at = date(event.event?.lastSeen ?? event.event?.firstSeen)
+  if (!at || !event.event) {
+    return undefined
+  }
+  const own = resourceKinds[event.kind]
+  const count = event.event.count
+  return {
+    key: `event/${event.namespace}/${event.uid}/${index}`,
+    type: "event",
+    at,
+    kind: own ?? (event.kind.startsWith("PtahMigration") ? "migration" : "schema"),
+    namespace: event.namespace,
+    name: event.name,
+    object: own ? undefined : event.kind,
+    tone: event.event.type === "Warning" ? "warn" : "off",
+    title: count > 1 ? `${event.event.reason} ×${count}` : event.event.reason,
+    details: [
+      event.event.message,
+      ...(event.event.reporter ? [`Reported by ${event.event.reporter}`] : []),
+    ].filter(Boolean),
+  }
+}
+
+export function activity(
+  resources: ResourceView[],
+  decisions: Decision[],
+  events: ObjectEvent[] = []
+): ActivityEntry[] {
   const decided = new Set(
     decisions.filter((d) => d.ref).map((d) => `${d.ref!.namespace}/${d.ref!.name}`)
   )
@@ -264,6 +310,12 @@ export function activity(resources: ResourceView[], decisions: Decision[]): Acti
       entries.push(read)
     }
   }
+  events.forEach((event, index) => {
+    const read = fromEvent(event, index)
+    if (read) {
+      entries.push(read)
+    }
+  })
   return entries.sort((a, b) => b.at.getTime() - a.at.getTime() || a.key.localeCompare(b.key))
 }
 
