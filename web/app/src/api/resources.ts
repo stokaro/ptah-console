@@ -4,6 +4,7 @@ import { skipToken, useQuery } from "@connectrpc/connect-query"
 import { DecisionService } from "../gen/ptah/console/v1/decisions_pb"
 import { InfoService, Mode } from "../gen/ptah/console/v1/info_pb"
 import { useLive } from "./live"
+import { useSelectedNamespaces } from "./selection"
 import {
   Access,
   Answer,
@@ -91,10 +92,14 @@ export function useOffer() {
   }
 }
 
-/** Every schema and migration in the readable namespaces. */
+/**
+ * Every schema and migration in the namespaces the page reads: the viewer's
+ * choice in the full console, every readable namespace elsewhere.
+ */
 export function useResources() {
   const scope = useScope()
-  const input = scope.readable.length > 0 ? { namespaces: scope.readable } : skipToken
+  const namespaces = useSelectedNamespaces(scope.readable)
+  const input = namespaces && namespaces.length > 0 ? { namespaces } : skipToken
   const schemas = useQuery(SchemaService.method.listSchemas, input)
   const migrations = useQuery(MigrationService.method.listMigrations, input)
   const resources: ResourceView[] = [
@@ -106,21 +111,26 @@ export function useResources() {
     .map((result) => result.namespace)
   return {
     scope,
+    /** The namespaces read, which the full console may have narrowed. */
+    namespaces: namespaces ?? [],
     resources,
     truncated: [...new Set(truncated)],
     loading:
-      scope.isPending || (scope.readable.length > 0 && (schemas.isPending || migrations.isPending)),
+      scope.isPending ||
+      namespaces === null ||
+      (namespaces.length > 0 && (schemas.isPending || migrations.isPending)),
     error: scope.error ?? schemas.error ?? migrations.error,
   }
 }
 
 export function useDecisions() {
   const scope = useScope()
+  const namespaces = useSelectedNamespaces(scope.readable)
   return {
     scope,
     decisions: useQuery(
       DecisionService.method.listDecisions,
-      scope.readable.length > 0 ? { namespaces: scope.readable } : skipToken
+      namespaces && namespaces.length > 0 ? { namespaces } : skipToken
     ),
   }
 }

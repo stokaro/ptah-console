@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -195,6 +196,34 @@ func TestListNamespacesHintsWhatTheIdentityMayDo(t *testing.T) {
 	c.Assert(byName[allowed].GetCapabilities().GetApproveSchemaPlans(), qt.Equals, consolev1.Answer_ANSWER_DENIED)
 	c.Assert(byName[allowed].GetCapabilities().GetReadPlanSql(), qt.Equals, consolev1.Answer_ANSWER_DENIED)
 	c.Assert(byName[forbidden].GetAccess(), qt.Equals, consolev1.Access_ACCESS_FORBIDDEN)
+	c.Assert(response.GetTruncated(), qt.IsFalse)
+	c.Assert(response.GetMaxNamespaces(), qt.Equals, uint32(api.MaxNamespaces))
+}
+
+// An identity that may list more namespaces than the console reads is
+// offered the first ones by name, and told the list was cut.
+func TestListNamespacesSaysWhenItCutsTheList(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	for i := range api.MaxNamespaces + 1 {
+		namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("cut-%02d", i)}}
+		c.Assert(plane.Admin.Create(t.Context(), namespace), qt.IsNil)
+	}
+	transport, ctx := signedIn(t, func(server *connect.Server) {
+		consolev1connect.RegisterScopeServiceHandler(server, api.NewScopeService(factory{plane.Admin}, api.Scope{}))
+	})
+
+	response, err := consolev1connect.NewScopeServiceClient(transport).ListNamespaces(ctx, &consolev1.ListNamespacesRequest{})
+
+	c.Assert(err, qt.IsNil)
+	c.Assert(response.GetTruncated(), qt.IsTrue)
+	c.Assert(response.GetMaxNamespaces(), qt.Equals, uint32(api.MaxNamespaces))
+	names := make([]string, 0, len(response.GetNamespaces()))
+	for _, namespace := range response.GetNamespaces() {
+		names = append(names, namespace.GetName())
+	}
+	c.Assert(names, qt.HasLen, api.MaxNamespaces)
+	c.Assert(slices.IsSorted(names), qt.IsTrue, qt.Commentf("%v", names))
 }
 
 // A namespace with more of a kind than the bound is read a page at a time up

@@ -20,6 +20,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
+	"github.com/stokaro/ptah-console/internal/api"
 	"github.com/stokaro/ptah-console/internal/auth/accounts"
 )
 
@@ -33,7 +34,7 @@ const (
 // Bounds on the files.
 const (
 	maxFileBytes   = 64 << 10
-	maxNamespaces  = 64
+	maxNamespaces  = api.MaxNamespaces
 	maxAccounts    = 256
 	maxServerName  = 253
 	maxAddressSize = 2048

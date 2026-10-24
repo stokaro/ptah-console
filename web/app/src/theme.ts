@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react"
-
 export type ThemeChoice = "system" | "light" | "dark"
+
+/** The themes a viewer may choose, in the order a switch lists them. */
+export const themes: { value: ThemeChoice; label: string }[] = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+]
 
 const storageKey = "ptah-console-theme"
 
@@ -14,7 +19,7 @@ export function readTheme(): ThemeChoice {
   }
 }
 
-function storeTheme(choice: ThemeChoice) {
+export function storeTheme(choice: ThemeChoice) {
   try {
     if (choice === "system") {
       window.localStorage.removeItem(storageKey)
@@ -39,24 +44,17 @@ export function applyTheme(choice: ThemeChoice, root: HTMLElement = document.doc
   root.setAttribute("data-theme", dark ? "dark" : "light")
 }
 
-/** The theme choice, applied, stored and kept in step with the system's. */
-export function useTheme(): [ThemeChoice, (choice: ThemeChoice) => void] {
-  const [choice, setChoice] = useState<ThemeChoice>(readTheme)
-  useEffect(() => {
-    applyTheme(choice)
-    if (choice !== "system" || typeof window.matchMedia !== "function") {
-      return
-    }
-    const media = window.matchMedia("(prefers-color-scheme: dark)")
-    const follow = () => applyTheme("system")
-    media.addEventListener("change", follow)
-    return () => media.removeEventListener("change", follow)
-  }, [choice])
-  return [
-    choice,
-    (next) => {
-      storeTheme(next)
-      setChoice(next)
-    },
-  ]
+/**
+ * Applies a choice, and keeps applying "system" as the system's preference
+ * changes. Returns what stops following it.
+ */
+export function followTheme(choice: ThemeChoice): () => void {
+  applyTheme(choice)
+  if (choice !== "system" || typeof window.matchMedia !== "function") {
+    return () => {}
+  }
+  const media = window.matchMedia("(prefers-color-scheme: dark)")
+  const follow = () => applyTheme("system")
+  media.addEventListener("change", follow)
+  return () => media.removeEventListener("change", follow)
 }

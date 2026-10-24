@@ -41,8 +41,9 @@ func (s Scope) maxPerNamespace() int {
 	return DefaultMaxPerNamespace
 }
 
-// maxNamespaces bounds one request.
-const maxNamespaces = 64
+// MaxNamespaces is the most namespaces the console offers, and reads in one
+// request. A configuration that names more is refused when it is read.
+const MaxNamespaces = 64
 
 var namespacePattern = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$`)
 
@@ -51,8 +52,8 @@ func (s Scope) check(namespaces []string) error {
 	if len(namespaces) == 0 {
 		return connect.NewError(connect.CodeInvalidArgument, "name at least one namespace")
 	}
-	if len(namespaces) > maxNamespaces {
-		return connect.Errorf(connect.CodeInvalidArgument, "at most %d namespaces per request", maxNamespaces)
+	if len(namespaces) > MaxNamespaces {
+		return connect.Errorf(connect.CodeInvalidArgument, "at most %d namespaces per request", MaxNamespaces)
 	}
 	for _, namespace := range namespaces {
 		if !namespacePattern.MatchString(namespace) {
@@ -60,6 +61,20 @@ func (s Scope) check(namespaces []string) error {
 		}
 		if len(s.Ceiling) > 0 && !slices.Contains(s.Ceiling, namespace) {
 			return connect.Errorf(connect.CodePermissionDenied, "namespace %q is outside what this console serves", namespace)
+		}
+	}
+	return nil
+}
+
+// Validate refuses candidates the console could not serve: more than
+// MaxNamespaces of them, or a name that is not a namespace's.
+func (s Scope) Validate() error {
+	if len(s.Candidates) > MaxNamespaces {
+		return fmt.Errorf("%d namespaces named; the console reads at most %d", len(s.Candidates), MaxNamespaces)
+	}
+	for _, namespace := range s.Candidates {
+		if !namespacePattern.MatchString(namespace) {
+			return fmt.Errorf("%q is not a namespace name", namespace)
 		}
 	}
 	return nil

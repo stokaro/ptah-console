@@ -50,9 +50,10 @@ address only, opens your browser with a sign-in link that works once, for one
 minute, and prints the link instead with `--no-open`. Press Enter in the
 terminal for a new link. Stop it with Ctrl-C.
 
-- `--namespace` names a namespace to show; repeat it for more. Without it the
-  console shows the context's namespace, or every namespace your identity may
-  list.
+- `--namespace` names a namespace to show; repeat it for more, up to 64.
+  Without it the console shows the context's namespace, or the first 64
+  namespaces your identity may list, and says when it cut the list. In the
+  full console you choose which of them the pages read, from the top bar.
 - `--read-only` refuses every change the console could send, whatever your
   identity may do.
 - `--kubeconfig` and `--context` choose another kubeconfig or context.

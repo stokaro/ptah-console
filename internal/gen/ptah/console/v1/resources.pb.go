@@ -856,7 +856,13 @@ type ListNamespacesResponse struct {
 	Namespaces []*NamespaceScope      `protobuf:"bytes,1,rep,name=namespaces,proto3" json:"namespaces,omitempty"`
 	// Whether the cluster serves the operator's API, as discovery tells the
 	// session's identity.
-	OperatorApi   *OperatorApi `protobuf:"bytes,2,opt,name=operator_api,json=operatorApi,proto3" json:"operator_api,omitempty"`
+	OperatorApi *OperatorApi `protobuf:"bytes,2,opt,name=operator_api,json=operatorApi,proto3" json:"operator_api,omitempty"`
+	// The identity may list more namespaces than the console offers. The
+	// console offers the first max_namespaces by name; a console started with
+	// the namespaces it should offer is never cut short.
+	Truncated bool `protobuf:"varint,3,opt,name=truncated,proto3" json:"truncated,omitempty"`
+	// The most namespaces the console offers, and reads in one request.
+	MaxNamespaces uint32 `protobuf:"varint,4,opt,name=max_namespaces,json=maxNamespaces,proto3" json:"max_namespaces,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -903,6 +909,20 @@ func (x *ListNamespacesResponse) GetOperatorApi() *OperatorApi {
 		return x.OperatorApi
 	}
 	return nil
+}
+
+func (x *ListNamespacesResponse) GetTruncated() bool {
+	if x != nil {
+		return x.Truncated
+	}
+	return false
+}
+
+func (x *ListNamespacesResponse) GetMaxNamespaces() uint32 {
+	if x != nil {
+		return x.MaxNamespaces
+	}
+	return 0
 }
 
 // OperatorApi is what discovery says about operator.ptah.run/v1alpha1.
@@ -3797,12 +3817,14 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\x06access\x18\x02 \x01(\x0e2\x17.ptah.console.v1.AccessR\x06access\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\x12A\n" +
 	"\fcapabilities\x18\x04 \x01(\v2\x1d.ptah.console.v1.CapabilitiesR\fcapabilities\"\x17\n" +
-	"\x15ListNamespacesRequest\"\x9a\x01\n" +
+	"\x15ListNamespacesRequest\"\xdf\x01\n" +
 	"\x16ListNamespacesResponse\x12?\n" +
 	"\n" +
 	"namespaces\x18\x01 \x03(\v2\x1f.ptah.console.v1.NamespaceScopeR\n" +
 	"namespaces\x12?\n" +
-	"\foperator_api\x18\x02 \x01(\v2\x1c.ptah.console.v1.OperatorApiR\voperatorApi\"Y\n" +
+	"\foperator_api\x18\x02 \x01(\v2\x1c.ptah.console.v1.OperatorApiR\voperatorApi\x12\x1c\n" +
+	"\ttruncated\x18\x03 \x01(\bR\ttruncated\x12%\n" +
+	"\x0emax_namespaces\x18\x04 \x01(\rR\rmaxNamespaces\"Y\n" +
 	"\vOperatorApi\x12\x16\n" +
 	"\x06served\x18\x01 \x01(\bR\x06served\x12\x18\n" +
 	"\amissing\x18\x02 \x03(\tR\amissing\x12\x18\n" +
