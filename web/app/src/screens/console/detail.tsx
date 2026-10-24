@@ -1,5 +1,7 @@
 import type { Timestamp } from "@bufbuild/protobuf/wkt"
 import { timestampDate } from "@bufbuild/protobuf/wkt"
+import { ConnectError } from "@connectrpc/connect"
+import { useMutation } from "@connectrpc/connect-query"
 import {
   Button,
   Card,
@@ -10,10 +12,19 @@ import {
   Terminal,
   useCopy,
 } from "@ptah/console-ui"
+import { useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { useState, type ReactNode } from "react"
 
 import { useOffer, useSession } from "../../api/resources"
+import {
+  DecisionOutcome,
+  DecisionService,
+  ResourceKind,
+} from "../../gen/ptah/console/v1/decisions_pb"
+import { ago } from "../../model/connection"
+import { readState } from "../../model/readrequest"
+import { useNow } from "../common"
 import {
   SourceKind,
   type Condition,
@@ -160,6 +171,7 @@ export function DetailHeader({ resource, kind, chips, actions }: DetailHeaderPro
             {resource.suspended ? "Resume…" : "Suspend…"}
           </Button>
         ) : null}
+        {maySuspend ? <ReadAgainButton resource={resource} /> : null}
         <Button onClick={() => void copy(window.location.href)}>Copy link</Button>
         <Button onClick={() => void copy(command)} title={command}>
           Copy kubectl command
@@ -168,6 +180,7 @@ export function DetailHeader({ resource, kind, chips, actions }: DetailHeaderPro
           {copyWords[state]}
         </span>
       </div>
+      <ReadAgainState resource={resource} />
       {suspending ? (
         <SuspendDialog
           resource={resource}
@@ -452,5 +465,65 @@ YAML`
         <span className="text-sm text-mute">The spec could not be shown.</span>
       )}
     </Card>
+  )
+}
+
+/**
+ * Asks the resource to read its database now, through the operator's
+ * read-requested-at annotation, rather than at its next interval. It changes
+ * nothing else; the operator answers once no operation is running.
+ */
+function ReadAgainButton({ resource }: { resource: ResourceView }) {
+  const queryClient = useQueryClient()
+  const ask = useMutation(DecisionService.method.requestRead, {
+    onSuccess: () => void queryClient.invalidateQueries(),
+  })
+  const refused =
+    ask.data && ask.data.outcome !== DecisionOutcome.ADMITTED
+      ? ask.data.message
+      : ask.error
+        ? ConnectError.from(ask.error).rawMessage
+        : ""
+  return (
+    <>
+      <Button
+        disabled={ask.isPending}
+        onClick={() =>
+          ask.mutate({
+            kind: resource.kind === "schema" ? ResourceKind.SCHEMA : ResourceKind.MIGRATION,
+            namespace: resource.namespace,
+            name: resource.name,
+            uid: resource.ref.uid,
+          })
+        }
+      >
+        {ask.isPending ? "Asking…" : "Read again now"}
+      </Button>
+      {refused ? (
+        <span role="alert" className="text-[12.5px] text-red">
+          {refused}
+        </span>
+      ) : null}
+    </>
+  )
+}
+
+/** Where the last request to read now stands, as the operator recorded it. */
+function ReadAgainState({ resource }: { resource: ResourceView }) {
+  const now = useNow(5_000)
+  const state = readState(resource)
+  if (!state) {
+    return null
+  }
+  const when = state.requested ? ago(state.requested, now) : "earlier"
+  return (
+    <p className="m-0 flex items-center gap-2 text-[13px] text-fg2">
+      <StatusGlyph tone={state.answered ? "ok" : "run"} size={20} />
+      {state.answered
+        ? `A read was asked ${when}, and the operator started it.`
+        : resource.suspended
+          ? `A read was asked ${when}. The resource is suspended, so the operator answers once it is resumed.`
+          : `A read was asked ${when}. The operator starts it once no operation is running.`}
+    </p>
   )
 }

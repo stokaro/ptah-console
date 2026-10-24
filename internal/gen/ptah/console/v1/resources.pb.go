@@ -2126,7 +2126,9 @@ type Schema struct {
 	SpecYaml string `protobuf:"bytes,20,opt,name=spec_yaml,json=specYaml,proto3" json:"spec_yaml,omitempty"`
 	// The significant events of the schema's lifecycle the operator kept.
 	// Absent from an operator that keeps no journal.
-	Journal       *Journal `protobuf:"bytes,21,opt,name=journal,proto3" json:"journal,omitempty"`
+	Journal *Journal `protobuf:"bytes,21,opt,name=journal,proto3" json:"journal,omitempty"`
+	// The last request to read the database now, and the one the operator answered.
+	ReadRequest   *ReadRequest `protobuf:"bytes,22,opt,name=read_request,json=readRequest,proto3" json:"read_request,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2304,6 +2306,13 @@ func (x *Schema) GetSpecYaml() string {
 func (x *Schema) GetJournal() *Journal {
 	if x != nil {
 		return x.Journal
+	}
+	return nil
+}
+
+func (x *Schema) GetReadRequest() *ReadRequest {
+	if x != nil {
+		return x.ReadRequest
 	}
 	return nil
 }
@@ -3697,7 +3706,9 @@ type Migration struct {
 	SpecYaml string `protobuf:"bytes,20,opt,name=spec_yaml,json=specYaml,proto3" json:"spec_yaml,omitempty"`
 	// The significant events of the migration's lifecycle the operator kept.
 	// Absent from an operator that keeps no journal.
-	Journal       *Journal `protobuf:"bytes,21,opt,name=journal,proto3" json:"journal,omitempty"`
+	Journal *Journal `protobuf:"bytes,21,opt,name=journal,proto3" json:"journal,omitempty"`
+	// The last request to read the database now, and the one the operator answered.
+	ReadRequest   *ReadRequest `protobuf:"bytes,22,opt,name=read_request,json=readRequest,proto3" json:"read_request,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3875,6 +3886,13 @@ func (x *Migration) GetSpecYaml() string {
 func (x *Migration) GetJournal() *Journal {
 	if x != nil {
 		return x.Journal
+	}
+	return nil
+}
+
+func (x *Migration) GetReadRequest() *ReadRequest {
+	if x != nil {
+		return x.ReadRequest
 	}
 	return nil
 }
@@ -4399,6 +4417,64 @@ func (x *GetMigrationPlanResponse) GetPlan() *MigrationPlan {
 	return nil
 }
 
+// ReadRequest is a person's request that the resource read its database now
+// rather than at its next interval, through the
+// operator.ptah.run/read-requested-at annotation.
+type ReadRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The annotation's value: the instant the last request was made.
+	Requested string `protobuf:"bytes,1,opt,name=requested,proto3" json:"requested,omitempty"`
+	// The value the operator last answered, from status.lastReadRequest. A
+	// value longer than 64 bytes is recorded as its digest.
+	Answered      string `protobuf:"bytes,2,opt,name=answered,proto3" json:"answered,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReadRequest) Reset() {
+	*x = ReadRequest{}
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadRequest) ProtoMessage() {}
+
+func (x *ReadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadRequest.ProtoReflect.Descriptor instead.
+func (*ReadRequest) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *ReadRequest) GetRequested() string {
+	if x != nil {
+		return x.Requested
+	}
+	return ""
+}
+
+func (x *ReadRequest) GetAnswered() string {
+	if x != nil {
+		return x.Answered
+	}
+	return ""
+}
+
 var File_ptah_console_v1_resources_proto protoreflect.FileDescriptor
 
 const file_ptah_console_v1_resources_proto_rawDesc = "" +
@@ -4554,7 +4630,7 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\aoutcome\x18\x01 \x01(\tR\aoutcome\x12$\n" +
 	"\x0eapply_job_name\x18\x02 \x01(\tR\fapplyJobName\x12\"\n" +
 	"\rapply_job_uid\x18\x03 \x01(\tR\vapplyJobUid\x12?\n" +
-	"\robserve_after\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\fobserveAfter\"\xf7\b\n" +
+	"\robserve_after\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\fobserveAfter\"\xb8\t\n" +
 	"\x06Schema\x12,\n" +
 	"\x03ref\x18\x01 \x01(\v2\x1a.ptah.console.v1.ObjectRefR\x03ref\x12\x14\n" +
 	"\x05phase\x18\x02 \x01(\tR\x05phase\x12%\n" +
@@ -4579,7 +4655,8 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\tattention\x18\x12 \x03(\v2\x1a.ptah.console.v1.AttentionR\tattention\x12/\n" +
 	"\x06gitops\x18\x13 \x01(\v2\x17.ptah.console.v1.GitOpsR\x06gitops\x12\x1b\n" +
 	"\tspec_yaml\x18\x14 \x01(\tR\bspecYaml\x122\n" +
-	"\ajournal\x18\x15 \x01(\v2\x18.ptah.console.v1.JournalR\ajournal\"\x83\x01\n" +
+	"\ajournal\x18\x15 \x01(\v2\x18.ptah.console.v1.JournalR\ajournal\x12?\n" +
+	"\fread_request\x18\x16 \x01(\v2\x1c.ptah.console.v1.ReadRequestR\vreadRequest\"\x83\x01\n" +
 	"\aJournal\x12?\n" +
 	"\rcovered_since\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\fcoveredSince\x127\n" +
 	"\aentries\x18\x02 \x03(\v2\x1d.ptah.console.v1.JournalEntryR\aentries\"\xe5\x04\n" +
@@ -4717,7 +4794,7 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"resolution\x12'\n" +
 	"\x0facknowledged_by\x18\x04 \x01(\tR\x0eacknowledgedBy\x12;\n" +
 	"\vresolved_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"resolvedAt\"\x8c\b\n" +
+	"resolvedAt\"\xcd\b\n" +
 	"\tMigration\x12,\n" +
 	"\x03ref\x18\x01 \x01(\v2\x1a.ptah.console.v1.ObjectRefR\x03ref\x12\x14\n" +
 	"\x05phase\x18\x02 \x01(\tR\x05phase\x12%\n" +
@@ -4742,7 +4819,8 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\tattention\x18\x12 \x03(\v2\x1a.ptah.console.v1.AttentionR\tattention\x12/\n" +
 	"\x06gitops\x18\x13 \x01(\v2\x17.ptah.console.v1.GitOpsR\x06gitops\x12\x1b\n" +
 	"\tspec_yaml\x18\x14 \x01(\tR\bspecYaml\x122\n" +
-	"\ajournal\x18\x15 \x01(\v2\x18.ptah.console.v1.JournalR\ajournal\"7\n" +
+	"\ajournal\x18\x15 \x01(\v2\x18.ptah.console.v1.JournalR\ajournal\x12?\n" +
+	"\fread_request\x18\x16 \x01(\v2\x1c.ptah.console.v1.ReadRequestR\vreadRequest\"7\n" +
 	"\x15ListMigrationsRequest\x12\x1e\n" +
 	"\n" +
 	"namespaces\x18\x01 \x03(\tR\n" +
@@ -4792,7 +4870,10 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x1c\n" +
 	"\tmigration\x18\x02 \x01(\tR\tmigration\"N\n" +
 	"\x18GetMigrationPlanResponse\x122\n" +
-	"\x04plan\x18\x01 \x01(\v2\x1e.ptah.console.v1.MigrationPlanR\x04plan*W\n" +
+	"\x04plan\x18\x01 \x01(\v2\x1e.ptah.console.v1.MigrationPlanR\x04plan\"G\n" +
+	"\vReadRequest\x12\x1c\n" +
+	"\trequested\x18\x01 \x01(\tR\trequested\x12\x1a\n" +
+	"\banswered\x18\x02 \x01(\tR\banswered*W\n" +
 	"\x06Access\x12\x16\n" +
 	"\x12ACCESS_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tACCESS_OK\x10\x01\x12\x14\n" +
@@ -4862,7 +4943,7 @@ func file_ptah_console_v1_resources_proto_rawDescGZIP() []byte {
 }
 
 var file_ptah_console_v1_resources_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_ptah_console_v1_resources_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
+var file_ptah_console_v1_resources_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
 var file_ptah_console_v1_resources_proto_goTypes = []any{
 	(Access)(0),                      // 0: ptah.console.v1.Access
 	(Answer)(0),                      // 1: ptah.console.v1.Answer
@@ -4918,11 +4999,12 @@ var file_ptah_console_v1_resources_proto_goTypes = []any{
 	(*MigrationPlan)(nil),            // 51: ptah.console.v1.MigrationPlan
 	(*GetMigrationPlanRequest)(nil),  // 52: ptah.console.v1.GetMigrationPlanRequest
 	(*GetMigrationPlanResponse)(nil), // 53: ptah.console.v1.GetMigrationPlanResponse
-	(*timestamppb.Timestamp)(nil),    // 54: google.protobuf.Timestamp
+	(*ReadRequest)(nil),              // 54: ptah.console.v1.ReadRequest
+	(*timestamppb.Timestamp)(nil),    // 55: google.protobuf.Timestamp
 }
 var file_ptah_console_v1_resources_proto_depIdxs = []int32{
-	54,  // 0: ptah.console.v1.ObjectRef.created_at:type_name -> google.protobuf.Timestamp
-	54,  // 1: ptah.console.v1.Condition.last_transition:type_name -> google.protobuf.Timestamp
+	55,  // 0: ptah.console.v1.ObjectRef.created_at:type_name -> google.protobuf.Timestamp
+	55,  // 1: ptah.console.v1.Condition.last_transition:type_name -> google.protobuf.Timestamp
 	0,   // 2: ptah.console.v1.NamespaceResult.access:type_name -> ptah.console.v1.Access
 	1,   // 3: ptah.console.v1.Capabilities.list_schemas:type_name -> ptah.console.v1.Answer
 	1,   // 4: ptah.console.v1.Capabilities.list_migrations:type_name -> ptah.console.v1.Answer
@@ -4945,20 +5027,20 @@ var file_ptah_console_v1_resources_proto_depIdxs = []int32{
 	14,  // 21: ptah.console.v1.ListNamespacesResponse.operator_api:type_name -> ptah.console.v1.OperatorApi
 	2,   // 22: ptah.console.v1.Stage.state:type_name -> ptah.console.v1.StageState
 	3,   // 23: ptah.console.v1.Attention.kind:type_name -> ptah.console.v1.AttentionKind
-	54,  // 24: ptah.console.v1.Attention.since:type_name -> google.protobuf.Timestamp
-	54,  // 25: ptah.console.v1.Source.resolved_at:type_name -> google.protobuf.Timestamp
-	54,  // 26: ptah.console.v1.Source.verified_at:type_name -> google.protobuf.Timestamp
+	55,  // 24: ptah.console.v1.Attention.since:type_name -> google.protobuf.Timestamp
+	55,  // 25: ptah.console.v1.Source.resolved_at:type_name -> google.protobuf.Timestamp
+	55,  // 26: ptah.console.v1.Source.verified_at:type_name -> google.protobuf.Timestamp
 	4,   // 27: ptah.console.v1.Source.kind:type_name -> ptah.console.v1.SourceKind
 	19,  // 28: ptah.console.v1.Source.policy:type_name -> ptah.console.v1.SourcePolicy
 	4,   // 29: ptah.console.v1.PlanSource.kind:type_name -> ptah.console.v1.SourceKind
-	54,  // 30: ptah.console.v1.Target.last_observed_at:type_name -> google.protobuf.Timestamp
+	55,  // 30: ptah.console.v1.Target.last_observed_at:type_name -> google.protobuf.Timestamp
 	21,  // 31: ptah.console.v1.Target.drift_findings:type_name -> ptah.console.v1.DriftFinding
-	54,  // 32: ptah.console.v1.Operation.started_at:type_name -> google.protobuf.Timestamp
-	54,  // 33: ptah.console.v1.ConsumedApproval.approved_at:type_name -> google.protobuf.Timestamp
-	54,  // 34: ptah.console.v1.SchemaPlanSummary.created_at:type_name -> google.protobuf.Timestamp
+	55,  // 32: ptah.console.v1.Operation.started_at:type_name -> google.protobuf.Timestamp
+	55,  // 33: ptah.console.v1.ConsumedApproval.approved_at:type_name -> google.protobuf.Timestamp
+	55,  // 34: ptah.console.v1.SchemaPlanSummary.created_at:type_name -> google.protobuf.Timestamp
 	24,  // 35: ptah.console.v1.SchemaPlanSummary.approval:type_name -> ptah.console.v1.ConsumedApproval
-	54,  // 36: ptah.console.v1.SchemaApplied.completed_at:type_name -> google.protobuf.Timestamp
-	54,  // 37: ptah.console.v1.PendingObservation.observe_after:type_name -> google.protobuf.Timestamp
+	55,  // 36: ptah.console.v1.SchemaApplied.completed_at:type_name -> google.protobuf.Timestamp
+	55,  // 37: ptah.console.v1.PendingObservation.observe_after:type_name -> google.protobuf.Timestamp
 	7,   // 38: ptah.console.v1.Schema.ref:type_name -> ptah.console.v1.ObjectRef
 	8,   // 39: ptah.console.v1.Schema.conditions:type_name -> ptah.console.v1.Condition
 	18,  // 40: ptah.console.v1.Schema.source:type_name -> ptah.console.v1.Source
@@ -4967,77 +5049,79 @@ var file_ptah_console_v1_resources_proto_depIdxs = []int32{
 	26,  // 43: ptah.console.v1.Schema.applied:type_name -> ptah.console.v1.SchemaApplied
 	23,  // 44: ptah.console.v1.Schema.active_operation:type_name -> ptah.console.v1.Operation
 	27,  // 45: ptah.console.v1.Schema.pending_observation:type_name -> ptah.console.v1.PendingObservation
-	54,  // 46: ptah.console.v1.Schema.last_attempt:type_name -> google.protobuf.Timestamp
-	54,  // 47: ptah.console.v1.Schema.last_successful_reconciliation:type_name -> google.protobuf.Timestamp
-	54,  // 48: ptah.console.v1.Schema.next_reconciliation:type_name -> google.protobuf.Timestamp
+	55,  // 46: ptah.console.v1.Schema.last_attempt:type_name -> google.protobuf.Timestamp
+	55,  // 47: ptah.console.v1.Schema.last_successful_reconciliation:type_name -> google.protobuf.Timestamp
+	55,  // 48: ptah.console.v1.Schema.next_reconciliation:type_name -> google.protobuf.Timestamp
 	15,  // 49: ptah.console.v1.Schema.stages:type_name -> ptah.console.v1.Stage
 	16,  // 50: ptah.console.v1.Schema.attention:type_name -> ptah.console.v1.Attention
 	17,  // 51: ptah.console.v1.Schema.gitops:type_name -> ptah.console.v1.GitOps
 	29,  // 52: ptah.console.v1.Schema.journal:type_name -> ptah.console.v1.Journal
-	54,  // 53: ptah.console.v1.Journal.covered_since:type_name -> google.protobuf.Timestamp
-	30,  // 54: ptah.console.v1.Journal.entries:type_name -> ptah.console.v1.JournalEntry
-	54,  // 55: ptah.console.v1.JournalEntry.at:type_name -> google.protobuf.Timestamp
-	54,  // 56: ptah.console.v1.JournalEntry.started_at:type_name -> google.protobuf.Timestamp
-	54,  // 57: ptah.console.v1.JournalEntry.last_at:type_name -> google.protobuf.Timestamp
-	31,  // 58: ptah.console.v1.JournalEntry.failure:type_name -> ptah.console.v1.RunFailure
-	28,  // 59: ptah.console.v1.ListSchemasResponse.schemas:type_name -> ptah.console.v1.Schema
-	9,   // 60: ptah.console.v1.ListSchemasResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
-	28,  // 61: ptah.console.v1.GetSchemaResponse.schema:type_name -> ptah.console.v1.Schema
-	6,   // 62: ptah.console.v1.SchemaPlan.selection:type_name -> ptah.console.v1.PlanSelection
-	36,  // 63: ptah.console.v1.SchemaPlan.statements:type_name -> ptah.console.v1.Statement
-	37,  // 64: ptah.console.v1.SchemaPlan.chunks:type_name -> ptah.console.v1.PlanChunk
-	54,  // 65: ptah.console.v1.SchemaPlan.created_at:type_name -> google.protobuf.Timestamp
-	54,  // 66: ptah.console.v1.SchemaPlan.completed_at:type_name -> google.protobuf.Timestamp
-	5,   // 67: ptah.console.v1.SchemaPlan.sql_access:type_name -> ptah.console.v1.SqlAccess
-	20,  // 68: ptah.console.v1.SchemaPlan.source:type_name -> ptah.console.v1.PlanSource
-	6,   // 69: ptah.console.v1.GetSchemaPlanRequest.selection:type_name -> ptah.console.v1.PlanSelection
-	38,  // 70: ptah.console.v1.GetSchemaPlanResponse.plan:type_name -> ptah.console.v1.SchemaPlan
-	54,  // 71: ptah.console.v1.MigrationHistory.observed_at:type_name -> google.protobuf.Timestamp
-	54,  // 72: ptah.console.v1.MigrationRun.started_at:type_name -> google.protobuf.Timestamp
-	54,  // 73: ptah.console.v1.MigrationRun.finished_at:type_name -> google.protobuf.Timestamp
-	31,  // 74: ptah.console.v1.MigrationRun.failure:type_name -> ptah.console.v1.RunFailure
-	54,  // 75: ptah.console.v1.UnresolvedRun.recorded_at:type_name -> google.protobuf.Timestamp
-	54,  // 76: ptah.console.v1.ResolvedRun.resolved_at:type_name -> google.protobuf.Timestamp
-	7,   // 77: ptah.console.v1.Migration.ref:type_name -> ptah.console.v1.ObjectRef
-	8,   // 78: ptah.console.v1.Migration.conditions:type_name -> ptah.console.v1.Condition
-	18,  // 79: ptah.console.v1.Migration.source:type_name -> ptah.console.v1.Source
-	22,  // 80: ptah.console.v1.Migration.target:type_name -> ptah.console.v1.Target
-	41,  // 81: ptah.console.v1.Migration.history:type_name -> ptah.console.v1.MigrationHistory
-	42,  // 82: ptah.console.v1.Migration.last_run:type_name -> ptah.console.v1.MigrationRun
-	43,  // 83: ptah.console.v1.Migration.unresolved_run:type_name -> ptah.console.v1.UnresolvedRun
-	44,  // 84: ptah.console.v1.Migration.resolved_run:type_name -> ptah.console.v1.ResolvedRun
-	23,  // 85: ptah.console.v1.Migration.active_operation:type_name -> ptah.console.v1.Operation
-	54,  // 86: ptah.console.v1.Migration.next_reconciliation:type_name -> google.protobuf.Timestamp
-	15,  // 87: ptah.console.v1.Migration.stages:type_name -> ptah.console.v1.Stage
-	16,  // 88: ptah.console.v1.Migration.attention:type_name -> ptah.console.v1.Attention
-	17,  // 89: ptah.console.v1.Migration.gitops:type_name -> ptah.console.v1.GitOps
-	29,  // 90: ptah.console.v1.Migration.journal:type_name -> ptah.console.v1.Journal
-	45,  // 91: ptah.console.v1.ListMigrationsResponse.migrations:type_name -> ptah.console.v1.Migration
-	9,   // 92: ptah.console.v1.ListMigrationsResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
-	45,  // 93: ptah.console.v1.GetMigrationResponse.migration:type_name -> ptah.console.v1.Migration
-	50,  // 94: ptah.console.v1.MigrationPlan.migrations:type_name -> ptah.console.v1.PlannedMigration
-	54,  // 95: ptah.console.v1.MigrationPlan.created_at:type_name -> google.protobuf.Timestamp
-	20,  // 96: ptah.console.v1.MigrationPlan.source:type_name -> ptah.console.v1.PlanSource
-	51,  // 97: ptah.console.v1.GetMigrationPlanResponse.plan:type_name -> ptah.console.v1.MigrationPlan
-	12,  // 98: ptah.console.v1.ScopeService.ListNamespaces:input_type -> ptah.console.v1.ListNamespacesRequest
-	32,  // 99: ptah.console.v1.SchemaService.ListSchemas:input_type -> ptah.console.v1.ListSchemasRequest
-	34,  // 100: ptah.console.v1.SchemaService.GetSchema:input_type -> ptah.console.v1.GetSchemaRequest
-	39,  // 101: ptah.console.v1.SchemaService.GetSchemaPlan:input_type -> ptah.console.v1.GetSchemaPlanRequest
-	46,  // 102: ptah.console.v1.MigrationService.ListMigrations:input_type -> ptah.console.v1.ListMigrationsRequest
-	48,  // 103: ptah.console.v1.MigrationService.GetMigration:input_type -> ptah.console.v1.GetMigrationRequest
-	52,  // 104: ptah.console.v1.MigrationService.GetMigrationPlan:input_type -> ptah.console.v1.GetMigrationPlanRequest
-	13,  // 105: ptah.console.v1.ScopeService.ListNamespaces:output_type -> ptah.console.v1.ListNamespacesResponse
-	33,  // 106: ptah.console.v1.SchemaService.ListSchemas:output_type -> ptah.console.v1.ListSchemasResponse
-	35,  // 107: ptah.console.v1.SchemaService.GetSchema:output_type -> ptah.console.v1.GetSchemaResponse
-	40,  // 108: ptah.console.v1.SchemaService.GetSchemaPlan:output_type -> ptah.console.v1.GetSchemaPlanResponse
-	47,  // 109: ptah.console.v1.MigrationService.ListMigrations:output_type -> ptah.console.v1.ListMigrationsResponse
-	49,  // 110: ptah.console.v1.MigrationService.GetMigration:output_type -> ptah.console.v1.GetMigrationResponse
-	53,  // 111: ptah.console.v1.MigrationService.GetMigrationPlan:output_type -> ptah.console.v1.GetMigrationPlanResponse
-	105, // [105:112] is the sub-list for method output_type
-	98,  // [98:105] is the sub-list for method input_type
-	98,  // [98:98] is the sub-list for extension type_name
-	98,  // [98:98] is the sub-list for extension extendee
-	0,   // [0:98] is the sub-list for field type_name
+	54,  // 53: ptah.console.v1.Schema.read_request:type_name -> ptah.console.v1.ReadRequest
+	55,  // 54: ptah.console.v1.Journal.covered_since:type_name -> google.protobuf.Timestamp
+	30,  // 55: ptah.console.v1.Journal.entries:type_name -> ptah.console.v1.JournalEntry
+	55,  // 56: ptah.console.v1.JournalEntry.at:type_name -> google.protobuf.Timestamp
+	55,  // 57: ptah.console.v1.JournalEntry.started_at:type_name -> google.protobuf.Timestamp
+	55,  // 58: ptah.console.v1.JournalEntry.last_at:type_name -> google.protobuf.Timestamp
+	31,  // 59: ptah.console.v1.JournalEntry.failure:type_name -> ptah.console.v1.RunFailure
+	28,  // 60: ptah.console.v1.ListSchemasResponse.schemas:type_name -> ptah.console.v1.Schema
+	9,   // 61: ptah.console.v1.ListSchemasResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
+	28,  // 62: ptah.console.v1.GetSchemaResponse.schema:type_name -> ptah.console.v1.Schema
+	6,   // 63: ptah.console.v1.SchemaPlan.selection:type_name -> ptah.console.v1.PlanSelection
+	36,  // 64: ptah.console.v1.SchemaPlan.statements:type_name -> ptah.console.v1.Statement
+	37,  // 65: ptah.console.v1.SchemaPlan.chunks:type_name -> ptah.console.v1.PlanChunk
+	55,  // 66: ptah.console.v1.SchemaPlan.created_at:type_name -> google.protobuf.Timestamp
+	55,  // 67: ptah.console.v1.SchemaPlan.completed_at:type_name -> google.protobuf.Timestamp
+	5,   // 68: ptah.console.v1.SchemaPlan.sql_access:type_name -> ptah.console.v1.SqlAccess
+	20,  // 69: ptah.console.v1.SchemaPlan.source:type_name -> ptah.console.v1.PlanSource
+	6,   // 70: ptah.console.v1.GetSchemaPlanRequest.selection:type_name -> ptah.console.v1.PlanSelection
+	38,  // 71: ptah.console.v1.GetSchemaPlanResponse.plan:type_name -> ptah.console.v1.SchemaPlan
+	55,  // 72: ptah.console.v1.MigrationHistory.observed_at:type_name -> google.protobuf.Timestamp
+	55,  // 73: ptah.console.v1.MigrationRun.started_at:type_name -> google.protobuf.Timestamp
+	55,  // 74: ptah.console.v1.MigrationRun.finished_at:type_name -> google.protobuf.Timestamp
+	31,  // 75: ptah.console.v1.MigrationRun.failure:type_name -> ptah.console.v1.RunFailure
+	55,  // 76: ptah.console.v1.UnresolvedRun.recorded_at:type_name -> google.protobuf.Timestamp
+	55,  // 77: ptah.console.v1.ResolvedRun.resolved_at:type_name -> google.protobuf.Timestamp
+	7,   // 78: ptah.console.v1.Migration.ref:type_name -> ptah.console.v1.ObjectRef
+	8,   // 79: ptah.console.v1.Migration.conditions:type_name -> ptah.console.v1.Condition
+	18,  // 80: ptah.console.v1.Migration.source:type_name -> ptah.console.v1.Source
+	22,  // 81: ptah.console.v1.Migration.target:type_name -> ptah.console.v1.Target
+	41,  // 82: ptah.console.v1.Migration.history:type_name -> ptah.console.v1.MigrationHistory
+	42,  // 83: ptah.console.v1.Migration.last_run:type_name -> ptah.console.v1.MigrationRun
+	43,  // 84: ptah.console.v1.Migration.unresolved_run:type_name -> ptah.console.v1.UnresolvedRun
+	44,  // 85: ptah.console.v1.Migration.resolved_run:type_name -> ptah.console.v1.ResolvedRun
+	23,  // 86: ptah.console.v1.Migration.active_operation:type_name -> ptah.console.v1.Operation
+	55,  // 87: ptah.console.v1.Migration.next_reconciliation:type_name -> google.protobuf.Timestamp
+	15,  // 88: ptah.console.v1.Migration.stages:type_name -> ptah.console.v1.Stage
+	16,  // 89: ptah.console.v1.Migration.attention:type_name -> ptah.console.v1.Attention
+	17,  // 90: ptah.console.v1.Migration.gitops:type_name -> ptah.console.v1.GitOps
+	29,  // 91: ptah.console.v1.Migration.journal:type_name -> ptah.console.v1.Journal
+	54,  // 92: ptah.console.v1.Migration.read_request:type_name -> ptah.console.v1.ReadRequest
+	45,  // 93: ptah.console.v1.ListMigrationsResponse.migrations:type_name -> ptah.console.v1.Migration
+	9,   // 94: ptah.console.v1.ListMigrationsResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
+	45,  // 95: ptah.console.v1.GetMigrationResponse.migration:type_name -> ptah.console.v1.Migration
+	50,  // 96: ptah.console.v1.MigrationPlan.migrations:type_name -> ptah.console.v1.PlannedMigration
+	55,  // 97: ptah.console.v1.MigrationPlan.created_at:type_name -> google.protobuf.Timestamp
+	20,  // 98: ptah.console.v1.MigrationPlan.source:type_name -> ptah.console.v1.PlanSource
+	51,  // 99: ptah.console.v1.GetMigrationPlanResponse.plan:type_name -> ptah.console.v1.MigrationPlan
+	12,  // 100: ptah.console.v1.ScopeService.ListNamespaces:input_type -> ptah.console.v1.ListNamespacesRequest
+	32,  // 101: ptah.console.v1.SchemaService.ListSchemas:input_type -> ptah.console.v1.ListSchemasRequest
+	34,  // 102: ptah.console.v1.SchemaService.GetSchema:input_type -> ptah.console.v1.GetSchemaRequest
+	39,  // 103: ptah.console.v1.SchemaService.GetSchemaPlan:input_type -> ptah.console.v1.GetSchemaPlanRequest
+	46,  // 104: ptah.console.v1.MigrationService.ListMigrations:input_type -> ptah.console.v1.ListMigrationsRequest
+	48,  // 105: ptah.console.v1.MigrationService.GetMigration:input_type -> ptah.console.v1.GetMigrationRequest
+	52,  // 106: ptah.console.v1.MigrationService.GetMigrationPlan:input_type -> ptah.console.v1.GetMigrationPlanRequest
+	13,  // 107: ptah.console.v1.ScopeService.ListNamespaces:output_type -> ptah.console.v1.ListNamespacesResponse
+	33,  // 108: ptah.console.v1.SchemaService.ListSchemas:output_type -> ptah.console.v1.ListSchemasResponse
+	35,  // 109: ptah.console.v1.SchemaService.GetSchema:output_type -> ptah.console.v1.GetSchemaResponse
+	40,  // 110: ptah.console.v1.SchemaService.GetSchemaPlan:output_type -> ptah.console.v1.GetSchemaPlanResponse
+	47,  // 111: ptah.console.v1.MigrationService.ListMigrations:output_type -> ptah.console.v1.ListMigrationsResponse
+	49,  // 112: ptah.console.v1.MigrationService.GetMigration:output_type -> ptah.console.v1.GetMigrationResponse
+	53,  // 113: ptah.console.v1.MigrationService.GetMigrationPlan:output_type -> ptah.console.v1.GetMigrationPlanResponse
+	107, // [107:114] is the sub-list for method output_type
+	100, // [100:107] is the sub-list for method input_type
+	100, // [100:100] is the sub-list for extension type_name
+	100, // [100:100] is the sub-list for extension extendee
+	0,   // [0:100] is the sub-list for field type_name
 }
 
 func init() { file_ptah_console_v1_resources_proto_init() }
@@ -5051,7 +5135,7 @@ func file_ptah_console_v1_resources_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ptah_console_v1_resources_proto_rawDesc), len(file_ptah_console_v1_resources_proto_rawDesc)),
 			NumEnums:      7,
-			NumMessages:   47,
+			NumMessages:   48,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

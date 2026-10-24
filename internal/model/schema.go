@@ -38,6 +38,7 @@ func Schema(schema *operatorv1alpha1.PtahSchema) *consolev1.Schema {
 		Gitops:                       gitOps(schema.ObjectMeta),
 		SpecYaml:                     specYAML(schema.Spec),
 		Journal:                      journal(status.Journal),
+		ReadRequest:                  readRequest(schema.ObjectMeta, status.LastReadRequest),
 	}
 	if plan := status.Plan; plan != nil {
 		out.CurrentPlan = &consolev1.SchemaPlanSummary{

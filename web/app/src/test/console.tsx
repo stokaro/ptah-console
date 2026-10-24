@@ -16,6 +16,8 @@ import {
   type Decision,
   type DecisionResult,
   type GetDecisionRequest,
+  type RequestReadRequest,
+  type RequestReadResponseSchema,
   type SetSuspendedRequest,
   type SetSuspendedResponseSchema,
 } from "../gen/ptah/console/v1/decisions_pb"
@@ -249,6 +251,8 @@ export interface Fixture {
   setSuspended?: (
     request: SetSuspendedRequest
   ) => MessageInitShape<typeof SetSuspendedResponseSchema>
+  /** How a request to read now is answered; admitted, at the current instant, by default. */
+  requestRead?: (request: RequestReadRequest) => MessageInitShape<typeof RequestReadResponseSchema>
   /** What diagnostics answer, or how they answer the request they were sent. */
   diagnostics?:
     | MessageInitShape<typeof GetDiagnosticsResponseSchema>
@@ -534,6 +538,11 @@ export function consoleTransport(fixture: Fixture) {
       approveSchemaPlan: async (request) => ({ result: await fixture.approve?.(request) }),
       acknowledgeMigrationRun: (request) => ({ result: fixture.acknowledge?.(request) }),
       setSuspended: (request) => fixture.setSuspended?.(request) ?? {},
+      requestRead: (request) =>
+        fixture.requestRead?.(request) ?? {
+          outcome: DecisionOutcome.ADMITTED,
+          requested: new Date().toISOString(),
+        },
     })
     service(DiagnosticsService, {
       getDiagnostics: (request) =>

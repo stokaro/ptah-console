@@ -224,3 +224,68 @@ func fieldsOwnedBy(t *testing.T, object client.Object, manager string) map[strin
 	}
 	return nil
 }
+
+// readRequestOf asks the object stored to read its database now.
+func readRequestOf(stored *operatorv1alpha1.PtahSchema) *consolev1.RequestReadRequest {
+	return &consolev1.RequestReadRequest{
+		Kind: consolev1.ResourceKind_RESOURCE_KIND_SCHEMA, Namespace: stored.Namespace, Name: stored.Name, Uid: string(stored.UID),
+	}
+}
+
+// A request to read now sets the annotation, under the console's field
+// manager, and nothing else: the generation, and so the plan, stay.
+func TestARequestToReadSetsTheAnnotationAlone(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	namespace, stored := arrange(t, "reader", "patch")
+	decisions, ctx, log := service(t, "reader")
+
+	response, err := decisions.RequestRead(ctx, readRequestOf(stored))
+
+	c.Assert(err, qt.IsNil)
+	c.Assert(response.GetOutcome(), qt.Equals, consolev1.DecisionOutcome_DECISION_OUTCOME_ADMITTED, qt.Commentf("%s", response.GetMessage()))
+	requested, err := time.Parse(time.RFC3339Nano, response.GetRequested())
+	c.Assert(err, qt.IsNil)
+	c.Assert(time.Since(requested) < time.Minute, qt.IsTrue)
+	after := &operatorv1alpha1.PtahSchema{}
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKey{Namespace: namespace, Name: "storefront"}, after), qt.IsNil)
+	c.Assert(after.Annotations[operatorv1alpha1.ReadRequestAnnotation], qt.Equals, response.GetRequested())
+	c.Assert(after.Generation, qt.Equals, stored.Generation)
+	c.Assert(after.Spec, qt.DeepEquals, stored.Spec)
+	// The patch made the annotations map, which the stored schema had none
+	// of, so the console owns the map itself too.
+	c.Assert(fieldsOwnedBy(t, after, "ptah-console"), qt.DeepEquals, map[string]any{"f:metadata": map[string]any{
+		"f:annotations": map[string]any{".": make(map[string]any), "f:" + operatorv1alpha1.ReadRequestAnnotation: make(map[string]any)},
+	}})
+	var line map[string]any
+	c.Assert(json.Unmarshal(log.Bytes(), &line), qt.IsNil)
+	c.Assert(line["action"], qt.Equals, "request-read")
+
+	again, err := decisions.RequestRead(ctx, readRequestOf(stored))
+	c.Assert(err, qt.IsNil)
+	c.Assert(again.GetRequested(), qt.Not(qt.Equals), response.GetRequested(), qt.Commentf("a second request is a new value"))
+}
+
+// Another object under the name is not asked, and an identity that may not
+// patch the schema is forbidden.
+func TestARequestToReadAsksOnlyTheObjectSeen(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	_, recreated := arrange(t, "rereader", "patch")
+	_, unpatchable := arrange(t, "onlooker")
+	c.Assert(plane.Admin.Delete(t.Context(), recreated.DeepCopy()), qt.IsNil)
+	c.Assert(plane.Admin.Create(t.Context(), schema(recreated.Namespace, recreated.Name)), qt.IsNil)
+	rereader, ctx, _ := service(t, "rereader")
+	onlooker, onlookerCtx, _ := service(t, "onlooker")
+
+	changed, err := rereader.RequestRead(ctx, readRequestOf(recreated))
+	c.Assert(err, qt.IsNil)
+	forbidden, err := onlooker.RequestRead(onlookerCtx, readRequestOf(unpatchable))
+	c.Assert(err, qt.IsNil)
+
+	c.Assert(changed.GetOutcome(), qt.Equals, consolev1.DecisionOutcome_DECISION_OUTCOME_CHANGED, qt.Commentf("%s", changed.GetMessage()))
+	current := &operatorv1alpha1.PtahSchema{}
+	c.Assert(plane.Admin.Get(t.Context(), client.ObjectKeyFromObject(recreated), current), qt.IsNil)
+	c.Assert(current.Annotations[operatorv1alpha1.ReadRequestAnnotation], qt.Equals, "")
+	c.Assert(forbidden.GetOutcome(), qt.Equals, consolev1.DecisionOutcome_DECISION_OUTCOME_FORBIDDEN, qt.Commentf("%s", forbidden.GetMessage()))
+}

@@ -2,6 +2,7 @@ package model
 
 import (
 	operatorv1alpha1 "github.com/stokaro/ptah-operator/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
 )
@@ -51,4 +52,14 @@ func runFailure(failure *operatorv1alpha1.MigrationRunFailureStatus) *consolev1.
 		Version: failure.Version, Statement: failure.Statement, Statements: failure.Statements,
 		SqlState: failure.SQLState, ErrorNumber: failure.ErrorNumber,
 	}
+}
+
+// readRequest is the last request to read the database now and the value
+// the operator answered, or nothing when neither is set.
+func readRequest(meta metav1.ObjectMeta, answered string) *consolev1.ReadRequest {
+	requested := meta.Annotations[operatorv1alpha1.ReadRequestAnnotation]
+	if requested == "" && answered == "" {
+		return nil
+	}
+	return &consolev1.ReadRequest{Requested: requested, Answered: answered}
 }

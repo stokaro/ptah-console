@@ -244,6 +244,8 @@ func namespacesOf(request *agentv1.Request) ([]string, bool) {
 		return []string{action.AcknowledgeMigrationRun.GetNamespace()}, true
 	case *agentv1.Request_SetSuspended:
 		return []string{action.SetSuspended.GetNamespace()}, true
+	case *agentv1.Request_RequestRead:
+		return []string{action.RequestRead.GetNamespace()}, true
 	case *agentv1.Request_GetDiagnostics:
 		return []string{action.GetDiagnostics.GetNamespace()}, true
 	case *agentv1.Request_ListEvents:
@@ -303,6 +305,9 @@ func (d *Dispatcher) call(ctx context.Context, account string, request *agentv1.
 	case *agentv1.Request_SetSuspended:
 		response, err := d.decisions.SetSuspended(ctx, action.SetSuspended)
 		return &agentv1.Result{Outcome: &agentv1.Result_SetSuspended{SetSuspended: response}}, err
+	case *agentv1.Request_RequestRead:
+		response, err := d.decisions.RequestRead(ctx, action.RequestRead)
+		return &agentv1.Result{Outcome: &agentv1.Result_RequestRead{RequestRead: response}}, err
 	case *agentv1.Request_GetDiagnostics:
 		response, err := d.diagnostics.GetDiagnostics(ctx, action.GetDiagnostics)
 		return &agentv1.Result{Outcome: &agentv1.Result_GetDiagnostics{GetDiagnostics: response}}, err
