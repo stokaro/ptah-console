@@ -34,6 +34,10 @@ service DecisionService {
   // SetSuspended suspends or resumes a schema or migration, changing nothing
   // else.
   rpc SetSuspended(SetSuspendedRequest) returns (SetSuspendedResponse) {}
+  // RequestRead asks exactly the object the person saw to read its database
+  // now, by setting its read-requested-at annotation to the current instant.
+  // It changes nothing else: not the spec, not the generation, not the plan.
+  rpc RequestRead(RequestReadRequest) returns (RequestReadResponse) {}
 }
 
 enum DecisionKind {
@@ -193,4 +197,20 @@ message SetSuspendedResponse {
   DecisionOutcome outcome = 1;
   string message = 2;
   string resource_version = 3;
+}
+
+message RequestReadRequest {
+  ResourceKind kind = 1;
+  string namespace = 2;
+  string name = 3;
+  // The object as the person saw it; another object under the name is not
+  // asked.
+  string uid = 4;
+}
+
+message RequestReadResponse {
+  DecisionOutcome outcome = 1;
+  string message = 2;
+  // The value the annotation was set to.
+  string requested = 3;
 }

@@ -189,8 +189,9 @@ current version and checkpoint, how many migrations are applied and pending,
 whether a row is dirty, and the versions that were modified or arrived out of
 order. The page lists the versions the last run applied, the plan's files and
 the refused versions, and says that the earlier versions are a count. The
-next history read is `status.nextReconciliationTime`; there is no "read now",
-because the operator has no such action, and no retry, rollback or force.
+next history read is `status.nextReconciliationTime`. "Read again now" asks
+for it sooner through the `operator.ptah.run/read-requested-at` annotation; there
+is no retry, rollback or force, because the operator has none.
 
 ## Full console: plan review
 
@@ -334,6 +335,21 @@ words, with the object as it would be stored. Only the draft that check
 accepted can be created, as the session's identity, under the console's field
 manager, and the create is audited. A namespace RBAC does not let the identity
 create in is not offered, and a read-only console sends nothing.
+## Read again now
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| Whether this identity may ask | `selfsubjectaccessreviews`, for `patch` on the kind, as for suspend | create |
+| The request and whether the operator answered it | the resource's `operator.ptah.run/read-requested-at` annotation and `status.lastReadRequest` | get, watch |
+| The request itself | `ptahschemas` or `ptahmigrations` | patch |
+
+"Read again now" sets the annotation to the current instant with a merge patch
+that names the object's UID, so another object under the name is not asked,
+and changes nothing else: not the spec, the generation or the plan. A
+resource version is not held, because the operator writes status between any
+two looks. The page then says the read was asked and, once
+`status.lastReadRequest` holds the value, that the operator started it; a
+suspended resource answers once it is resumed.
 
 ## Suspend and resume
 

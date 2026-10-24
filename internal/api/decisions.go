@@ -583,3 +583,80 @@ func required(fields []field) error {
 }
 
 type field struct{ name, value string }
+
+// RequestRead asks exactly the object the person saw to read its database
+// now. It sets the read-requested-at annotation to the current instant with a
+// merge patch that also names the object's UID, so the patch fails on another
+// object under the name rather than asking it. A resource version is not
+// held: the operator writes status between any two looks, and the request
+// asks about the object, not about a version of it.
+func (d *DecisionService) RequestRead(ctx context.Context, request *consolev1.RequestReadRequest) (*consolev1.RequestReadResponse, error) {
+	if err := d.scope.check([]string{request.GetNamespace()}); err != nil {
+		return nil, err
+	}
+	c, principal, err := actor(ctx, d.factory)
+	if err != nil {
+		return nil, err
+	}
+	var object client.Object
+	kind := ""
+	switch request.GetKind() {
+	case consolev1.ResourceKind_RESOURCE_KIND_SCHEMA:
+		object, kind = &operatorv1alpha1.PtahSchema{}, "PtahSchema"
+	case consolev1.ResourceKind_RESOURCE_KIND_MIGRATION:
+		object, kind = &operatorv1alpha1.PtahMigration{}, "PtahMigration"
+	default:
+		return nil, connect.NewError(connect.CodeInvalidArgument, "name a schema or a migration")
+	}
+	if err := required([]field{{"name", request.GetName()}, {"uid", request.GetUid()}}); err != nil {
+		return nil, err
+	}
+	// RFC 3339 with the fraction, so two requests a person makes within a
+	// second are two requests.
+	requested := time.Now().UTC().Format(time.RFC3339Nano)
+	patch, err := json.Marshal(map[string]any{"metadata": map[string]any{
+		"uid":         request.GetUid(),
+		"annotations": map[string]string{operatorv1alpha1.ReadRequestAnnotation: requested},
+	}})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, "build the change").WithCause(err)
+	}
+	object.SetNamespace(request.GetNamespace())
+	object.SetName(request.GetName())
+	event := audit.Event{
+		Action: "request-read", Context: principal.Context, AccountID: principal.AccountID,
+		Namespace: request.GetNamespace(), Kind: kind, Name: request.GetName(), UID: request.GetUid(),
+	}
+
+	sendCtx, cancel := context.WithTimeout(ctx, submitTimeout)
+	defer cancel()
+	sendCtx, ids := kube.CollectAuditIDs(sendCtx)
+	err = c.Patch(sendCtx, object, client.RawPatch(types.MergePatchType, patch), client.FieldOwner(fieldOwner))
+	event.AuditID = ids.Last()
+
+	response := &consolev1.RequestReadResponse{}
+	switch {
+	case err == nil:
+		response.Outcome, response.Requested = consolev1.DecisionOutcome_DECISION_OUTCOME_ADMITTED, requested
+	case apierrors.IsNotFound(err) || ((apierrors.IsInvalid(err) || apierrors.IsConflict(err)) && gone(ctx, c, object, request.GetUid())):
+		response.Outcome = consolev1.DecisionOutcome_DECISION_OUTCOME_CHANGED
+		response.Message = "Another object holds this name now. Nothing was asked; look again."
+	default:
+		response.Outcome, response.Message = classify(err)
+	}
+	event.Outcome, event.Reason = auditOutcome(response.Outcome), response.Message
+	d.audit.Record(ctx, event)
+	return response, nil
+}
+
+// gone reports whether the object under the name is not the one with uid.
+func gone(ctx context.Context, c client.Client, object client.Object, uid string) bool {
+	current, ok := object.DeepCopyObject().(client.Object)
+	if !ok {
+		return false
+	}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(object), current); err != nil {
+		return apierrors.IsNotFound(err)
+	}
+	return string(current.GetUID()) != uid
+}

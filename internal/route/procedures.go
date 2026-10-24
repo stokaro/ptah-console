@@ -88,5 +88,8 @@ var procedures = map[string]procedure{
 	cv1.AuthoringServiceCreateMigrationProcedure: across(func(r *consolev1.CreateMigrationRequest) *agentv1.Request {
 		return &agentv1.Request{Action: &agentv1.Request_CreateMigration{CreateMigration: r}}
 	}, (*agentv1.Result).GetCreateMigration, true),
+	cv1.DecisionServiceRequestReadProcedure: across(func(r *consolev1.RequestReadRequest) *agentv1.Request {
+		return &agentv1.Request{Action: &agentv1.Request_RequestRead{RequestRead: r}}
+	}, (*agentv1.Result).GetRequestRead, true),
 	cv1.WatchServiceSubscribeProcedure: {watch: true},
 }

@@ -218,8 +218,8 @@ export function MigrationDetail({ namespace, name }: MigrationDetailProps) {
             <span className="text-sm text-fg2">The operator has not read the history yet.</span>
           )}
           <span className="text-xs text-mute">
-            The operator reads the history at its interval. There is no &ldquo;read now&rdquo;: the
-            operator offers no such action.
+            The operator reads the history at its interval. After the database changed outside it,
+            &ldquo;Read again now&rdquo; asks for that read sooner.
           </span>
         </Card>
         <Card title="Last run">
@@ -351,7 +351,7 @@ export function MigrationDetail({ namespace, name }: MigrationDetailProps) {
           <li className="text-fg2">
             Retry, rollback and force are not offered: the operator has no such action. A failed
             migration is fixed in the database or the artifact, and the next history read picks it
-            up.
+            up; &ldquo;Read again now&rdquo; asks for that read without waiting for the interval.
           </li>
         </ul>
         {resolved ? (

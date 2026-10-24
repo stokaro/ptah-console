@@ -100,6 +100,7 @@ message Request {
     ptah.console.v1.ListEventsRequest list_events = 26;
     ptah.console.v1.CreateSchemaRequest create_schema = 27;
     ptah.console.v1.CreateMigrationRequest create_migration = 28;
+    ptah.console.v1.RequestReadRequest request_read = 29;
   }
 }
 
@@ -145,6 +146,7 @@ message Result {
     ptah.console.v1.ListEventsResponse list_events = 26;
     ptah.console.v1.CreateSchemaResponse create_schema = 27;
     ptah.console.v1.CreateMigrationResponse create_migration = 28;
+    ptah.console.v1.RequestReadResponse request_read = 29;
   }
 }
 

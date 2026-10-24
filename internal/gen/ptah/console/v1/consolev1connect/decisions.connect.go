@@ -42,6 +42,9 @@ const (
 	// DecisionServiceSetSuspendedProcedure is the procedure name of the DecisionService's SetSuspended
 	// RPC.
 	DecisionServiceSetSuspendedProcedure = "/ptah.console.v1.DecisionService/SetSuspended"
+	// DecisionServiceRequestReadProcedure is the procedure name of the DecisionService's RequestRead
+	// RPC.
+	DecisionServiceRequestReadProcedure = "/ptah.console.v1.DecisionService/RequestRead"
 )
 
 var (
@@ -89,6 +92,13 @@ var (
 			Procedure:  DecisionServiceSetSuspendedProcedure,
 		}
 	})
+	decisionServiceRequestReadSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_ptah_console_v1_decisions_proto.Services().ByName("DecisionService").Methods().ByName("RequestRead"),
+			Procedure:  DecisionServiceRequestReadProcedure,
+		}
+	})
 )
 
 // DecisionServiceClient is a client for the ptah.console.v1.DecisionService service.
@@ -107,6 +117,10 @@ type DecisionServiceClient interface {
 	// SetSuspended suspends or resumes a schema or migration, changing nothing
 	// else.
 	SetSuspended(context.Context, *v1.SetSuspendedRequest) (*v1.SetSuspendedResponse, error)
+	// RequestRead asks exactly the object the person saw to read its database
+	// now, by setting its read-requested-at annotation to the current instant.
+	// It changes nothing else: not the spec, not the generation, not the plan.
+	RequestRead(context.Context, *v1.RequestReadRequest) (*v1.RequestReadResponse, error)
 }
 
 // NewDecisionServiceClient constructs a client for the ptah.console.v1.DecisionService service.
@@ -131,6 +145,10 @@ type DecisionServiceHandler interface {
 	// SetSuspended suspends or resumes a schema or migration, changing nothing
 	// else.
 	SetSuspended(context.Context, *v1.SetSuspendedRequest) (*v1.SetSuspendedResponse, error)
+	// RequestRead asks exactly the object the person saw to read its database
+	// now, by setting its read-requested-at annotation to the current instant.
+	// It changes nothing else: not the spec, not the generation, not the plan.
+	RequestRead(context.Context, *v1.RequestReadRequest) (*v1.RequestReadResponse, error)
 }
 
 // RegisterDecisionServiceHandler registers svc as the ptah.console.v1.DecisionService
@@ -144,6 +162,7 @@ func RegisterDecisionServiceHandler(server *connect.Server, svc DecisionServiceH
 		connect.Method{Spec: decisionServiceApproveMigrationPlanSpec(), Handler: adapter.approveMigrationPlan},
 		connect.Method{Spec: decisionServiceAcknowledgeMigrationRunSpec(), Handler: adapter.acknowledgeMigrationRun},
 		connect.Method{Spec: decisionServiceSetSuspendedSpec(), Handler: adapter.setSuspended},
+		connect.Method{Spec: decisionServiceRequestReadSpec(), Handler: adapter.requestRead},
 	)
 }
 
@@ -172,6 +191,10 @@ func (UnimplementedDecisionServiceHandler) AcknowledgeMigrationRun(context.Conte
 
 func (UnimplementedDecisionServiceHandler) SetSuspended(context.Context, *v1.SetSuspendedRequest) (*v1.SetSuspendedResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.DecisionService.SetSuspended is not implemented")
+}
+
+func (UnimplementedDecisionServiceHandler) RequestRead(context.Context, *v1.RequestReadRequest) (*v1.RequestReadResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.DecisionService.RequestRead is not implemented")
 }
 
 type decisionServiceClient struct {
@@ -221,6 +244,14 @@ func (c *decisionServiceClient) AcknowledgeMigrationRun(ctx context.Context, req
 func (c *decisionServiceClient) SetSuspended(ctx context.Context, req *v1.SetSuspendedRequest) (*v1.SetSuspendedResponse, error) {
 	var res v1.SetSuspendedResponse
 	if err := c.client.CallUnary(ctx, decisionServiceSetSuspendedSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *decisionServiceClient) RequestRead(ctx context.Context, req *v1.RequestReadRequest) (*v1.RequestReadResponse, error) {
+	var res v1.RequestReadResponse
+	if err := c.client.CallUnary(ctx, decisionServiceRequestReadSpec(), req, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -294,6 +325,18 @@ func (h decisionServiceHandler) setSuspended(ctx context.Context, _ connect.Spec
 		return err
 	}
 	res, err := h.svc.SetSuspended(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h decisionServiceHandler) requestRead(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RequestReadRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RequestRead(ctx, &req)
 	if err != nil {
 		return err
 	}

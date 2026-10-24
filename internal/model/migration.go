@@ -43,6 +43,7 @@ func Migration(migration *operatorv1alpha1.PtahMigration) *consolev1.Migration {
 		Gitops:             gitOps(migration.ObjectMeta),
 		SpecYaml:           specYAML(migration.Spec),
 		Journal:            journal(status.Journal),
+		ReadRequest:        readRequest(migration.ObjectMeta, status.LastReadRequest),
 	}
 	if realm := migration.Spec.Target.RealmRef; realm != nil {
 		out.Target.Realm = realm.Name

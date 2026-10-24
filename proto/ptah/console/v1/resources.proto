@@ -331,6 +331,8 @@ message Schema {
   // The significant events of the schema's lifecycle the operator kept.
   // Absent from an operator that keeps no journal.
   Journal journal = 21;
+  // The last request to read the database now, and the one the operator answered.
+  ReadRequest read_request = 22;
 }
 
 // Journal is the bounded record of a resource's lifecycle the operator keeps
@@ -542,6 +544,8 @@ message Migration {
   // The significant events of the migration's lifecycle the operator kept.
   // Absent from an operator that keeps no journal.
   Journal journal = 21;
+  // The last request to read the database now, and the one the operator answered.
+  ReadRequest read_request = 22;
 }
 
 message ListMigrationsRequest {
@@ -595,4 +599,15 @@ message GetMigrationPlanRequest {
 
 message GetMigrationPlanResponse {
   MigrationPlan plan = 1;
+}
+
+// ReadRequest is a person's request that the resource read its database now
+// rather than at its next interval, through the
+// operator.ptah.run/read-requested-at annotation.
+message ReadRequest {
+  // The annotation's value: the instant the last request was made.
+  string requested = 1;
+  // The value the operator last answered, from status.lastReadRequest. A
+  // value longer than 64 bytes is recorded as its digest.
+  string answered = 2;
 }
