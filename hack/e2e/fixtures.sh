@@ -11,8 +11,8 @@
 #   payroll     a schema in another namespace no persona may read
 #   catalog     a database and a ConfigMap with its desired schema, and no
 #               resource: a row creates the PtahSchema through the console
-#   ledger      a database and a ConfigMap with one migration, and no
-#               resource: a row creates the PtahMigration the same way
+#   ledger      a database and a ConfigMap with one migration's up and down
+#               files, and no resource: a row creates the PtahMigration
 #
 # The installation is switched to the four-eyes control first, so every
 # resource written here has a recorded writer for admission to compare an
@@ -83,6 +83,7 @@ admin -n "$NAMESPACE" create configmap catalog-schema \
 	--dry-run=client -o yaml | admin apply -f - >/dev/null
 admin -n "$NAMESPACE" create configmap ledger-migrations \
 	--from-file=0000000001-up="$E2E_DIR/migrations/ledger/0000000001_create_ledger_entries.up.sql" \
+	--from-file=0000000001-down="$E2E_DIR/migrations/ledger/0000000001_create_ledger_entries.down.sql" \
 	--dry-run=client -o yaml | admin apply -f - >/dev/null
 
 # Each resource applies on its own interval; ten minutes keeps a plan that

@@ -118,6 +118,9 @@ products=$(postgres -d catalog -c \
 	"SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'products'")
 [ "$products" = 1 ] || fail 'catalog has no products table'
 wait_condition ptahmigration ledger Ready
+items=$(ns get ptahmigration ledger -o json | jq -r '[.spec.artifact.configMap.items[].path] | sort | join(",")')
+[ "$items" = 0000000001_create_ledger_entries.down.sql,0000000001_create_ledger_entries.up.sql ] ||
+	fail "ledger reads '$items' from its ConfigMap, not the up and down files the row named"
 ledger=$(ns get ptahmigrationapprovals -o json |
 	jq -r '[.items[] | select(.spec.migrationRef.name == "ledger") | .spec.approver.username] | join(",")')
 [ "$ledger" = "$APPROVER" ] || fail "ledger's approvals read '$ledger', not one by $APPROVER"
