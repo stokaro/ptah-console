@@ -18,6 +18,11 @@ export interface ApproveDialogProps {
   onClose: () => void
   /** The plan the person read, when they read it on the plan page. */
   reviewed?: ReviewedPlan
+  /**
+   * The pages the dialog leads on to: Focus's, or, opened in the full
+   * console, the console's own, so a person stays where they started.
+   */
+  pages?: "focus" | "console"
 }
 
 /** The plan a person reviewed, as it was when they chose to approve it. */
@@ -35,7 +40,13 @@ export interface ReviewedPlan {
  * while it is open, the request still names what was reviewed, and the server,
  * which reads the resource again, answers that it changed.
  */
-export function ApproveDialog({ resource, context, onClose, reviewed }: ApproveDialogProps) {
+export function ApproveDialog({
+  resource,
+  context,
+  onClose,
+  reviewed,
+  pages = "focus",
+}: ApproveDialogProps) {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const session = useSession()
@@ -109,11 +120,6 @@ export function ApproveDialog({ resource, context, onClose, reviewed }: ApproveD
     }
   }
 
-  const followLink = {
-    to: "/releases/$namespace/$kind/$name",
-    params: { namespace: resource.namespace, kind: resource.kind, name: resource.name },
-  } as const
-
   return (
     <DecisionDialog
       onClose={onClose}
@@ -133,25 +139,80 @@ export function ApproveDialog({ resource, context, onClose, reviewed }: ApproveD
       admittedText={(decision) =>
         `${plan?.name ?? ""} · recorded by admission as ${decision?.decidedBy ?? "you"}. Approved is not yet applied: the operator runs it next.`
       }
-      next={
-        <Link
-          {...followLink}
-          onClick={onClose}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-linear-135 from-pri to-[color-mix(in_oklab,var(--pri)_62%,var(--teal))] px-[18px] text-sm font-semibold text-onpri"
-        >
-          Follow it
-        </Link>
-      }
-      reviewAgain={
-        <Link
-          to="/approve/$namespace/$kind/$name"
-          params={followLink.params}
-          onClick={onClose}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-linear-135 from-pri to-[color-mix(in_oklab,var(--pri)_62%,var(--teal))] px-[18px] text-sm font-semibold text-onpri"
-        >
-          Review the new plan
-        </Link>
-      }
+      next={<FollowLink resource={resource} pages={pages} onClick={onClose} />}
+      reviewAgain={<ReviewAgainLink resource={resource} pages={pages} onClick={onClose} />}
     />
+  )
+}
+
+const nextClass =
+  "inline-flex min-h-11 items-center justify-center rounded-xl bg-linear-135 from-pri to-[color-mix(in_oklab,var(--pri)_62%,var(--teal))] px-[18px] text-sm font-semibold text-onpri"
+
+interface NextLinkProps {
+  resource: ResourceView
+  pages: "focus" | "console"
+  onClick: () => void
+}
+
+/** The resource's own page, where it is followed while the operator applies the plan. */
+function FollowLink({ resource, pages, onClick }: NextLinkProps) {
+  const params = { namespace: resource.namespace, name: resource.name }
+  if (pages === "focus") {
+    return (
+      <Link
+        to="/releases/$namespace/$kind/$name"
+        params={{ ...params, kind: resource.kind }}
+        onClick={onClick}
+        className={nextClass}
+      >
+        Follow it
+      </Link>
+    )
+  }
+  return (
+    <Link
+      to={
+        resource.kind === "schema"
+          ? "/console/schemas/$namespace/$name"
+          : "/console/migrations/$namespace/$name"
+      }
+      params={params}
+      onClick={onClick}
+      className={nextClass}
+    >
+      Follow it
+    </Link>
+  )
+}
+
+/** The plan that replaced the one the person reviewed. */
+function ReviewAgainLink({ resource, pages, onClick }: NextLinkProps) {
+  const params = { namespace: resource.namespace, name: resource.name }
+  if (pages === "focus") {
+    return (
+      <Link
+        to="/approve/$namespace/$kind/$name"
+        params={{ ...params, kind: resource.kind }}
+        onClick={onClick}
+        className={nextClass}
+      >
+        Review the new plan
+      </Link>
+    )
+  }
+  return (
+    <Link
+      to={
+        resource.kind === "schema"
+          ? "/console/schemas/$namespace/$name/plan"
+          : "/console/migrations/$namespace/$name/plan"
+      }
+      params={params}
+      search={{}}
+      onClick={onClick}
+      className={nextClass}
+    >
+      Review the new plan
+    </Link>
   )
 }

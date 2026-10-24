@@ -4,8 +4,15 @@ import userEvent from "@testing-library/user-event"
 import { axe } from "jest-axe"
 import { describe, expect, it } from "vitest"
 
+import { DecisionOutcome } from "../../gen/ptah/console/v1/decisions_pb"
 import { Answer, MigrationPlanSchema, SqlAccess } from "../../gen/ptah/console/v1/resources_pb"
-import { renderConsole, storedPlan, syncedMigration, waitingSchema } from "../../test/console"
+import {
+  renderConsole,
+  result,
+  storedPlan,
+  syncedMigration,
+  waitingSchema,
+} from "../../test/console"
 
 const allowedButNoApproval = {
   listSchemas: Answer.ALLOWED,
@@ -73,6 +80,40 @@ describe("The full console's plan review", () => {
     await user.click(await screen.findByRole("button", { name: "Approve this plan…" }))
 
     expect(await screen.findByRole("alertdialog")).toHaveTextContent("storefront-p-8f2c")
+  })
+
+  it.each([
+    {
+      outcome: DecisionOutcome.ADMITTED,
+      link: "Follow it",
+      href: "/console/schemas/application/storefront",
+    },
+    {
+      outcome: DecisionOutcome.CHANGED,
+      link: "Review the new plan",
+      href: "/console/schemas/application/storefront/plan",
+    },
+  ])("leads on to the full console's own page once the answer is $link", async (row) => {
+    const user = userEvent.setup()
+    renderConsole("/console/schemas/application/storefront/plan", {
+      schemas: [waitingSchema()],
+      migrations: [],
+      approve: () => result({ outcome: row.outcome }),
+    })
+    await user.click(await screen.findByRole("button", { name: "Approve this plan…" }))
+    const dialog = await screen.findByRole("alertdialog")
+    await user.click(
+      within(dialog).getByRole("checkbox", { name: "I reviewed what this changes." })
+    )
+    const confirm = within(dialog).getByRole("button", { name: "Confirm" })
+    await waitFor(() => expect(confirm).toBeEnabled())
+
+    await user.click(confirm)
+
+    expect(await within(dialog).findByRole("link", { name: row.link })).toHaveAttribute(
+      "href",
+      row.href
+    )
   })
 
   it("says when the plan a link named is no longer current, and approves nothing from it", async () => {
