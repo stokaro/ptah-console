@@ -104,7 +104,7 @@ export function Connections() {
       {registry.manage ? (
         <Link
           to="/connections/new"
-          className="inline-flex min-h-11 items-center self-end rounded-xl bg-pri px-4 text-sm font-semibold text-pri-fg"
+          className="inline-flex min-h-11 items-center self-end rounded-xl bg-pri px-4 text-sm font-semibold text-onpri"
         >
           Add cluster
         </Link>

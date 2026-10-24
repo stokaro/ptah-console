@@ -6,7 +6,7 @@ const dots = {
   warn: "bg-amber",
   bad: "bg-red",
   unk: "bg-violet",
-  run: "bg-pri",
+  run: "bg-run",
   off: "bg-line",
 } as const
 

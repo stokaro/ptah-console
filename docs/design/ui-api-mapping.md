@@ -86,6 +86,33 @@ Who decided is what admission stamped (`spec.approver`, `spec.acknowledgedBy`),
 never what the console sent. CSV export happens in the browser and neutralizes
 cells that start with `=`, `+`, `-` or `@`.
 
+## Full console: navigation
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| How many resources need attention, how many the console reads | `ptahschemas`, `ptahmigrations` | list, watch |
+| Whether the operator keeps the schedule its resources promise | `ptahschemas`, `ptahmigrations` | list, watch |
+| Who the console acts as | `selfsubjectreviews` | create |
+
+The sidebar reads nothing the resource list does not. The console does not
+read the operator's Deployment or Pods, so the operator's health is judged by
+the evidence the resources carry: each one names in
+`status.nextReconciliationTime` when the operator will read it again, and a
+resource more than five minutes past that time counts as late. A suspended
+resource, one with an operation in progress and one that promises no read are
+left out of the judgment, and with nothing left to judge the sidebar says so
+rather than reporting the schedule as kept. The version beside it is the
+operator module the console was built against, recorded by the build.
+
+The accent a viewer picks colors actions, links and focus. It is kept in the
+browser, and the states keep their own colors whatever the accent is.
+
+## Full console: architecture and safety
+
+The page reads nothing from the cluster. It describes how the operator works
+and what it holds itself to, and links to the operator's own documentation for
+each part.
+
 ## Full console: overview
 
 | Shows | Reads | Verbs |

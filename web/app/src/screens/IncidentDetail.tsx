@@ -43,7 +43,7 @@ const titleColors = {
   warn: "text-amber",
   bad: "text-red",
   unk: "text-violet",
-  run: "text-pri",
+  run: "text-run",
   off: "text-mute",
 } as const
 

@@ -12,7 +12,8 @@ function Foundations() {
       <section className="flex flex-col gap-3">
         <h2 className="m-0 font-display text-xl font-semibold">States</h2>
         <p className="m-0 text-sm text-fg2">
-          A state is always a color and a glyph, never color alone.
+          A state is always a color and a glyph, never color alone, and its color is its own: the
+          accent a viewer chooses changes --pri and nothing a state is drawn with.
         </p>
         <ul className="m-0 grid list-none grid-cols-3 gap-3 p-0">
           {tones.map((tone) => (

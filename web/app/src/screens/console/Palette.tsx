@@ -59,6 +59,12 @@ export function Palette({ open, onOpenChange }: PaletteProps) {
       go: () => void navigate({ to: "/console/preflight" }),
     },
     {
+      value: "page:architecture",
+      label: "Architecture & safety",
+      hint: "full console",
+      go: () => void navigate({ to: "/console/architecture" }),
+    },
+    {
       value: "page:approve",
       label: "Approver",
       hint: "focused view",

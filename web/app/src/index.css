@@ -23,6 +23,8 @@
   --pri: oklch(0.52 0.2 268);
   --pribg: oklch(0.95 0.03 268);
   --onpri: #fff;
+  --run: oklch(0.52 0.2 268);
+  --runbg: oklch(0.95 0.03 268);
   --teal: oklch(0.55 0.12 195);
   --green: oklch(0.52 0.15 152);
   --greenbg: oklch(0.95 0.045 152);
@@ -51,6 +53,8 @@
   --pri: oklch(0.72 0.16 270);
   --pribg: oklch(0.29 0.08 270);
   --onpri: #0b0d1a;
+  --run: oklch(0.72 0.16 270);
+  --runbg: oklch(0.29 0.08 270);
   --teal: oklch(0.8 0.12 195);
   --green: oklch(0.79 0.16 152);
   --greenbg: oklch(0.29 0.06 152);
@@ -67,6 +71,32 @@
   color-scheme: dark;
 }
 
+/*
+ * The accent is the color of actions, links, focus and selection, and a viewer
+ * may choose it. The six states keep their own tokens, --run among them, so a
+ * verdict reads the same whatever the accent is.
+ */
+:root[data-accent="teal"] {
+  --pri: oklch(0.5 0.1 195);
+  --pribg: oklch(0.95 0.03 195);
+  --onpri: #fff;
+}
+:root[data-theme="dark"][data-accent="teal"] {
+  --pri: oklch(0.78 0.11 195);
+  --pribg: oklch(0.29 0.05 195);
+  --onpri: #04121a;
+}
+:root[data-accent="graphite"] {
+  --pri: oklch(0.38 0.02 268);
+  --pribg: oklch(0.94 0.008 268);
+  --onpri: #fff;
+}
+:root[data-theme="dark"][data-accent="graphite"] {
+  --pri: oklch(0.86 0.01 268);
+  --pribg: oklch(0.3 0.01 268);
+  --onpri: #0b0d1a;
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-card: var(--card);
@@ -79,6 +109,8 @@
   --color-pri: var(--pri);
   --color-pribg: var(--pribg);
   --color-onpri: var(--onpri);
+  --color-run: var(--run);
+  --color-runbg: var(--runbg);
   --color-teal: var(--teal);
   --color-green: var(--green);
   --color-greenbg: var(--greenbg);

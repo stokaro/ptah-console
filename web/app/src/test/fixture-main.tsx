@@ -10,11 +10,13 @@ import { createRoot } from "react-dom/client"
 import { App } from "../App"
 import { AppProviders } from "../AppProviders"
 import { DecisionKind, DecisionOutcome, DecisionSchema } from "../gen/ptah/console/v1/decisions_pb"
+import { applyAccent, readAccent } from "../accent"
 import { applyTheme, readTheme } from "../theme"
 import { consoleTransport, result, waitingSchema } from "./console"
 import "../index.css"
 
 applyTheme(readTheme())
+applyAccent(readAccent())
 // The router knows the console's paths, not this file's.
 window.history.replaceState(null, "", "/approve")
 
