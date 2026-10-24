@@ -9,6 +9,10 @@
 #   deliveries  MySQL; release 1 applied, release 2 waiting for an approval
 #   reports     published, not applied: a row applies it and interrupts it
 #   payroll     a schema in another namespace no persona may read
+#   catalog     a database and a ConfigMap with its desired schema, and no
+#               resource: a row creates the PtahSchema through the console
+#   ledger      a database and a ConfigMap with one migration, and no
+#               resource: a row creates the PtahMigration the same way
 #
 # The installation is switched to the four-eyes control first, so every
 # resource written here has a recorded writer for admission to compare an
@@ -41,7 +45,7 @@ say 'a PostgreSQL server for the databases this repository adds'
 	head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' >"$OUT_DIR/postgres-password"
 PASSWORD=$(cat "$OUT_DIR/postgres-password")
 postgres_server admin "$PASSWORD"
-for database in inventory billing journal reports; do
+for database in inventory billing journal reports catalog ledger; do
 	postgres -c "DROP DATABASE IF EXISTS $database WITH (FORCE)" -c "CREATE DATABASE $database"
 	admin -n "$NAMESPACE" create secret generic "e2e-database-$database" \
 		--from-literal=url="postgres://postgres:$PASSWORD@e2e-postgres.$NAMESPACE.svc.cluster.local:5432/$database?sslmode=disable" \
@@ -72,6 +76,14 @@ push_migrations reports-release-1 migrations/reports "$E2E_DIR/migrations/report
 for release in 1 2; do
 	push_migrations "deliveries-release-$release" migrations/deliveries "$OPERATOR_DIR/demo/mysql/release-$release"
 done
+
+say "the ConfigMaps the console's form names as sources"
+admin -n "$NAMESPACE" create configmap catalog-schema \
+	--from-file=schema.sql="$E2E_DIR/schemas/catalog-v1.sql" \
+	--dry-run=client -o yaml | admin apply -f - >/dev/null
+admin -n "$NAMESPACE" create configmap ledger-migrations \
+	--from-file=0000000001-up="$E2E_DIR/migrations/ledger/0000000001_create_ledger_entries.up.sql" \
+	--dry-run=client -o yaml | admin apply -f - >/dev/null
 
 # Each resource applies on its own interval; ten minutes keeps a plan that
 # waits for approval published while a row reviews it.

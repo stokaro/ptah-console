@@ -21,6 +21,11 @@
 #   act.sh hosted ...                 the hosted console; see hosted.sh
 #   act.sh external ...               the second cluster; see external.sh
 #   act.sh insync <schema>            wait for a schema to be InSync
+#   act.sh ready <migration>          wait for a migration to be Ready
+#   act.sh next-read <schema>         print the read the interval schedules
+#                                     next, at least three minutes off
+#   act.sh read-done <schema> <next>  wait for a read on request to finish,
+#                                     sooner than the scheduled <next>
 set -eu
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
@@ -38,6 +43,55 @@ external)
 	;;
 insync)
 	wait_condition ptahschema "${1:?name a schema}" InSync 900s
+	;;
+ready)
+	wait_condition ptahmigration "${1:?name a migration}" Ready 900s
+	;;
+next-read)
+	# A row that asks for a read has to tell its answer from the one the
+	# interval starts anyway, so the scheduled read it prints is far enough
+	# off for the requested one to finish first. A nearer one, or one that
+	# is running, is waited out.
+	schema=${1:?name a schema}
+	deadline=$(($(date +%s) + 900))
+	while [ "$(date +%s)" -lt "$deadline" ]; do
+		next=$(admin -n "$NAMESPACE" get "ptahschema/$schema" -o json | jq -r '
+			if (.status.activeOperation // null) != null or (.status.nextReconciliationTime // "") == "" then ""
+			elif ((.status.nextReconciliationTime | sub("\\.[0-9]+"; "") | fromdateiso8601) - now) < 180 then ""
+			else .status.nextReconciliationTime end')
+		[ -n "$next" ] && {
+			printf '%s\n' "$next"
+			exit 0
+		}
+		sleep 5
+	done
+	fail "ptahschema/$schema never had a read scheduled three minutes off with nothing running"
+	;;
+read-done)
+	# The read the console asked for counts once the operator answered that
+	# request and then completed a cycle, before the read the interval had
+	# scheduled: a cycle at or after that one proves nothing about the request.
+	schema=${1:?name a schema}
+	scheduled=${2:?give the read that was scheduled before the request}
+	deadline=$(($(date +%s) + 600))
+	while [ "$(date +%s)" -lt "$deadline" ]; do
+		verdict=$(admin -n "$NAMESPACE" get "ptahschema/$schema" -o json | jq -r --arg scheduled "$scheduled" '
+			def seconds: sub("\\.[0-9]+"; "") | fromdateiso8601;
+			(.metadata.annotations["operator.ptah.run/read-requested-at"] // "") as $asked
+			| (.status.lastSuccessfulReconciliation // "") as $done
+			| if $asked == "" then "unasked"
+			elif (.status.lastReadRequest // "") != $asked then "waiting"
+			elif $done == "" or ($done | seconds) <= ($asked | seconds) then "waiting"
+			elif ($done | seconds) >= ($scheduled | seconds) then "late \($done)"
+			else "done" end')
+		case "$verdict" in
+		done) exit 0 ;;
+		unasked) fail "nothing asked ptahschema/$schema to read" ;;
+		late*) fail "ptahschema/$schema completed a cycle at ${verdict#late }, not before the scheduled $scheduled" ;;
+		esac
+		sleep 3
+	done
+	fail "ptahschema/$schema never completed the read it was asked for"
 	;;
 publish)
 	[ "${1:-}" = storefront ] || fail 'only storefront is published again'

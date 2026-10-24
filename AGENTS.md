@@ -89,12 +89,15 @@ operator commit `go.mod` requires, with the personas and fixtures in
 the CSR API, bound to the operator's example roles; `hack/e2e/personas.sh`
 refuses to continue when an identity has a grant its rows assume it lacks, or
 lacks one they assume it has. The rows in `web/e2e/acceptance.spec.ts` run in
-order, one `ptah-console local` per person. The rows in
+order, one `ptah-console local` per person, and `web/e2e/console.spec.ts`
+continues from the state they leave with the full console's later pages and
+actions: creating a resource, reading on request, suspend and resume, the
+plan review, Execution & diagnosis, Activity. The rows in
 `web/e2e/hosted.spec.ts` follow them: `hack/e2e/hosted.sh` builds the
 console's image on the lab's Docker context, loads it into kind, installs
 `charts/ptah-console` with an author and an approver account, and serves it
 on this machine through a port-forward. `hack/e2e/verify.sh` checks what
-both sets of rows decided against the cluster rather than the page. The lab runs kind
+the rows decided against the cluster rather than the page. The lab runs kind
 on a Docker context (`remote-dev-container` unless `DOCKER_CONTEXT` names
 another) and never on a local daemon; the Acceptance workflow runs it on a
 GitHub runner, which is where cluster work belongs.

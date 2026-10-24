@@ -4,11 +4,12 @@ name: Acceptance
 # operator's own demonstration lab, from the operator commit this module
 # requires, with the personas and fixtures hack/e2e adds. Each person signs in
 # to a `ptah-console local` of their own, with a client certificate the
-# cluster issued, and every row is recorded. The hosted rows follow: this
-# repository's chart, installed in the lab with the image built from this
-# commit, signed in to with Console accounts. hack/e2e/verify.sh then checks
-# the cluster's own account of what the rows decided, and the recordings are
-# joined into the demo film.
+# cluster issued, and every row is recorded. web/e2e/console.spec.ts carries
+# on from the state those rows leave, through the full console's later pages
+# and actions. The hosted rows follow: this repository's chart, installed in
+# the lab with the image built from this commit, signed in to with Console
+# accounts. hack/e2e/verify.sh then checks the cluster's own account of what
+# the rows decided, and the recordings are joined into the demo film.
 #
 # The two-cluster rows (web/e2e/two-clusters.spec.ts) then add a second kind
 # cluster beside the lab, with the operator and no setup for the console, and
