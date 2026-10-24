@@ -308,6 +308,7 @@ export function ConsolePlanReview({
           resource={resource}
           context={identity?.context}
           reviewed={approving}
+          pages="console"
           onClose={() => setApproving(undefined)}
         />
       ) : null}
