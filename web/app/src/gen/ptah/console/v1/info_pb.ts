@@ -10,7 +10,7 @@ import type { Message, UnknownEnum } from "@bufbuild/protobuf";
  * Describes the file ptah/console/v1/info.proto.
  */
 export const file_ptah_console_v1_info: GenFile = /*@__PURE__*/
-  fileDesc("ChpwdGFoL2NvbnNvbGUvdjEvaW5mby5wcm90bxIPcHRhaC5jb25zb2xlLnYxIhAKDkdldEluZm9SZXF1ZXN0It4BCg9HZXRJbmZvUmVzcG9uc2USDwoHdmVyc2lvbhgBIAEoCRIOCgZjb21taXQYAiABKAkSIwoEbW9kZRgDIAEoDjIVLnB0YWguY29uc29sZS52MS5Nb2RlEhEKCXJlYWRfb25seRgEIAEoCBIYChBvcGVyYXRvcl92ZXJzaW9uGAUgASgJEh0KFXBsYW5fY29udHJhY3RfdmVyc2lvbhgGIAEoBRIZChFrdWJlcm5ldGVzX21pbm9ycxgHIAMoCRIeChZwbGFuX2NvbnRyYWN0X3ZlcnNpb25zGAogAygFKj0KBE1vZGUSFAoQTU9ERV9VTlNQRUNJRklFRBAAEg4KCk1PREVfTE9DQUwQARIPCgtNT0RFX0hPU1RFRBACMmAKC0luZm9TZXJ2aWNlElEKB0dldEluZm8SHy5wdGFoLmNvbnNvbGUudjEuR2V0SW5mb1JlcXVlc3QaIC5wdGFoLmNvbnNvbGUudjEuR2V0SW5mb1Jlc3BvbnNlIgOQAgFCSFpGZ2l0aHViLmNvbS9zdG9rYXJvL3B0YWgtY29uc29sZS9pbnRlcm5hbC9nZW4vcHRhaC9jb25zb2xlL3YxO2NvbnNvbGV2MWIGcHJvdG8z");
+  fileDesc("ChpwdGFoL2NvbnNvbGUvdjEvaW5mby5wcm90bxIPcHRhaC5jb25zb2xlLnYxIhAKDkdldEluZm9SZXF1ZXN0IqICCg9HZXRJbmZvUmVzcG9uc2USDwoHdmVyc2lvbhgBIAEoCRIOCgZjb21taXQYAiABKAkSIwoEbW9kZRgDIAEoDjIVLnB0YWguY29uc29sZS52MS5Nb2RlEhEKCXJlYWRfb25seRgEIAEoCBIYChBvcGVyYXRvcl92ZXJzaW9uGAUgASgJEh0KFXBsYW5fY29udHJhY3RfdmVyc2lvbhgGIAEoBRIZChFrdWJlcm5ldGVzX21pbm9ycxgHIAMoCRIoCgdzaWduX2luGAggASgOMhcucHRhaC5jb25zb2xlLnYxLlNpZ25JbhIYChBzaWduX2luX3Byb3ZpZGVyGAkgASgJEh4KFnBsYW5fY29udHJhY3RfdmVyc2lvbnMYCiADKAUqPQoETW9kZRIUChBNT0RFX1VOU1BFQ0lGSUVEEAASDgoKTU9ERV9MT0NBTBABEg8KC01PREVfSE9TVEVEEAIqYgoGU2lnbkluEhcKE1NJR05fSU5fVU5TUEVDSUZJRUQQABIXChNTSUdOX0lOX0xBVU5DSF9MSU5LEAESFAoQU0lHTl9JTl9BQ0NPVU5UUxACEhAKDFNJR05fSU5fT0lEQxADMmAKC0luZm9TZXJ2aWNlElEKB0dldEluZm8SHy5wdGFoLmNvbnNvbGUudjEuR2V0SW5mb1JlcXVlc3QaIC5wdGFoLmNvbnNvbGUudjEuR2V0SW5mb1Jlc3BvbnNlIgOQAgFCSFpGZ2l0aHViLmNvbS9zdG9rYXJvL3B0YWgtY29uc29sZS9pbnRlcm5hbC9nZW4vcHRhaC9jb25zb2xlL3YxO2NvbnNvbGV2MWIGcHJvdG8z");
 
 /**
  * @generated from message ptah.console.v1.GetInfoRequest
@@ -79,6 +79,19 @@ export type GetInfoResponse = Message<"ptah.console.v1.GetInfoResponse"> & {
   kubernetesMinors: string[];
 
   /**
+   * @generated from field: ptah.console.v1.SignIn sign_in = 8;
+   */
+  signIn: SignIn;
+
+  /**
+   * The provider's name, for the sign-in page, when people sign in with
+   * OpenID Connect.
+   *
+   * @generated from field: string sign_in_provider = 9;
+   */
+  signInProvider: string;
+
+  /**
    * The plan contracts this console's plan reader reads, oldest first. A
    * schema plan of another contract is shown without its SQL and is not
    * approved here.
@@ -114,7 +127,8 @@ export const Mode = {
   LOCAL: 1,
 
   /**
-   * Beside the operator, with personal Console accounts and impersonation.
+   * Beside the operator, with personal Console accounts and impersonation,
+   * or with an OpenID Connect provider and the person's own token.
    *
    * @generated from enum value: MODE_HOSTED = 2;
    */
@@ -133,6 +147,52 @@ export type Mode = (typeof Mode)[keyof typeof Mode] | UnknownEnum;
  */
 export const ModeSchema: GenEnum<Mode> = /*@__PURE__*/
   enumDesc(file_ptah_console_v1_info, 0);
+
+/**
+ * SignIn is how a person signs in.
+ *
+ * @generated from enum ptah.console.v1.SignIn
+ */
+export const SignIn = {
+  /**
+   * @generated from enum value: SIGN_IN_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED: 0,
+
+  /**
+   * The link ptah-console local prints.
+   *
+   * @generated from enum value: SIGN_IN_LAUNCH_LINK = 1;
+   */
+  LAUNCH_LINK: 1,
+
+  /**
+   * A Console account's login and password.
+   *
+   * @generated from enum value: SIGN_IN_ACCOUNTS = 2;
+   */
+  ACCOUNTS: 2,
+
+  /**
+   * An OpenID Connect provider, at /auth/oidc/login.
+   *
+   * @generated from enum value: SIGN_IN_OIDC = 3;
+   */
+  OIDC: 3,
+} as const;
+
+/**
+ * SignIn is how a person signs in.
+ *
+ * @generated from enum ptah.console.v1.SignIn
+ */
+export type SignIn = (typeof SignIn)[keyof typeof SignIn] | UnknownEnum;
+
+/**
+ * Describes the enum ptah.console.v1.SignIn.
+ */
+export const SignInSchema: GenEnum<SignIn> = /*@__PURE__*/
+  enumDesc(file_ptah_console_v1_info, 1);
 
 /**
  * InfoService says which console build is serving and how it runs.

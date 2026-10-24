@@ -29,7 +29,7 @@ import {
   type CreateEnrollmentResponseSchema,
   type EnrollmentSchema,
 } from "../gen/ptah/console/v1/connections_pb"
-import { InfoService, Mode } from "../gen/ptah/console/v1/info_pb"
+import { InfoService, Mode, SignIn } from "../gen/ptah/console/v1/info_pb"
 import {
   Access,
   Answer,
@@ -264,7 +264,12 @@ export interface Fixture {
    * A hosted console. The browser starts signed out; login throws to refuse
    * a sign-in, and returning signs the account in.
    */
-  hosted?: { login: (request: LoginRequest) => void; signedIn?: boolean }
+  hosted?: {
+    login: (request: LoginRequest) => void
+    signedIn?: boolean
+    /** People sign in with this OpenID Connect provider instead of accounts. */
+    provider?: string
+  }
   /** The registry of a hosted console with external clusters. */
   registry?: RegistryFixture
   /** The server's side of the session; set ended to forget it, as a restart does. */
@@ -342,6 +347,8 @@ export function consoleTransport(fixture: Fixture) {
         planContractVersion: 2,
         planContractVersions: [1, 2],
         kubernetesMinors: fixture.kubernetesMinors ?? ["1.35", "1.36", "1.37"],
+        signIn: hosted?.provider ? SignIn.OIDC : hosted ? SignIn.ACCOUNTS : SignIn.LAUNCH_LINK,
+        signInProvider: hosted?.provider ?? "",
       }),
     })
     service(SessionService, {
@@ -353,9 +360,10 @@ export function consoleTransport(fixture: Fixture) {
               mode: Mode.HOSTED,
               context: "in-cluster",
               kubernetesUsername: fixture.username ?? "ptah-console:prod:alex",
-              accountId: "alex",
+              accountId: hosted.provider ? "oidc-3f2c4b1e" : "alex",
               displayName: "Alex Morgan",
               readOnly: fixture.readOnly ?? false,
+              signIn: hosted.provider ? SignIn.OIDC : SignIn.ACCOUNTS,
             }
           : {
               mode: Mode.LOCAL,

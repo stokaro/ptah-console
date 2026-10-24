@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
@@ -111,14 +112,23 @@ func newConfig(stdout io.Writer) *cobra.Command {
 		Short: "Check a hosted configuration and its passwords file",
 		Long: "validate reads the configuration and the passwords file the way the server does, and\n" +
 			"reports every problem in them. For a valid pair it prints the Kubernetes username\n" +
-			"each account acts as, which is what RBAC bindings name.",
+			"each account acts as, which is what RBAC bindings name. A configuration with oidc has\n" +
+			"no passwords file; validate then says what the API server has to trust.",
 		Args: exactArgs(0),
 		RunE: func(*cobra.Command, []string) error {
-			if configPath == "" || passwordsPath == "" {
-				return fmt.Errorf("%w: --config and --passwords are both required", errUsage)
+			if configPath == "" {
+				return fmt.Errorf("%w: --config is required, and --passwords with accounts", errUsage)
 			}
 			config, _, err := accounts.Load(configPath, passwordsPath)
 			if err != nil {
+				return err
+			}
+			if config.OIDC != nil {
+				_, err := fmt.Fprintf(stdout, "Valid for installation %s, in namespaces %s.\n"+
+					"People sign in with %s. The API server has to trust issuer %s with audience %s;\n"+
+					"RBAC bindings name the usernames and groups it maps the tokens to.\n",
+					config.InstallationID, strings.Join(config.Namespaces, ", "),
+					cmp.Or(config.OIDC.DisplayName, config.OIDC.IssuerURL), config.OIDC.IssuerURL, config.OIDC.ClientID)
 				return err
 			}
 			if _, err := fmt.Fprintf(stdout, "Valid for installation %s, in namespaces %s.\nThe accounts act as:\n",
@@ -135,7 +145,7 @@ func newConfig(stdout io.Writer) *cobra.Command {
 	}
 	flags := validate.Flags()
 	flags.StringVar(&configPath, "config", "", "the configuration file")
-	flags.StringVar(&passwordsPath, "passwords", "", "the passwords file")
+	flags.StringVar(&passwordsPath, "passwords", "", "the passwords file, for a configuration with accounts")
 	command.AddCommand(validate)
 	return command
 }

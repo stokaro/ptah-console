@@ -69,6 +69,42 @@ Console account approved, not that two physical people were involved; the
 operator's `approvals.requireDistinctApprover` setting is unchanged and still
 the control for that.
 
+## Hosted mode with OIDC
+
+A hosted console can sign people in with an OpenID Connect provider instead
+of Console accounts. It is optional, and the account mode above is unchanged.
+A configuration has one of the two: `oidc` or `accounts`, never both.
+
+- The console passes the person's ID token to the API server as a bearer
+  token. The API server must trust the same issuer, with the console's client
+  ID as an audience, through its own OIDC flags or its
+  `AuthenticationConfiguration`. It maps the token's claims to a Kubernetes
+  username and groups, and RBAC decides what the person may do. The console
+  reads no claim to decide anything; it shows the username the API server
+  returns from a SelfSubjectReview.
+- No impersonation. The console's ServiceAccount gets no `impersonate` rule in
+  this mode, and the client that acts for a person carries the API server's
+  address and CA and the person's token, nothing else: not the
+  ServiceAccount's token, no client certificate, no exec plugin.
+- Sign-in is the authorization code flow with PKCE (S256), a `state` bound to
+  the browser by a cookie of its own, and a `nonce` the ID token must carry.
+  Each attempt is kept on the server for ten minutes and used once. The ID
+  token's signature, issuer, audience and expiry are checked, and then the API
+  server is asked whom the token stands for; a token it refuses signs nobody
+  in, and the page says the API server does not trust the issuer for this
+  client ID.
+- The session lives as long as the account mode's, and no longer than the
+  token can be kept valid. Before the ID token expires the console refreshes
+  it, when the provider gave a refresh token, and checks the new one as it
+  checked the first, for the same subject. A refresh that fails, or a token
+  the API server starts refusing, ends the session. Nothing falls back to
+  another identity.
+- External clusters are reached through agents that impersonate allowlisted
+  accounts, so a configuration with `oidc` and a registry is refused: in this
+  mode the console reaches only the cluster it runs in.
+- Signing out ends the console's session. It does not sign the person out of
+  the provider.
+
 ## Sessions
 
 - Server-side, in memory, behind an opaque cookie: HttpOnly, SameSite=Strict,

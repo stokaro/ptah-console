@@ -7,6 +7,10 @@ ServiceAccount, which may impersonate exactly those usernames. Read
 [Security model](../security.md) first: it says what that grant allows and
 what it cannot contain.
 
+To sign people in with an OpenID Connect provider instead, with no
+impersonation, follow [Sign in with OpenID Connect](../hosted/oidc.md); the
+steps below are for Console accounts.
+
 ## What you need
 
 - Ptah Operator installed, and its chart's approver ClusterRole if any account

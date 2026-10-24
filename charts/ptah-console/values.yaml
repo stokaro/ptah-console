@@ -24,8 +24,8 @@ publicURL: ""
 # roles in. The console reads nothing outside them.
 namespaces: []
 
-# Required. Who may sign in, and what each account may do in every namespace
-# above. An id never changes: RBAC names it. roles are any of:
+# Required, unless oidc is enabled. Who may sign in, and what each account
+# may do in every namespace above. An id never changes: RBAC names it. roles are any of:
 #   viewer                reads every Ptah kind except the chunks a plan's SQL is in
 #   plan-reader           reads schemas, plans and their SQL (operator example)
 #   desired-state-author  edits schemas and migrations (operator example)
@@ -86,12 +86,48 @@ agents:
   # Empty admits any source: agents come from other clusters.
   ingressFrom: []
 
-# Required. An existing Secret with the passwords file under key: one line of
-# <account id>:<bcrypt hash> per account. ptah-console accounts hash makes a
-# hash. A changed password takes effect when the Pod restarts.
+# Required with accounts. An existing Secret with the passwords file under
+# key: one line of <account id>:<bcrypt hash> per account. ptah-console
+# accounts hash makes a hash. A changed password takes effect when the Pod
+# restarts.
 passwords:
   secretName: ""
   key: passwords
+
+# Sign people in with an OpenID Connect provider instead of Console accounts.
+# On, accounts and passwords stay empty, and the console's ServiceAccount gets
+# no impersonation rule: each person acts with their own ID token. The API
+# server has to trust issuerURL with clientID as an audience, through its OIDC
+# flags or its AuthenticationConfiguration; it maps each token to a username
+# and groups, and RBAC decides. The registry and agents act as accounts, so
+# they stay off.
+oidc:
+  enabled: false
+  # Required when enabled: the issuer, exactly as its ID tokens name it, and
+  # the console's client there.
+  issuerURL: ""
+  clientID: ""
+  # How the sign-in page names the provider; empty uses issuerURL.
+  displayName: ""
+  # The CA, in PEM, the console trusts for the issuer; empty trusts the
+  # image's roots.
+  issuerCA: ""
+  # Scopes asked for beside openid, such as the one a provider puts groups
+  # under, or offline_access for a refresh token.
+  extraScopes: []
+  # An existing Secret with the console's client secret under key. Empty, the
+  # console is a public client, which PKCE protects.
+  clientSecret:
+    secretName: ""
+    key: client-secret
+  # The users and groups, as the API server names them after its own mapping
+  # and prefix, and the roles each gets in every namespace above, from the
+  # list under accounts except connection-admin. A name starting with system:
+  # is refused: system:authenticated would give the roles to everyone.
+  subjects: []
+  #  - kind: Group
+  #    name: "oidc:ptah-approvers"
+  #    roles: [viewer, approver]
 
 # Exactly one of the two. secretName names an existing kubernetes.io/tls
 # Secret the console serves HTTPS with, read again when it is renewed.

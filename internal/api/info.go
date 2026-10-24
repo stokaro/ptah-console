@@ -24,11 +24,19 @@ type Info struct {
 
 	mode     consolev1.Mode
 	readOnly bool
+	facts    InfoFacts
+}
+
+// InfoFacts say how people sign in to the console.
+type InfoFacts struct {
+	SignIn consolev1.SignIn
+	// SignInProvider names the OpenID Connect provider on the sign-in page.
+	SignInProvider string
 }
 
 // NewInfo returns the InfoService for a console running in mode.
-func NewInfo(mode consolev1.Mode, readOnly bool) *Info {
-	return &Info{mode: mode, readOnly: readOnly}
+func NewInfo(mode consolev1.Mode, readOnly bool, facts InfoFacts) *Info {
+	return &Info{mode: mode, readOnly: readOnly, facts: facts}
 }
 
 // GetInfo returns the build and the mode.
@@ -43,6 +51,8 @@ func (i *Info) GetInfo(context.Context, *consolev1.GetInfoRequest) (*consolev1.G
 		PlanContractVersion:  readContracts[len(readContracts)-1],
 		KubernetesMinors:     testedMinors(support.Compatibility),
 		PlanContractVersions: readContracts,
+		SignIn:               i.facts.SignIn,
+		SignInProvider:       i.facts.SignInProvider,
 	}, nil
 }
 

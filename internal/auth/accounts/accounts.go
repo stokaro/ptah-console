@@ -65,6 +65,29 @@ type Config struct {
 	// Registry is where the console's registry of connections is, when one is
 	// installed. Absent, the console reaches only the cluster it runs in.
 	Registry *Registry `json:"registry,omitempty"`
+	// OIDC signs people in with an OpenID Connect provider instead of
+	// Console accounts. A configuration has one or the other.
+	OIDC *OIDC `json:"oidc,omitempty"`
+}
+
+// OIDC is the provider a hosted console signs people in with. The console
+// passes the person's ID token to the API server, which has to trust the
+// same issuer with ClientID as an audience; RBAC then decides as for any
+// other user.
+type OIDC struct {
+	// IssuerURL is the provider's issuer, exactly as its ID tokens name it.
+	IssuerURL string `json:"issuerURL"`
+	// ClientID is the console's client at the provider, and the audience its
+	// ID tokens carry.
+	ClientID string `json:"clientID"`
+	// DisplayName names the provider on the sign-in page.
+	DisplayName string `json:"displayName,omitempty"`
+	// IssuerCA is the CA, in PEM, the console trusts for the issuer. Absent,
+	// the system's roots are trusted.
+	IssuerCA string `json:"issuerCA,omitempty"`
+	// ExtraScopes are asked for beside openid, such as the scope a provider
+	// puts groups under, or offline_access for a refresh token.
+	ExtraScopes []string `json:"extraScopes,omitempty"`
 }
 
 // Registry names the registry and the entry of the cluster the console runs
@@ -141,7 +164,9 @@ func ParseConfig(data []byte) (*Config, error) {
 	return &config, nil
 }
 
-// Load reads and checks a configuration file and the passwords for it.
+// Load reads and checks a configuration file and the passwords for it. A
+// configuration with oidc has no passwords, and naming a passwords file for
+// one is refused rather than ignored.
 func Load(configPath, passwordsPath string) (*Config, *Passwords, error) {
 	data, err := readBounded(configPath)
 	if err != nil {
@@ -150,6 +175,15 @@ func Load(configPath, passwordsPath string) (*Config, *Passwords, error) {
 	config, err := ParseConfig(data)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s: %w", configPath, err)
+	}
+	if config.OIDC != nil {
+		if passwordsPath != "" {
+			return nil, nil, fmt.Errorf("%s: signs people in with oidc, which reads no passwords file; leave out --passwords", configPath)
+		}
+		return config, nil, nil
+	}
+	if passwordsPath == "" {
+		return nil, nil, fmt.Errorf("%s: lists accounts, whose passwords are a file of their own; give --passwords", configPath)
 	}
 	data, err = readBounded(passwordsPath)
 	if err != nil {
@@ -219,14 +253,99 @@ func (c *Config) problems() []string {
 		}
 		seenNamespaces[namespace] = i
 	}
-	if len(c.Accounts) == 0 {
-		add("accounts", "lists no account")
+	switch {
+	case c.OIDC != nil && len(c.Accounts) > 0:
+		add("accounts", "a configuration with oidc signs people in through the provider and lists no account")
+	case c.OIDC == nil && len(c.Accounts) == 0:
+		add("accounts", "lists no account, and there is no oidc to sign people in with")
+	}
+	if c.OIDC != nil && c.Registry != nil {
+		add("registry", "external clusters are reached through agents that act as Console accounts, so a configuration with oidc has no registry")
 	}
 	problems = append(problems, proxyProblems(c.TrustedProxies)...)
 	if c.Registry != nil {
 		problems = append(problems, c.Registry.problems()...)
 	}
+	if c.OIDC != nil {
+		problems = append(problems, c.OIDC.problems()...)
+	}
 	return append(problems, accountProblems(c.Accounts)...)
+}
+
+const (
+	maxClientIDBytes = 255
+	maxExtraScopes   = 16
+)
+
+func (o *OIDC) problems() []string {
+	var problems []string
+	add := func(field, format string, args ...any) {
+		problems = append(problems, "oidc."+field+": "+fmt.Sprintf(format, args...))
+	}
+	if problem := issuerProblem(o.IssuerURL); problem != "" {
+		add("issuerURL", "%s", problem)
+	}
+	switch {
+	case o.ClientID == "":
+		add("clientID", "is required")
+	case len(o.ClientID) > maxClientIDBytes:
+		add("clientID", "is longer than %d bytes", maxClientIDBytes)
+	case strings.IndexFunc(o.ClientID, func(r rune) bool { return r < '!' || r > '~' }) >= 0:
+		add("clientID", "must be ASCII letters, digits and punctuation, without spaces")
+	}
+	if problem := displayNameProblem(o.DisplayName); problem != "" {
+		add("displayName", "%s", problem)
+	}
+	if o.IssuerCA != "" && !holdsCertificate(o.IssuerCA) {
+		add("issuerCA", "holds no PEM certificate")
+	}
+	if len(o.ExtraScopes) > maxExtraScopes {
+		add("extraScopes", "lists more than %d scopes", maxExtraScopes)
+	}
+	seen := make(map[string]int)
+	for i, scope := range o.ExtraScopes {
+		field := fmt.Sprintf("extraScopes[%d]", i)
+		switch {
+		case !scopeToken.MatchString(scope):
+			add(field, "is not a scope: printable ASCII without spaces, quotes or backslashes")
+		case scope == "openid":
+			add(field, "is openid, which the console always asks for")
+		default:
+			if first, repeated := seen[scope]; repeated {
+				add(field, "repeats extraScopes[%d]", first)
+				continue
+			}
+			seen[scope] = i
+		}
+	}
+	return problems
+}
+
+// scopeToken is one scope as OAuth 2.0 defines it (RFC 6749, section 3.3).
+var scopeToken = regexp.MustCompile(`^[\x21\x23-\x5B\x5D-\x7E]{1,128}$`)
+
+// issuerProblem refuses an issuer the console could not hold its tokens to:
+// one that is not https, carries credentials, a query or a fragment. A path,
+// and a final slash, are kept as written: the ID tokens have to name the
+// issuer exactly so.
+func issuerProblem(text string) string {
+	if text == "" {
+		return "is required"
+	}
+	address, err := url.Parse(text)
+	switch {
+	case err != nil:
+		return "is not a URL"
+	case address.Scheme != "https":
+		return "must be an https URL; the API server fetches the issuer's keys over https only"
+	case address.Hostname() == "":
+		return "names no host"
+	case address.User != nil:
+		return "must not carry a user name or password"
+	case address.RawQuery != "" || address.ForceQuery || address.Fragment != "":
+		return "must not carry a query or a fragment"
+	}
+	return ""
 }
 
 var (

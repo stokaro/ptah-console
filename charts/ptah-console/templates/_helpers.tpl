@@ -88,6 +88,32 @@ rather than editing a spec the API refuses to change. */}}
 {{- end -}}
 {{- $_ := set $logins (lower .login) true -}}
 {{- end -}}
+{{- if .Values.oidc.enabled -}}
+{{- if .Values.accounts -}}
+{{- fail "oidc: people sign in through the provider, so accounts stays empty" -}}
+{{- end -}}
+{{- if .Values.passwords.secretName -}}
+{{- fail "oidc: people sign in through the provider, so passwords.secretName stays empty" -}}
+{{- end -}}
+{{- if or .Values.registry.enabled .Values.agents.enabled -}}
+{{- fail "oidc: the registry and agents act as Console accounts; leave registry and agents off" -}}
+{{- end -}}
+{{- if not (hasPrefix "https://" .Values.oidc.issuerURL) -}}
+{{- fail "oidc: issuerURL is the provider's https issuer" -}}
+{{- end -}}
+{{- if not .Values.oidc.clientID -}}
+{{- fail "oidc: clientID is the console's client at the provider" -}}
+{{- end -}}
+{{- range .Values.oidc.subjects -}}
+{{- if hasPrefix "system:" (lower .name) -}}
+{{- fail (printf "oidc: subjects may not name %s; a system: name covers users the installer did not choose" .name) -}}
+{{- end -}}
+{{- end -}}
+{{- else if not .Values.accounts -}}
+{{- fail "accounts: lists no account; give accounts, or enable oidc" -}}
+{{- else if not .Values.passwords.secretName -}}
+{{- fail "passwords: secretName names the Secret with the accounts' passwords" -}}
+{{- end -}}
 {{- if and .Values.networkPolicy.enabled (not .Values.networkPolicy.apiServer.cidrs) -}}
 {{- fail "networkPolicy: apiServer.cidrs names the API server the console has to reach" -}}
 {{- end -}}

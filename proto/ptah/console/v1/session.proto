@@ -58,6 +58,7 @@ message GetSessionResponse {
   // True when the kubeconfig turns off verification of the API server's
   // certificate.
   bool insecure_tls = 9;
+  SignIn sign_in = 10;
 }
 
 message LogoutRequest {}

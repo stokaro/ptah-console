@@ -19,7 +19,7 @@ func TestReadOnlyRefusesWhatMayChangeSomething(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
 	server := connect.NewServer(api.ReadOnly(consolev1connect.SessionServiceLogoutProcedure))
-	consolev1connect.RegisterInfoServiceHandler(server, api.NewInfo(consolev1.Mode_MODE_LOCAL, true))
+	consolev1connect.RegisterInfoServiceHandler(server, api.NewInfo(consolev1.Mode_MODE_LOCAL, true, api.InfoFacts{}))
 	consolev1connect.RegisterSessionServiceHandler(server, &api.Session{})
 	transport := connect.NewClient(connectinprocess.New(server))
 	info := consolev1connect.NewInfoServiceClient(transport)

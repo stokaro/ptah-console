@@ -1,5 +1,13 @@
 Ptah Console for installation {{ .Values.installationID }} serves {{ .Values.publicURL }}.
 
+{{- if .Values.oidc.enabled }}
+People sign in with {{ .Values.oidc.displayName | default .Values.oidc.issuerURL }}. The API server has to
+trust issuer {{ .Values.oidc.issuerURL }} with audience {{ .Values.oidc.clientID }}; each person acts as the
+user it maps their token to. The roles this chart binds:
+{{- range .Values.oidc.subjects }}
+  {{ .kind }} {{ .name }}  ({{ join ", " .roles }})
+{{- end }}
+{{- else }}
 The accounts act in Kubernetes as:
 {{- range .Values.accounts }}
   {{ include "ptah-console.username" (dict "installationID" $.Values.installationID "id" .id) }}  ({{ .login }}: {{ join ", " .roles }})
@@ -7,3 +15,4 @@ The accounts act in Kubernetes as:
 
 A changed password takes effect when the Pod restarts:
   kubectl -n {{ .Release.Namespace }} rollout restart deployment/{{ include "ptah-console.fullname" . }}
+{{- end }}

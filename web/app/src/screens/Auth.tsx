@@ -5,7 +5,8 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Navigate, useNavigate } from "@tanstack/react-router"
 import { useState, type FormEvent } from "react"
 
-import { canAnywhere, useHosted, useScope, useSession } from "../api/resources"
+import { canAnywhere, useHosted, useInfo, useScope, useSession } from "../api/resources"
+import { SignIn } from "../gen/ptah/console/v1/info_pb"
 import { SessionService } from "../gen/ptah/console/v1/session_pb"
 import { Loading } from "./common"
 
@@ -32,10 +33,30 @@ export function Launch() {
   )
 }
 
+/** Why a sign-in with the provider came back without a session, as the console names it. */
+export const providerRefusals = [
+  "throttled",
+  "busy",
+  "provider",
+  "state",
+  "token",
+  "refused",
+  "unavailable",
+  "full",
+] as const
+
+export type ProviderRefusal = (typeof providerRefusals)[number]
+
+export interface LoginProps {
+  /** Why the last sign-in with the provider did not end in a session. */
+  refused?: ProviderRefusal
+}
+
 /** How to sign in, for the mode this console runs in. */
-export function Login() {
+export function Login({ refused }: LoginProps) {
   const session = useSession()
   const hosted = useHosted()
+  const info = useInfo()
   // A query that failed keeps its last data, so data alone does not say
   // there is a session: after a restart it is the session that ended.
   if (session.isSuccess) {
@@ -43,6 +64,9 @@ export function Login() {
   }
   if (hosted === undefined) {
     return <Loading what="how this console signs in" />
+  }
+  if (info.data?.signIn === SignIn.OIDC) {
+    return <ProviderSignIn provider={info.data.signInProvider} refused={refused} />
   }
   if (hosted) {
     return <SignInForm />
@@ -52,6 +76,60 @@ export function Login() {
       ptah-console local signs you in with the link it prints in your terminal, as the identity in
       your kubeconfig; there is no password. Run it, and open that link.
     </EmptyState>
+  )
+}
+
+function refusalText(refused: ProviderRefusal, provider: string) {
+  switch (refused) {
+    case "throttled":
+      return "Too many sign-ins were started from here. Wait a minute and try again."
+    case "busy":
+      return "The console has too many sign-ins in progress. Try again in a minute."
+    case "provider":
+      return `${provider} did not sign you in.`
+    case "state":
+      return "That sign-in was started in another window, or it took longer than ten minutes. Start again."
+    case "token":
+      return `${provider}'s answer did not check out, so nobody was signed in.`
+    case "refused":
+      return `The API server does not accept ${provider}'s token for this console. It has to trust the issuer, with the console's client ID as an audience; ask the cluster's administrator.`
+    case "unavailable":
+      return "The API server did not answer, so the console could not learn who you are. Try again."
+    case "full":
+      return "Too many sessions are open on this console. Try again later."
+  }
+}
+
+/**
+ * The sign-in of a hosted console whose people sign in with an OpenID
+ * Connect provider. The button is a plain link: the browser goes to the
+ * console's own page, which sends it on to the provider.
+ */
+function ProviderSignIn({ provider, refused }: { provider: string; refused?: ProviderRefusal }) {
+  return (
+    <section
+      aria-labelledby="sign-in-title"
+      className="mx-auto flex w-full max-w-[380px] flex-col gap-4 rounded-2xl border border-line bg-card p-6 shadow-card"
+    >
+      <h1 id="sign-in-title" className="m-0 font-display text-xl font-semibold">
+        Sign in
+      </h1>
+      <p className="m-0 text-sm text-mute">
+        With {provider}. What you can see and do is what the API server lets the identity it maps
+        your sign-in to do.
+      </p>
+      {refused ? (
+        <p role="alert" className="m-0 text-sm text-red">
+          {refusalText(refused, provider)}
+        </p>
+      ) : null}
+      <a
+        href="/auth/oidc/login"
+        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-pri px-4 text-sm font-semibold text-onpri"
+      >
+        Sign in with {provider}
+      </a>
+    </section>
   )
 }
 

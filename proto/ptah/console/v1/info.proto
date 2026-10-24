@@ -31,6 +31,10 @@ message GetInfoResponse {
   // The Kubernetes minors this console release was tested against, oldest
   // first, from its support record.
   repeated string kubernetes_minors = 7;
+  SignIn sign_in = 8;
+  // The provider's name, for the sign-in page, when people sign in with
+  // OpenID Connect.
+  string sign_in_provider = 9;
   // The plan contracts this console's plan reader reads, oldest first. A
   // schema plan of another contract is shown without its SQL and is not
   // approved here.
@@ -42,6 +46,18 @@ enum Mode {
   MODE_UNSPECIFIED = 0;
   // The user's own kubeconfig, on a loopback listener.
   MODE_LOCAL = 1;
-  // Beside the operator, with personal Console accounts and impersonation.
+  // Beside the operator, with personal Console accounts and impersonation,
+  // or with an OpenID Connect provider and the person's own token.
   MODE_HOSTED = 2;
+}
+
+// SignIn is how a person signs in.
+enum SignIn {
+  SIGN_IN_UNSPECIFIED = 0;
+  // The link ptah-console local prints.
+  SIGN_IN_LAUNCH_LINK = 1;
+  // A Console account's login and password.
+  SIGN_IN_ACCOUNTS = 2;
+  // An OpenID Connect provider, at /auth/oidc/login.
+  SIGN_IN_OIDC = 3;
 }

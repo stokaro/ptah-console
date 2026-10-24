@@ -7,7 +7,6 @@ the console does the following instead.
 
 | The design shows | The console does |
 | --- | --- |
-| "as oidc:alex@acme.com" | The identity requests run as: the kubeconfig's user in local mode, `ptah-console:<installation>:<account>` with the display name in hosted mode. OIDC sign-in is a later, optional profile. |
 | The Admin role: connections, Add cluster, Quarantine | Not in the first phase. External clusters arrive with the outbound agent in phase 2. |
 | "prod-ap-2 disconnected · outbound connector" | Phase 2. Phase 1 shows only a lost watch on the one API server. |
 | "Sign in to prod-eu-1" | A per-cluster sign-in belongs to the native-credentials profile, phase 3. |
