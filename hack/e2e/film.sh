@@ -5,16 +5,24 @@
 #
 #   RESULTS  Playwright's output directory (default web/test-results)
 #   FILM     the film to write (default .e2e/film/ptah-console-demo.mp4)
+#   ROWS     the row files to take, such as "acceptance.spec.ts
+#            console.spec.ts"; empty takes every row that was recorded
 set -eu
 ROOT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 RESULTS=${RESULTS:-$ROOT_DIR/web/test-results}
 FILM=${FILM:-$ROOT_DIR/.e2e/film/ptah-console-demo.mp4}
+ROWS=${ROWS:-}
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$(dirname "$FILM")"
 : >"$WORK/list"
 
 find "$RESULTS" -name film.json | while read -r film; do
+	file=$(jq -r '.file // ""' "$film")
+	case " $ROWS " in
+	"  " | *" $file "*) ;;
+	*) continue ;;
+	esac
 	printf '%s %s\n' "$(jq -r .startedAt "$film")" "$(dirname "$film")"
 done | sort -n | while read -r _ dir; do
 	[ -f "$dir/video.webm" ] || continue
@@ -33,7 +41,7 @@ done | sort -n | while read -r _ dir; do
 	printf "file '%s'\n" "$WORK/$count.mp4" >>"$WORK/list"
 done
 [ -s "$WORK/list" ] || {
-	printf 'film: no recording under %s\n' "$RESULTS" >&2
+	printf 'film: no recording of %s under %s\n' "${ROWS:-any row}" "$RESULTS" >&2
 	exit 1
 }
 ffmpeg -nostdin -loglevel error -y -f concat -safe 0 -i "$WORK/list" -c copy -movflags +faststart "$FILM"

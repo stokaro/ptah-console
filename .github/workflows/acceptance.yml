@@ -176,15 +176,22 @@ jobs:
           OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
           OUT_DIR: ${{ runner.temp }}/e2e
         run: make e2e-verify
-      - name: Join the recordings into a film
+      # The demo is the local phase: the rows each person runs against a
+      # ptah-console local of their own. The full film adds the hosted and
+      # two-cluster rows.
+      - name: Join the recordings into films
         if: always()
-        env:
-          FILM: ${{ github.workspace }}/film/ptah-console-demo.mp4
         shell: bash
+        env:
+          ROWS_REQUESTED: ${{ inputs.rows }}
         run: |
           set -euo pipefail
           [ -d web/test-results ] || exit 0
-          make e2e-film
+          FILM="$GITHUB_WORKSPACE/film/ptah-console-full.mp4" make e2e-film
+          # A run of some row files may hold no local row to make the demo of.
+          if [ -z "$ROWS_REQUESTED" ]; then
+            FILM="$GITHUB_WORKSPACE/film/ptah-console-demo.mp4" ROWS="acceptance.spec.ts console.spec.ts" make e2e-film
+          fi
           for who in outsider viewer reviewer author lead approver diag; do
             cp "${{ runner.temp }}/e2e/$who-audit.log" "film/$who-audit.log" 2>/dev/null || true
           done
