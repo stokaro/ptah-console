@@ -81,7 +81,7 @@ asking for a read, suspending, and seeing what you may do.
 
 [![An approver reviews a plan that drops a column and grants SELECT, with what it changes and its exact SQL](docs/demo/poster.png)](docs/demo/ptah-console-demo.mp4)
 
-[The recording](docs/demo/ptah-console-demo.mp4) (4 minutes 33 seconds) runs the scenarios of
+[The recording](docs/demo/ptah-console-demo.mp4) (7 minutes 29 seconds) runs the scenarios of
 [stokaro/ptah-operator#587](https://github.com/stokaro/ptah-operator/issues/587)
 against a real operator, one person at a time, each signed in to a
 `ptah-console local` of their own with a client certificate the cluster
@@ -104,13 +104,28 @@ issued:
 - a run whose Job was deleted mid-Apply is unknown until acknowledged, and an
   API server that stops answering meanwhile is reported while the decision
   waits;
-- the auditor view shows who decided what, as admission recorded it.
+- the auditor view shows who decided what, as admission recorded it;
+- an author creates a schema from a ConfigMap, checked by the API server
+  before it is created, and a migration from the up and down files of another;
+- an author asks inventory to read its database now, and the operator reads it
+  before its interval would;
+- an approver reviews both new plans in the full console, approves them as
+  themselves, and follows each to the database, with the history the journal
+  keeps and the revision row the run wrote;
+- an author suspends catalog and resumes it, and the operator follows both;
+- on call reads a failed run in Execution & diagnosis and finds it, with the
+  operator's Events, in Activity.
 
-The Acceptance workflow records it against the operator's own demonstration
-lab, from the operator commit `go.mod` requires, cuts out the minutes the
-operator spends applying, and checks every decision against the cluster rather
-than the page. This file comes from run 39367996294; a new run's
-`ptah-console-acceptance` artifact holds a fresh one.
+The rows run against the operator's own demonstration lab, from the operator
+commit `go.mod` requires; the recording cuts out the minutes the operator
+spends applying, and `make e2e-verify` checks every decision against the
+cluster rather than the page. This file was recorded on October 24, 2026,
+against operator commit `7484e85a` on Kubernetes 1.37, with `make e2e-up`,
+`E2E_ROWS="acceptance.spec.ts console.spec.ts" make e2e-rows` and
+`ROWS="acceptance.spec.ts console.spec.ts" make e2e-film`. The Acceptance
+workflow records the same film on each run of every row, as
+`ptah-console-demo.mp4` in its `ptah-console-acceptance` artifact, beside
+`ptah-console-full.mp4` with the hosted and two-cluster rows.
 
 ## Building
 

@@ -142,7 +142,7 @@ export interface Lab {
   signInHosted(account: Account, password?: string): Promise<void>
   /** The origin of the console the page is signed in to. */
   origin(): string
-  /** Shows a caption and holds it long enough to read. */
+  /** Shows a caption, holds it long enough to read, and takes it away. */
   caption(text: string, holdMs?: number, at?: "top" | "bottom"): Promise<void>
   /**
    * Checks the page as it stands against WCAG 2.1 A and AA with axe. A
@@ -222,6 +222,9 @@ export const test = base.extend<{ lab: Lab }>({
       async caption(text, holdMs = 3500, at = "top") {
         await showCaption(page, text, at)
         await page.waitForTimeout(holdMs)
+        // A caption says what the page shows now; the next action changes
+        // that, so it does not stay over it.
+        await showCaption(page, "")
       },
       async audit(screen) {
         // A page or dialog fades in; measured halfway, its text blends with
