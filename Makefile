@@ -217,7 +217,8 @@ e2e-up:
 # cluster's own account of what they decided.
 e2e: e2e-rows e2e-verify
 
-# E2E_ROWS names some of the row files, to run those alone.
+# E2E_ROWS names some of the row files, to run those alone, and e2e-verify
+# then checks what those rows did.
 e2e-rows: build
 	cd web && npx playwright test -c e2e/playwright.config.ts $(E2E_ROWS)
 
