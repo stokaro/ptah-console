@@ -7,10 +7,15 @@ package api
 
 import (
 	"context"
+	"encoding/json"
+
+	"github.com/stokaro/ptah-operator/pkg/planread"
 
 	"github.com/stokaro/ptah-console/internal/buildinfo"
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
 	"github.com/stokaro/ptah-console/internal/gen/ptah/console/v1/consolev1connect"
+	"github.com/stokaro/ptah-console/internal/release"
+	"github.com/stokaro/ptah-console/support"
 )
 
 // Info serves InfoService.
@@ -30,10 +35,23 @@ func NewInfo(mode consolev1.Mode, readOnly bool) *Info {
 func (i *Info) GetInfo(context.Context, *consolev1.GetInfoRequest) (*consolev1.GetInfoResponse, error) {
 	build := buildinfo.Read()
 	return &consolev1.GetInfoResponse{
-		Version:         build.Version,
-		Commit:          build.Commit,
-		Mode:            i.mode,
-		ReadOnly:        i.readOnly,
-		OperatorVersion: build.Operator,
+		Version:             build.Version,
+		Commit:              build.Commit,
+		Mode:                i.mode,
+		ReadOnly:            i.readOnly,
+		OperatorVersion:     build.Operator,
+		PlanContractVersion: planread.ContractVersion,
+		KubernetesMinors:    testedMinors(support.Compatibility),
 	}, nil
+}
+
+// testedMinors are the Kubernetes minors of the support record's first row,
+// the one that describes this tree, or none when the record cannot be read.
+// CI holds the record to the tree, so none is a build nobody checked.
+func testedMinors(record []byte) []string {
+	var parsed release.Record
+	if err := json.Unmarshal(record, &parsed); err != nil || len(parsed.Releases) == 0 {
+		return nil
+	}
+	return parsed.Releases[0].Kubernetes
 }

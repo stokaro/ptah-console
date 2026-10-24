@@ -90,9 +90,10 @@ func (s *ScopeService) ListNamespaces(ctx context.Context, _ *consolev1.ListName
 	}
 
 	out := &consolev1.ListNamespacesResponse{
-		OperatorApi:   operatorAPI(c.Config),
-		Truncated:     truncated,
-		MaxNamespaces: MaxNamespaces,
+		OperatorApi:       operatorAPI(c.Config),
+		Truncated:         truncated,
+		MaxNamespaces:     MaxNamespaces,
+		KubernetesVersion: kubernetesVersion(c.Config),
 	}
 	for _, name := range names {
 		hints := kube.Can(ctx, c, capabilityChecks(name)...)
