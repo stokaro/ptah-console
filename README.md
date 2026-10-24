@@ -72,7 +72,10 @@ lanes; and a pre-flight of what your identity may do in each namespace.
 ⌘K, Ctrl+K or `/` opens a palette that jumps to any page or resource.
 
 The page follows changes live. What a button offers depends on what RBAC says
-you may do; the server decides.
+you may do; the server decides. [Using the console](docs/use/console.md) goes
+through the tasks: approving a plan, following a release, finding out why
+something failed, settling a run nobody can prove, creating a resource,
+asking for a read, suspending, and seeing what you may do.
 
 ## Demo
 
