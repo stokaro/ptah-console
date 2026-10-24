@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest"
 import {
   AttentionKind,
   AttentionSchema,
+  JournalSchema,
   MigrationPlanSchema,
   MigrationRunSchema,
   StageState,
@@ -215,5 +216,84 @@ describe("Migration detail", () => {
     expect(
       await screen.findByRole("heading", { name: /PtahMigration \/ journal/ })
     ).toBeInTheDocument()
+  })
+})
+
+describe("Migration runs", () => {
+  const journaled = syncedMigration((m) => {
+    m.history = {
+      $typeName: "ptah.console.v1.MigrationHistory",
+      observedAt: minutesAgo(2),
+      currentVersion: 15n,
+      checkpointVersion: 10n,
+      appliedCount: 15,
+      pendingCount: 2,
+      dirty: false,
+      modifiedVersions: [],
+      outOfOrderVersions: [],
+    }
+    m.journal = create(JournalSchema, {
+      coveredSince: minutesAgo(600),
+      entries: [
+        {
+          type: "RunFinished",
+          startedAt: minutesAgo(300),
+          at: minutesAgo(299),
+          outcome: "Succeeded",
+          appliedVersions: 3,
+        },
+        {
+          type: "RunFinished",
+          startedAt: minutesAgo(120),
+          at: minutesAgo(117),
+          outcome: "Failed",
+          failure: { version: 16n, statement: 2, statements: 3, sqlState: "23505" },
+        },
+      ],
+    })
+  })
+
+  it("puts the history's numbers first and lists the runs the journal keeps", async () => {
+    const { container } = renderConsole("/console/migrations/application/billing", {
+      migrations: [journaled],
+    })
+
+    const glance = await screen.findByRole("list", { name: "At a glance" })
+    expect(glance).toHaveTextContent("Current version15checkpoint 10")
+    expect(glance).toHaveTextContent("Pending2waiting in the artifact")
+    expect(glance).toHaveTextContent("Runs kept21 failed since")
+    const runs = within(screen.getByRole("list", { name: "Runs, newest first" }))
+      .getAllByRole("listitem")
+      .map((item) => item.textContent)
+    expect(runs).toHaveLength(2)
+    expect(runs[0]).toContain("Run failed at migration 16, statement 2 of 3, SQLSTATE 23505")
+    expect(runs[0]).toContain("took 3 min")
+    expect(runs[1]).toContain("Run applied 3 versions")
+    expect(screen.getByRole("table", { name: "How long each run took" })).toHaveTextContent(
+      "Run applied 3 versions1 min"
+    )
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("narrows the runs to those that failed", async () => {
+    const user = userEvent.setup()
+    renderConsole("/console/migrations/application/billing", { migrations: [journaled] })
+
+    await user.click(await screen.findByRole("button", { name: "Failed 1" }))
+
+    expect(
+      within(screen.getByRole("list", { name: "Runs, newest first" })).getAllByRole("listitem")
+    ).toHaveLength(1)
+    await user.click(screen.getByRole("button", { name: "Outcome unknown 0" }))
+    expect(screen.getByText("No run matches.")).toBeVisible()
+  })
+
+  it("says the earlier runs are not known when the operator keeps no journal", async () => {
+    renderConsole("/console/migrations/application/billing", { migrations: [syncedMigration()] })
+
+    expect(await screen.findByText(/The operator keeps no journal of this migration/)).toBeVisible()
+    expect(await screen.findByRole("list", { name: "At a glance" })).toHaveTextContent(
+      "Runs kept–the operator keeps no journal"
+    )
   })
 })

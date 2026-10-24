@@ -54,6 +54,26 @@ const Architecture = lazyRouteComponent(
   "Architecture"
 )
 const Activity = lazyRouteComponent(() => import("./screens/console/Activity"), "Activity")
+const ConsolePlanReview = lazyRouteComponent(
+  () => import("./screens/console/PlanReview"),
+  "ConsolePlanReview"
+)
+const ExecutionDiagnosis = lazyRouteComponent(
+  () => import("./screens/console/ExecutionDiagnosis"),
+  "ExecutionDiagnosis"
+)
+
+/** The plan a link named, kept in the address so the page can say when it is gone. */
+interface PlanSearch {
+  plan?: string
+}
+
+function readPlanSearch(search: Record<string, unknown>): PlanSearch {
+  return typeof search.plan === "string" &&
+    /^[a-z0-9]([-a-z0-9.]{0,251}[a-z0-9])?$/.test(search.plan)
+    ? { plan: search.plan }
+    : {}
+}
 const SchemaDetail = lazyRouteComponent(
   () => import("./screens/console/SchemaDetail"),
   "SchemaDetail"
@@ -226,6 +246,72 @@ function MigrationHistoryRoute() {
   return <ExecutionHistory kind="migration" namespace={namespace} name={name} />
 }
 
+const schemaExecution = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "schemas/$namespace/$name/execution",
+  component: SchemaExecutionRoute,
+})
+
+function SchemaExecutionRoute() {
+  const { namespace, name } = schemaExecution.useParams()
+  return <ExecutionDiagnosis kind="schema" namespace={namespace} name={name} />
+}
+
+const migrationExecution = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "migrations/$namespace/$name/execution",
+  component: MigrationExecutionRoute,
+})
+
+function MigrationExecutionRoute() {
+  const { namespace, name } = migrationExecution.useParams()
+  return <ExecutionDiagnosis kind="migration" namespace={namespace} name={name} />
+}
+
+const schemaPlan = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "schemas/$namespace/$name/plan",
+  validateSearch: readPlanSearch,
+  component: SchemaPlanRoute,
+})
+
+function SchemaPlanRoute() {
+  const { namespace, name } = schemaPlan.useParams()
+  const search = schemaPlan.useSearch()
+  const navigate = schemaPlan.useNavigate()
+  return (
+    <ConsolePlanReview
+      kind="schema"
+      namespace={namespace}
+      name={name}
+      followed={search.plan}
+      onReadCurrent={() => void navigate({ search: { ...search, plan: undefined }, replace: true })}
+    />
+  )
+}
+
+const migrationPlan = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "migrations/$namespace/$name/plan",
+  validateSearch: readPlanSearch,
+  component: MigrationPlanRoute,
+})
+
+function MigrationPlanRoute() {
+  const { namespace, name } = migrationPlan.useParams()
+  const search = migrationPlan.useSearch()
+  const navigate = migrationPlan.useNavigate()
+  return (
+    <ConsolePlanReview
+      kind="migration"
+      namespace={namespace}
+      name={name}
+      followed={search.plan}
+      onReadCurrent={() => void navigate({ search: { ...search, plan: undefined }, replace: true })}
+    />
+  )
+}
+
 const consolePreflight = createRoute({
   getParentRoute: () => consoleRoute,
   path: "preflight",
@@ -277,6 +363,10 @@ export const routeTree = rootRoute.addChildren([
     schemaHistory,
     consoleMigration,
     migrationHistory,
+    schemaExecution,
+    migrationExecution,
+    schemaPlan,
+    migrationPlan,
     consolePreflight,
     consoleArchitecture,
     consoleActivity,

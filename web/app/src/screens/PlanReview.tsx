@@ -220,7 +220,8 @@ function SchemaSql({ plan }: { plan: SchemaPlan }) {
   )
 }
 
-function MigrationSteps({ plan }: { plan: MigrationPlan }) {
+/** A migration plan's files in order, which is all this operator API publishes of it. */
+export function MigrationSteps({ plan }: { plan: MigrationPlan }) {
   return (
     <Card title="Steps in order">
       <SequenceTable
@@ -239,7 +240,8 @@ function MigrationSteps({ plan }: { plan: MigrationPlan }) {
   )
 }
 
-function bindings(
+/** What a plan is bound to, as an approval of it is. */
+export function bindings(
   resource: ResourceView,
   schema?: SchemaPlan,
   migration?: MigrationPlan

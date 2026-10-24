@@ -136,6 +136,17 @@ export function DetailHeader({ resource, kind, chips, actions }: DetailHeaderPro
         <Link
           to={
             resource.kind === "schema"
+              ? "/console/schemas/$namespace/$name/execution"
+              : "/console/migrations/$namespace/$name/execution"
+          }
+          params={{ namespace: resource.namespace, name: resource.name }}
+          className="inline-flex min-h-10 items-center rounded-[11px] border border-line bg-card px-3.5 text-[13.5px] font-medium text-fg"
+        >
+          Execution &amp; diagnosis
+        </Link>
+        <Link
+          to={
+            resource.kind === "schema"
               ? "/console/schemas/$namespace/$name/history"
               : "/console/migrations/$namespace/$name/history"
           }

@@ -16,6 +16,7 @@ import { say, steps, waitingForApproval } from "../../model/resource"
 import { Loading, ReadError, useNow } from "../common"
 import { AcknowledgeDialog } from "../IncidentDetail"
 import { Sentence } from "../Releases"
+import { MigrationGlance, RunsCard } from "./MigrationRuns"
 import {
   ArtifactCard,
   AttentionCard,
@@ -154,8 +155,9 @@ export function MigrationDetail({ namespace, name }: MigrationDetailProps) {
         actions={
           migration.planName ? (
             <Link
-              to="/approve/$namespace/$kind/$name"
-              params={{ namespace, kind: "migration", name }}
+              to="/console/migrations/$namespace/$name/plan"
+              params={{ namespace, name }}
+              search={{ plan: migration.planName }}
               className={`inline-flex min-h-10 items-center rounded-[11px] border px-3.5 text-[13.5px] font-semibold ${waiting ? "border-pri bg-pri text-onpri" : "border-line bg-card text-fg"}`}
             >
               Review plan
@@ -163,6 +165,7 @@ export function MigrationDetail({ namespace, name }: MigrationDetailProps) {
           ) : null
         }
       />
+      <MigrationGlance resource={resource} />
       <Card label="Where it stands">
         <StepRail steps={steps(resource)} label={`Progress of ${resource.name}`} />
         <Sentence tone={sentence.tone} text={sentence.text} large />
@@ -255,6 +258,7 @@ export function MigrationDetail({ namespace, name }: MigrationDetailProps) {
           )}
         </Card>
       </div>
+      <RunsCard resource={resource} now={now} />
       <Card title="Steps">
         {plan.error ? (
           <span className="text-sm text-fg2">

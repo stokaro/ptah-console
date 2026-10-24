@@ -176,6 +176,13 @@ none.
 | How far the history is, how the last run ended, what the current plan would apply, the run waiting for a person, every condition, the artifact, the target, the spec | `ptahmigrations` | list, watch; get when opened from a link |
 | The files the plan would apply | `ptahmigrationplans` | get |
 | Acknowledge an unresolved run | `ptahmigrationrunacknowledgments` | create, as on call |
+| The runs the journal keeps, how each ended and how long it took | the migration's `status.journal` | get |
+
+The tiles above the page are the history's own numbers (current version and
+checkpoint, applied, pending) and the runs the journal keeps, with how many
+failed since it is complete. The runs list is newest first and narrows by how
+a run ended; its chart draws one bar per run that recorded its start, because
+the operator records a run, not each migration in it.
 
 The operator publishes a summary of the revision table, not its rows: the
 current version and checkpoint, how many migrations are applied and pending,
@@ -184,6 +191,49 @@ order. The page lists the versions the last run applied, the plan's files and
 the refused versions, and says that the earlier versions are a count. The
 next history read is `status.nextReconciliationTime`; there is no "read now",
 because the operator has no such action, and no retry, rollback or force.
+
+## Full console: plan review
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| What the plan changes, from its manifest | `ptahschemaplans` or `ptahmigrationplans` | get |
+| The exact SQL with the plan's own marks, and whether its chunks checked out | `ptahschemaplanchunks`, through the operator's plan reader | get |
+| Whether this identity may approve here | `selfsubjectaccessreviews` | create |
+| A plan a link named that is no longer current | the resource's `status.journal`, and the decisions | get, list |
+
+The page is the focused view's plan review in the full console, with what
+an approver weighs beside it. Statement types count the marks Ptah gave each
+statement, its severity and reason; the console parses no SQL. Integrity says
+what the plan reader established: every chunk checked by size, digest and
+order before any SQL is shown, the manifest alone for an identity that may not
+read the chunks, and nothing of a plan that failed a check. The SQL can be
+filtered, or narrowed to the marked statements, and keeps the plan's
+numbering. The approval panel lists what the console checks before it offers
+to send one: the plan read is the current one, its contract is one the console
+reads, for a schema plan, and RBAC lets this identity create the approval;
+admission and the operator decide again either way. A link that names a plan
+by `?plan=` says when that plan is no longer current, what replaced it, and
+what the journal and the decisions record of it, and approves nothing from it.
+
+## Full console: execution and diagnosis
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| The operation running now, its attempt and how long it has run; the last outcome; when the database is read next | the resource's status and `status.journal` | get |
+| Every Job the status names, by its own conditions, and its first failed container | `jobs`, `pods`, as on call | get, list |
+| A log excerpt, asked for only by an identity RBAC lets read logs | `pods/log` | get |
+| What the database was last found to be: a fresh read still due, drift from the last read, or the migration history | the resource's status | get |
+| The objects the status names, by name: plans, the approval, Jobs, the source, the Secret by its key, the realm | the resource's status | get |
+| Failure causes by operation and reason, and runs by where they stopped | the resource's `status.journal` | get |
+| Events about the resource | `events` for its UID | list with a field selector |
+
+The page reads the evidence the history page reads and answers a narrower
+question: what runs now and what a person may do about it. Its next steps are
+the attention the status raises, the plan review while a plan waits, and the
+acknowledgment of a run nobody can settle; it offers no retry, rollback or
+force, because the operator has none. The Secret the target names stays a
+name and a key. Failure causes count what the journal keeps and say from when
+it is complete; a resource whose operator keeps no journal shows none.
 
 ## Full console: execution and history
 
