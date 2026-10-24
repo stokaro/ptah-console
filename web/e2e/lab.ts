@@ -159,6 +159,8 @@ export interface Lab {
 /** What a row's recording needs to be cut and put in order. */
 export interface Film {
   title: string
+  /** The row file, so a film can be made of some of them. */
+  file: string
   startedAt: number
   /**
    * Stretches to leave out, in seconds from the start of the recording, and
@@ -258,7 +260,12 @@ export const test = base.extend<{ lab: Lab }>({
     for (const child of children) {
       child.kill()
     }
-    const film: Film = { title: testInfo.title, startedAt, cuts }
+    const film: Film = {
+      title: testInfo.title,
+      file: path.basename(testInfo.file),
+      startedAt,
+      cuts,
+    }
     writeFileSync(testInfo.outputPath("film.json"), JSON.stringify(film))
   },
 })
