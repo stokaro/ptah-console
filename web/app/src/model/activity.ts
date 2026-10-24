@@ -2,7 +2,7 @@ import { timestampDate, type Timestamp } from "@bufbuild/protobuf/wkt"
 import type { Tone } from "@ptah/console-ui"
 
 import { DecisionKind, type Decision } from "../gen/ptah/console/v1/decisions_pb"
-import type { JournalEntry } from "../gen/ptah/console/v1/resources_pb"
+import type { JournalEntry, RunFailure } from "../gen/ptah/console/v1/resources_pb"
 import { decisionState } from "./decision"
 import type { ResourceKind, ResourceView } from "./resource"
 
@@ -47,10 +47,11 @@ function plural(count: number, one: string, many = `${one}s`) {
 
 /** Where a migration run stopped, without the engine's message. */
 function stoppedAt(entry: JournalEntry) {
-  const failure = entry.failure
-  if (!failure) {
-    return undefined
-  }
+  return entry.failure ? whereStopped(entry.failure) : undefined
+}
+
+/** Where a migration run stopped: the migration, the statement's position, the engine's code. */
+export function whereStopped(failure: RunFailure) {
   const parts = [`migration ${failure.version}`]
   if (failure.statements > 0) {
     parts.push(`statement ${failure.statement} of ${failure.statements}`)

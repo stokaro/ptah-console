@@ -9,6 +9,7 @@ import {
   AttentionKind,
   AttentionSchema,
   MigrationPlanSchema,
+  MigrationRunSchema,
   StageState,
 } from "../../gen/ptah/console/v1/resources_pb"
 import { minutesAgo, renderConsole, syncedMigration } from "../../test/console"
@@ -94,6 +95,32 @@ describe("Migration detail", () => {
       "Retry, rollback and force are not offered"
     )
     expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("says where a failed run stopped, by migration, statement and SQLSTATE", async () => {
+    const stopped = syncedMigration((m) => {
+      m.ref!.name = "journal"
+      m.lastRun = create(MigrationRunSchema, {
+        outcome: "Failed",
+        jobName: "ptah-m-apply-journal-1",
+        startedAt: minutesAgo(5),
+        finishedAt: minutesAgo(4),
+        appliedVersions: [1n],
+        message: "Migration 2 failed and committed nothing",
+        failure: { version: 2n, statement: 1, statements: 3, sqlState: "23505" },
+      })
+    })
+    renderConsole("/console/migrations/application/journal", { migrations: [stopped] })
+
+    const run = await screen.findByRole("region", { name: "Last run" })
+    expect(run).toHaveTextContent("Stopped atmigration 2, statement 1 of 3, SQLSTATE 23505")
+  })
+
+  it("names no place to stop for a run that recorded none", async () => {
+    renderConsole("/console/migrations/application/journal", { migrations: [failed] })
+
+    const run = await screen.findByRole("region", { name: "Last run" })
+    expect(run).not.toHaveTextContent("Stopped at")
   })
 
   it("offers to acknowledge an unresolved run, and only where it may", async () => {

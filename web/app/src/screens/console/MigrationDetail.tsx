@@ -2,7 +2,7 @@ import { ConnectError } from "@connectrpc/connect"
 import { skipToken, useQuery } from "@connectrpc/connect-query"
 import { Button, Card, Pill, StatusGlyph, StepRail, type Tone } from "@ptah/console-ui"
 import { Link } from "@tanstack/react-router"
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 
 import { offerText, useOffer, useResource, useSession } from "../../api/resources"
 import {
@@ -11,6 +11,7 @@ import {
   type MigrationPlan,
   type UnresolvedRun,
 } from "../../gen/ptah/console/v1/resources_pb"
+import { whereStopped } from "../../model/activity"
 import { say, steps, waitingForApproval } from "../../model/resource"
 import { Loading, ReadError, useNow } from "../common"
 import { AcknowledgeDialog } from "../IncidentDetail"
@@ -229,6 +230,9 @@ export function MigrationDetail({ namespace, name }: MigrationDetailProps) {
                   </Pill>,
                 ],
                 ["What happened", run.message || <span className="text-mute">–</span>],
+                ...(run.failure
+                  ? ([["Stopped at", whereStopped(run.failure)]] as [string, ReactNode][])
+                  : []),
                 [
                   "Applied",
                   run.appliedVersions.length > 0 ? (
