@@ -277,6 +277,9 @@ export function createAppRouter(
     defaultPendingComponent: () => <Loading what="the page" />,
     defaultErrorComponent: RouteError,
     defaultPendingMs: 300,
+    // A page reads only what its route's validateSearch returned: a
+    // parameter no route validates is dropped, not handed to the page.
+    search: { strict: true },
   })
 }
 
