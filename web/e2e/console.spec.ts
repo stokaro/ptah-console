@@ -147,7 +147,8 @@ test("an author asks inventory to read its database now, and the operator reads 
     4000
   )
 
-  await page.getByRole("button", { name: "Read again now" }).click()
+  await page.getByRole("button", { name: "Actions" }).click()
+  await page.getByRole("menuitem", { name: "Read again now" }).click()
   await expect(page.getByText(/A read was asked .+, and the operator started it\./)).toBeVisible({
     timeout: planTimeout,
   })
@@ -279,7 +280,8 @@ test("an author suspends catalog and resumes it, and the operator follows both",
     .getByRole("row")
     .filter({ has: page.getByRole("rowheader", { name: "Suspended", exact: true }) })
 
-  await page.getByRole("button", { name: "Suspend…" }).click()
+  await page.getByRole("button", { name: "Actions" }).click()
+  await page.getByRole("menuitem", { name: "Suspend…" }).click()
   const dialog = page.getByRole("alertdialog")
   await expect(dialog).toContainText("Only spec.suspend changes")
   await lab.audit("the suspend dialog")
@@ -294,7 +296,8 @@ test("an author suspends catalog and resumes it, and the operator follows both",
     "Suspended: the console changed spec.suspend alone, and the operator reports it starts nothing until it is resumed."
   )
 
-  await page.getByRole("button", { name: "Resume…" }).click()
+  await page.getByRole("button", { name: "Actions" }).click()
+  await page.getByRole("menuitem", { name: "Resume…" }).click()
   await dialog.getByRole("button", { name: "Confirm" }).click()
   await expect(dialog.getByText("Resumed", { exact: true })).toBeVisible({ timeout: 30_000 })
   await dialog.getByRole("button", { name: "Close" }).click()
