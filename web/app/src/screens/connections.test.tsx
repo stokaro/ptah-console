@@ -92,6 +92,17 @@ describe("The clusters of a hosted console", () => {
     expect(await screen.findByRole("button", { name: /^Cluster: edge-lab/ })).toBeInTheDocument()
   })
 
+  it("names no cluster the address gives that is not a connection UID", async () => {
+    const fixture = registry()
+    renderConsole("/approve?cluster=..%2Fthis-cluster", hosted(fixture))
+
+    expect(
+      await screen.findByRole("button", { name: /^Cluster: this-cluster/ })
+    ).toBeInTheDocument()
+    await waitFor(() => expect(fixture.headers.length).toBeGreaterThan(0))
+    expect(fixture.headers.every((header) => header === "")).toBe(true)
+  })
+
   it("keeps the cluster across pages, so a link names its cluster", async () => {
     const user = userEvent.setup()
     const { history } = renderConsole(`/approve?cluster=${lab}`, hosted(registry()))
