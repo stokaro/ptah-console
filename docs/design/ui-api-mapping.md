@@ -197,7 +197,7 @@ exited with an error.
 | What the identity may do in each namespace | `selfsubjectaccessreviews` | create, one per question |
 | Whether the cluster serves the operator's group version and the kinds the console uses | discovery | get |
 | The cluster's Kubernetes version | discovery, `/version` | get |
-| The operator module the console was built against, the plan contract it reads, and the Kubernetes minors its release was tested on | nothing; the build and `support/compatibility.json` record them | none |
+| The operator module the console was built against, the plan contracts it reads, and the Kubernetes minors its release was tested on | nothing; the build and `support/compatibility.json` record them | none |
 
 The checks are worked out in the browser from what the other rows already
 read: the operator's API, the cluster's version against the tested minors,

@@ -89,5 +89,11 @@ func TestGetInfoSaysWhatTheReleaseWasTestedAgainst(t *testing.T) {
 
 	c.Assert(err, qt.IsNil)
 	c.Assert(info.GetKubernetesMinors(), qt.DeepEquals, parsed.Releases[0].Kubernetes)
-	c.Assert(info.GetPlanContractVersion(), qt.Equals, planread.ContractVersion)
+	// Contract 1 is a plan from an OCI artifact, 2 one from a ConfigMap or
+	// a Git commit; the operator module this console requires reads both.
+	c.Assert(info.GetPlanContractVersions(), qt.DeepEquals, []int32{1, 2})
+	c.Assert(info.GetPlanContractVersion(), qt.Equals, int32(2))
+	for version := int32(3); version <= 32; version++ {
+		c.Assert(planread.SupportedContract(version), qt.IsFalse, qt.Commentf("contract %d", version))
+	}
 }

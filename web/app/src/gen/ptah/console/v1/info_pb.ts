@@ -10,7 +10,7 @@ import type { Message, UnknownEnum } from "@bufbuild/protobuf";
  * Describes the file ptah/console/v1/info.proto.
  */
 export const file_ptah_console_v1_info: GenFile = /*@__PURE__*/
-  fileDesc("ChpwdGFoL2NvbnNvbGUvdjEvaW5mby5wcm90bxIPcHRhaC5jb25zb2xlLnYxIhAKDkdldEluZm9SZXF1ZXN0Ir4BCg9HZXRJbmZvUmVzcG9uc2USDwoHdmVyc2lvbhgBIAEoCRIOCgZjb21taXQYAiABKAkSIwoEbW9kZRgDIAEoDjIVLnB0YWguY29uc29sZS52MS5Nb2RlEhEKCXJlYWRfb25seRgEIAEoCBIYChBvcGVyYXRvcl92ZXJzaW9uGAUgASgJEh0KFXBsYW5fY29udHJhY3RfdmVyc2lvbhgGIAEoBRIZChFrdWJlcm5ldGVzX21pbm9ycxgHIAMoCSo9CgRNb2RlEhQKEE1PREVfVU5TUEVDSUZJRUQQABIOCgpNT0RFX0xPQ0FMEAESDwoLTU9ERV9IT1NURUQQAjJgCgtJbmZvU2VydmljZRJRCgdHZXRJbmZvEh8ucHRhaC5jb25zb2xlLnYxLkdldEluZm9SZXF1ZXN0GiAucHRhaC5jb25zb2xlLnYxLkdldEluZm9SZXNwb25zZSIDkAIBQkhaRmdpdGh1Yi5jb20vc3Rva2Fyby9wdGFoLWNvbnNvbGUvaW50ZXJuYWwvZ2VuL3B0YWgvY29uc29sZS92MTtjb25zb2xldjFiBnByb3RvMw");
+  fileDesc("ChpwdGFoL2NvbnNvbGUvdjEvaW5mby5wcm90bxIPcHRhaC5jb25zb2xlLnYxIhAKDkdldEluZm9SZXF1ZXN0It4BCg9HZXRJbmZvUmVzcG9uc2USDwoHdmVyc2lvbhgBIAEoCRIOCgZjb21taXQYAiABKAkSIwoEbW9kZRgDIAEoDjIVLnB0YWguY29uc29sZS52MS5Nb2RlEhEKCXJlYWRfb25seRgEIAEoCBIYChBvcGVyYXRvcl92ZXJzaW9uGAUgASgJEh0KFXBsYW5fY29udHJhY3RfdmVyc2lvbhgGIAEoBRIZChFrdWJlcm5ldGVzX21pbm9ycxgHIAMoCRIeChZwbGFuX2NvbnRyYWN0X3ZlcnNpb25zGAogAygFKj0KBE1vZGUSFAoQTU9ERV9VTlNQRUNJRklFRBAAEg4KCk1PREVfTE9DQUwQARIPCgtNT0RFX0hPU1RFRBACMmAKC0luZm9TZXJ2aWNlElEKB0dldEluZm8SHy5wdGFoLmNvbnNvbGUudjEuR2V0SW5mb1JlcXVlc3QaIC5wdGFoLmNvbnNvbGUudjEuR2V0SW5mb1Jlc3BvbnNlIgOQAgFCSFpGZ2l0aHViLmNvbS9zdG9rYXJvL3B0YWgtY29uc29sZS9pbnRlcm5hbC9nZW4vcHRhaC9jb25zb2xlL3YxO2NvbnNvbGV2MWIGcHJvdG8z");
 
 /**
  * @generated from message ptah.console.v1.GetInfoRequest
@@ -64,8 +64,7 @@ export type GetInfoResponse = Message<"ptah.console.v1.GetInfoResponse"> & {
   operatorVersion: string;
 
   /**
-   * The plan contract this console's plan reader reads. A schema plan of
-   * another contract is shown without its SQL and is not approved here.
+   * The newest of plan_contract_versions.
    *
    * @generated from field: int32 plan_contract_version = 6;
    */
@@ -78,6 +77,15 @@ export type GetInfoResponse = Message<"ptah.console.v1.GetInfoResponse"> & {
    * @generated from field: repeated string kubernetes_minors = 7;
    */
   kubernetesMinors: string[];
+
+  /**
+   * The plan contracts this console's plan reader reads, oldest first. A
+   * schema plan of another contract is shown without its SQL and is not
+   * approved here.
+   *
+   * @generated from field: repeated int32 plan_contract_versions = 10;
+   */
+  planContractVersions: number[];
 };
 
 /**

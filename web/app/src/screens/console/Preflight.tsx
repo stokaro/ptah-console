@@ -372,8 +372,12 @@ export function Preflight() {
                 about="the API types and the plan reader the console uses"
               />
               <Fact
-                name="Plan contract"
-                value={info.data?.planContractVersion ? String(info.data.planContractVersion) : "–"}
+                name="Plan contracts"
+                value={
+                  info.data && info.data.planContractVersions.length > 0
+                    ? info.data.planContractVersions.join(", ")
+                    : "–"
+                }
                 about="the schema plans it reads and approves; a plan of another contract is shown without its SQL"
               />
               <Fact

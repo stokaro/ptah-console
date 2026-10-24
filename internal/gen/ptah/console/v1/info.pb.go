@@ -122,14 +122,17 @@ type GetInfoResponse struct {
 	// recorded it. The console reads the operator's types and plan reader at
 	// this version; the cluster's operator is not asked.
 	OperatorVersion string `protobuf:"bytes,5,opt,name=operator_version,json=operatorVersion,proto3" json:"operator_version,omitempty"`
-	// The plan contract this console's plan reader reads. A schema plan of
-	// another contract is shown without its SQL and is not approved here.
+	// The newest of plan_contract_versions.
 	PlanContractVersion int32 `protobuf:"varint,6,opt,name=plan_contract_version,json=planContractVersion,proto3" json:"plan_contract_version,omitempty"`
 	// The Kubernetes minors this console release was tested against, oldest
 	// first, from its support record.
 	KubernetesMinors []string `protobuf:"bytes,7,rep,name=kubernetes_minors,json=kubernetesMinors,proto3" json:"kubernetes_minors,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// The plan contracts this console's plan reader reads, oldest first. A
+	// schema plan of another contract is shown without its SQL and is not
+	// approved here.
+	PlanContractVersions []int32 `protobuf:"varint,10,rep,packed,name=plan_contract_versions,json=planContractVersions,proto3" json:"plan_contract_versions,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GetInfoResponse) Reset() {
@@ -211,12 +214,19 @@ func (x *GetInfoResponse) GetKubernetesMinors() []string {
 	return nil
 }
 
+func (x *GetInfoResponse) GetPlanContractVersions() []int32 {
+	if x != nil {
+		return x.PlanContractVersions
+	}
+	return nil
+}
+
 var File_ptah_console_v1_info_proto protoreflect.FileDescriptor
 
 const file_ptah_console_v1_info_proto_rawDesc = "" +
 	"\n" +
 	"\x1aptah/console/v1/info.proto\x12\x0fptah.console.v1\"\x10\n" +
-	"\x0eGetInfoRequest\"\x97\x02\n" +
+	"\x0eGetInfoRequest\"\xcd\x02\n" +
 	"\x0fGetInfoResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
 	"\x06commit\x18\x02 \x01(\tR\x06commit\x12)\n" +
@@ -224,7 +234,9 @@ const file_ptah_console_v1_info_proto_rawDesc = "" +
 	"\tread_only\x18\x04 \x01(\bR\breadOnly\x12)\n" +
 	"\x10operator_version\x18\x05 \x01(\tR\x0foperatorVersion\x122\n" +
 	"\x15plan_contract_version\x18\x06 \x01(\x05R\x13planContractVersion\x12+\n" +
-	"\x11kubernetes_minors\x18\a \x03(\tR\x10kubernetesMinors*=\n" +
+	"\x11kubernetes_minors\x18\a \x03(\tR\x10kubernetesMinors\x124\n" +
+	"\x16plan_contract_versions\x18\n" +
+	" \x03(\x05R\x14planContractVersions*=\n" +
 	"\x04Mode\x12\x14\n" +
 	"\x10MODE_UNSPECIFIED\x10\x00\x12\x0e\n" +
 	"\n" +
