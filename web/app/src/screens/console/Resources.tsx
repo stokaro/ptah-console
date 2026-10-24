@@ -2,6 +2,7 @@ import {
   Button,
   EmptyState,
   Eyebrow,
+  ScrollRegion,
   Segmented,
   shortDigest,
   StatusGlyph,
@@ -148,7 +149,7 @@ export function Resources({ search, onSearch }: ResourcesProps) {
         </EmptyState>
       ) : (
         <section className="overflow-hidden rounded-[18px] border border-line bg-card shadow-card">
-          <div className="overflow-x-auto">
+          <ScrollRegion label={filtered ? "Resources that match the filters" : "Resources"}>
             <table className="w-full border-collapse text-left text-sm">
               <caption className="sr-only">
                 {filtered ? "Resources that match the filters" : "Resources"}
@@ -181,7 +182,7 @@ export function Resources({ search, onSearch }: ResourcesProps) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
           <Pager
             first={page.first}
             last={page.last}

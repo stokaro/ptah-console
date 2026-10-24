@@ -1,4 +1,13 @@
-import { Button, Card, copyWords, Eyebrow, StatusGlyph, useCopy, type Tone } from "@ptah/console-ui"
+import {
+  Button,
+  Card,
+  copyWords,
+  Eyebrow,
+  ScrollRegion,
+  StatusGlyph,
+  type Tone,
+  useCopy,
+} from "@ptah/console-ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 
@@ -251,7 +260,7 @@ export function Preflight() {
               className="min-w-0 flex-auto border-0 bg-transparent text-sm text-fg outline-0"
             />
           </label>
-          <div className="overflow-x-auto">
+          <ScrollRegion label="What this identity may do, by namespace">
             <table className="w-full border-collapse text-left text-[13px]">
               <caption className="sr-only">What this identity may do, by namespace</caption>
               <thead>
@@ -319,7 +328,7 @@ export function Preflight() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
           {shown.length === 0 ? (
             <p className="m-0 text-sm text-fg2">No namespace matches “{filter.trim()}”.</p>
           ) : null}

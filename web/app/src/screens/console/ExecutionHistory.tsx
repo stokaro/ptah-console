@@ -1,5 +1,5 @@
 import { skipToken, useQuery } from "@connectrpc/connect-query"
-import { Card, Pill, StatusGlyph, Terminal } from "@ptah/console-ui"
+import { Card, Pill, ScrollRegion, StatusGlyph, Terminal } from "@ptah/console-ui"
 import { Link } from "@tanstack/react-router"
 
 import { can, useResource } from "../../api/resources"
@@ -96,7 +96,7 @@ export function ExecutionHistory({ kind, namespace, name }: ExecutionHistoryProp
       <section className="overflow-hidden rounded-[18px] border border-line bg-card shadow-card">
         {diagnostics.isPending ? <Loading what="the evidence" /> : null}
         {diagnostics.error ? <ReadError error={diagnostics.error} what="the evidence" /> : null}
-        <div className="overflow-x-auto">
+        <ScrollRegion label={`Execution and history of ${name}`}>
           <table className="w-full min-w-[720px] table-fixed border-collapse text-left text-[13px]">
             <caption className="sr-only">Execution and history of {name}</caption>
             <colgroup>
@@ -143,7 +143,7 @@ export function ExecutionHistory({ kind, namespace, name }: ExecutionHistoryProp
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
         <p className="m-0 border-t border-line px-4 py-2.5 text-xs text-mute">
           {kept.complete
             ? `The operator's journal of ${resource.name} is complete since ${kept.complete.toLocaleString()}, and keeps its latest 64 events. `

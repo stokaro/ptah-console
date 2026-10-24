@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest"
 import { CommandBlock } from "./CommandBlock"
 import { Fingerprint } from "./Fingerprint"
 import { Freshness } from "./Freshness"
+import { ScrollRegion } from "./ScrollRegion"
 import { Segmented } from "./Segmented"
 import { Select } from "./Select"
 import { SequenceTable } from "./SequenceTable"
@@ -109,6 +110,28 @@ describe("Select", () => {
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Engine" }), "MySQL")
 
     expect(chosen).toEqual(["MySQL"])
+  })
+})
+
+describe("ScrollRegion", () => {
+  it("is a named stop in the tab order, so a keyboard can scroll a table with nothing to focus", async () => {
+    const user = userEvent.setup()
+    render(
+      <ScrollRegion label="Phases of storefront">
+        <table>
+          <caption>Phases of storefront</caption>
+          <tbody>
+            <tr>
+              <td>Approve: waiting</td>
+            </tr>
+          </tbody>
+        </table>
+      </ScrollRegion>
+    )
+
+    await user.tab()
+
+    expect(screen.getByRole("group", { name: "Phases of storefront" })).toHaveFocus()
   })
 })
 
