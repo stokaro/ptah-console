@@ -34,6 +34,23 @@ func operatorAPI(config *rest.Config) *consolev1.OperatorApi {
 	return answerDiscovery(client.ServerResourcesForGroupVersion(operatorv1alpha1.GroupVersion.String()))
 }
 
+// kubernetesVersion is the cluster's version as discovery tells the
+// session's identity, or empty when the API server does not say.
+func kubernetesVersion(config *rest.Config) string {
+	if config == nil {
+		return ""
+	}
+	client, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return ""
+	}
+	version, err := client.ServerVersion()
+	if err != nil {
+		return ""
+	}
+	return version.GitVersion
+}
+
 // answerDiscovery says what one discovery answer means for the console.
 func answerDiscovery(list *metav1.APIResourceList, err error) *consolev1.OperatorApi {
 	groupVersion := operatorv1alpha1.GroupVersion.String()

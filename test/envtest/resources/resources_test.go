@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/stokaro/ptah-console/internal/api"
@@ -198,6 +199,36 @@ func TestListNamespacesHintsWhatTheIdentityMayDo(t *testing.T) {
 	c.Assert(byName[forbidden].GetAccess(), qt.Equals, consolev1.Access_ACCESS_FORBIDDEN)
 	c.Assert(response.GetTruncated(), qt.IsFalse)
 	c.Assert(response.GetMaxNamespaces(), qt.Equals, uint32(api.MaxNamespaces))
+}
+
+// configured hands the service a client with its REST configuration, which
+// discovery needs; the recording factory above has none.
+type configured struct{ client *kube.Client }
+
+func (f configured) For(kube.Principal) (*kube.Client, error) { return f.client, nil }
+
+// The cluster's version is what discovery tells the session's identity, and
+// an identity granted nothing but Ptah reads may ask it.
+func TestListNamespacesSaysTheClusterVersion(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	allowed, _ := arrange(t, "version-viewer")
+	config, err := plane.User("version-viewer")
+	c.Assert(err, qt.IsNil)
+	viewer, err := kube.NewClient(config)
+	c.Assert(err, qt.IsNil)
+	transport, ctx := signedIn(t, func(server *connect.Server) {
+		consolev1connect.RegisterScopeServiceHandler(server, api.NewScopeService(configured{viewer}, api.Scope{Candidates: []string{allowed}}))
+	})
+	served, err := discovery.NewDiscoveryClientForConfigOrDie(plane.Env.Config).ServerVersion()
+	c.Assert(err, qt.IsNil)
+
+	response, err := consolev1connect.NewScopeServiceClient(transport).ListNamespaces(ctx, &consolev1.ListNamespacesRequest{})
+
+	c.Assert(err, qt.IsNil)
+	c.Assert(response.GetKubernetesVersion(), qt.Not(qt.Equals), "")
+	c.Assert(response.GetKubernetesVersion(), qt.Equals, served.GitVersion)
+	c.Assert(response.GetOperatorApi().GetServed(), qt.IsTrue)
 }
 
 // An identity that may list more namespaces than the console reads is

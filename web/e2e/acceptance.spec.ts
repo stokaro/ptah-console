@@ -497,8 +497,9 @@ test("on call, a failed run shows its evidence and the next supported step", asy
   )
   await page.getByRole("link", { name: "Pre-flight" }).click()
   const matrix = page.getByRole("table", { name: "What this identity may do, by namespace" })
-  await expect(matrix.getByRole("row", { name: /^Read logs/ })).toContainText("Allowed")
-  await expect(matrix.getByRole("row", { name: /^Approve schema plans/ })).toContainText("Denied")
+  const answers = matrix.getByRole("row", { name: new RegExp(`^${namespace}`) })
+  await expect(answers.getByRole("img", { name: "Read logs: Allowed" })).toBeVisible()
+  await expect(answers.getByRole("img", { name: "Approve schema plans: Denied" })).toBeVisible()
   await lab.audit("pre-flight")
   await lab.caption(
     "Pre-flight: what this identity may do in each namespace, as the API server answers it. The diagnostic reader may read logs and may not approve.",

@@ -196,13 +196,23 @@ exited with an error.
 | --- | --- | --- |
 | What the identity may do in each namespace | `selfsubjectaccessreviews` | create, one per question |
 | Whether the cluster serves the operator's group version and the kinds the console uses | discovery | get |
-| The operator module the console was built against | nothing; the build records it | none |
+| The cluster's Kubernetes version | discovery, `/version` | get |
+| The operator module the console was built against, the plan contract it reads, and the Kubernetes minors its release was tested on | nothing; the build and `support/compatibility.json` record them | none |
 
-The thirteen questions are the ones every page already asks, grouped as read,
-decide, change and diagnose, each with the verb and resource it puts to the
-API server. An answer the server could not establish reads as unknown and
-counts as not allowed. The page also says what the console never reads,
-whatever RBAC allows.
+The checks are worked out in the browser from what the other rows already
+read: the operator's API, the cluster's version against the tested minors,
+the session, how many offered namespaces are readable and whether the list was
+cut, the live watch, and the operator's schedule as the sidebar judges it.
+"Re-run checks" asks every question again. The matrix has a row per namespace
+and a column per question, the thirteen questions every page already asks,
+grouped as read, decide, change and diagnose; it shows 25 namespaces at a time
+and a filter narrows them, and a legend gives each question in the API
+server's words. An answer the server could not establish reads as unknown and
+counts as not allowed. "Copy kubectl command" copies the `kubectl auth can-i
+--list` loop that asks the same of the namespaces shown, through the
+kubeconfig context in local mode and with `--as` for the account a hosted
+console impersonates, which needs the right to impersonate it. The page also
+says what the console never reads, whatever RBAC allows.
 
 ## Full console: command palette
 

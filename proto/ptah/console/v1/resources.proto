@@ -127,6 +127,9 @@ message ListNamespacesResponse {
   bool truncated = 3;
   // The most namespaces the console offers, and reads in one request.
   uint32 max_namespaces = 4;
+  // The cluster's Kubernetes version, as discovery tells the session's
+  // identity; empty when the API server did not say.
+  string kubernetes_version = 5;
 }
 
 // OperatorApi is what discovery says about operator.ptah.run/v1alpha1.

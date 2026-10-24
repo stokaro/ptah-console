@@ -122,8 +122,14 @@ type GetInfoResponse struct {
 	// recorded it. The console reads the operator's types and plan reader at
 	// this version; the cluster's operator is not asked.
 	OperatorVersion string `protobuf:"bytes,5,opt,name=operator_version,json=operatorVersion,proto3" json:"operator_version,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// The plan contract this console's plan reader reads. A schema plan of
+	// another contract is shown without its SQL and is not approved here.
+	PlanContractVersion int32 `protobuf:"varint,6,opt,name=plan_contract_version,json=planContractVersion,proto3" json:"plan_contract_version,omitempty"`
+	// The Kubernetes minors this console release was tested against, oldest
+	// first, from its support record.
+	KubernetesMinors []string `protobuf:"bytes,7,rep,name=kubernetes_minors,json=kubernetesMinors,proto3" json:"kubernetes_minors,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GetInfoResponse) Reset() {
@@ -191,18 +197,34 @@ func (x *GetInfoResponse) GetOperatorVersion() string {
 	return ""
 }
 
+func (x *GetInfoResponse) GetPlanContractVersion() int32 {
+	if x != nil {
+		return x.PlanContractVersion
+	}
+	return 0
+}
+
+func (x *GetInfoResponse) GetKubernetesMinors() []string {
+	if x != nil {
+		return x.KubernetesMinors
+	}
+	return nil
+}
+
 var File_ptah_console_v1_info_proto protoreflect.FileDescriptor
 
 const file_ptah_console_v1_info_proto_rawDesc = "" +
 	"\n" +
 	"\x1aptah/console/v1/info.proto\x12\x0fptah.console.v1\"\x10\n" +
-	"\x0eGetInfoRequest\"\xb6\x01\n" +
+	"\x0eGetInfoRequest\"\x97\x02\n" +
 	"\x0fGetInfoResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
 	"\x06commit\x18\x02 \x01(\tR\x06commit\x12)\n" +
 	"\x04mode\x18\x03 \x01(\x0e2\x15.ptah.console.v1.ModeR\x04mode\x12\x1b\n" +
 	"\tread_only\x18\x04 \x01(\bR\breadOnly\x12)\n" +
-	"\x10operator_version\x18\x05 \x01(\tR\x0foperatorVersion*=\n" +
+	"\x10operator_version\x18\x05 \x01(\tR\x0foperatorVersion\x122\n" +
+	"\x15plan_contract_version\x18\x06 \x01(\x05R\x13planContractVersion\x12+\n" +
+	"\x11kubernetes_minors\x18\a \x03(\tR\x10kubernetesMinors*=\n" +
 	"\x04Mode\x12\x14\n" +
 	"\x10MODE_UNSPECIFIED\x10\x00\x12\x0e\n" +
 	"\n" +

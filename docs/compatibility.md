@@ -22,4 +22,7 @@ What the console checks while it runs, rather than trusting the table:
 - It reads the API group, version and kinds it uses through discovery, which
   every authenticated identity may read, and says when the cluster does not
   serve them.
+- Pre-flight compares the cluster's Kubernetes minor, as discovery reports it,
+  with the minors this release was tested on, and warns about one outside
+  them. It refuses nothing on that account.
 - Anything it cannot establish is shown as unknown, never as supported.

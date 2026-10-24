@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"encoding/json"
 	"os"
 	"regexp"
 	"testing"
@@ -8,6 +9,7 @@ import (
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connectinprocess"
 	qt "github.com/frankban/quicktest"
+	"github.com/stokaro/ptah-operator/pkg/planread"
 
 	"github.com/stokaro/ptah-console/internal/api"
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
@@ -61,4 +63,31 @@ func TestGetInfoNamesTheOperatorItWasBuiltAgainst(t *testing.T) {
 
 	c.Assert(err, qt.IsNil)
 	c.Assert(info.GetOperatorVersion(), qt.Equals, string(required[1]))
+}
+
+// The Kubernetes minors are the support record's row for this tree, and the
+// plan contract is the plan reader's, so the pre-flight page states what the
+// build was tested against rather than a list kept beside it.
+func TestGetInfoSaysWhatTheReleaseWasTestedAgainst(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	record, err := os.ReadFile("../../support/compatibility.json")
+	c.Assert(err, qt.IsNil)
+	var parsed struct {
+		Releases []struct {
+			Kubernetes []string `json:"kubernetes"`
+		} `json:"releases"`
+	}
+	c.Assert(json.Unmarshal(record, &parsed), qt.IsNil)
+	c.Assert(parsed.Releases, qt.Not(qt.HasLen), 0)
+	c.Assert(parsed.Releases[0].Kubernetes, qt.Not(qt.HasLen), 0)
+	server := connect.NewServer()
+	consolev1connect.RegisterInfoServiceHandler(server, api.NewInfo(consolev1.Mode_MODE_LOCAL, false))
+	client := consolev1connect.NewInfoServiceClient(connect.NewClient(connectinprocess.New(server)))
+
+	info, err := client.GetInfo(t.Context(), &consolev1.GetInfoRequest{})
+
+	c.Assert(err, qt.IsNil)
+	c.Assert(info.GetKubernetesMinors(), qt.DeepEquals, parsed.Releases[0].Kubernetes)
+	c.Assert(info.GetPlanContractVersion(), qt.Equals, planread.ContractVersion)
 }

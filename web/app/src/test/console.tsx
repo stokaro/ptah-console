@@ -250,6 +250,10 @@ export interface Fixture {
   sessionAnswered?: Promise<void>
   /** Called each time the console lists its namespaces. */
   onListNamespaces?: () => void
+  /** The cluster's version as discovery says it; v1.36.4 by default. */
+  kubernetesVersion?: string
+  /** The minors this console release was tested on; 1.35 to 1.37 by default. */
+  kubernetesMinors?: string[]
   /** The namespaces each list request named, in order; filled as the console asks. */
   listed?: { method: "listSchemas" | "listMigrations"; namespaces: string[] }[]
   /** The live stream; one heartbeat, then quiet, by default. */
@@ -330,8 +334,11 @@ export function consoleTransport(fixture: Fixture) {
     service(InfoService, {
       getInfo: () => ({
         version: "v0.1.0",
+        commit: "0123456789abcdef0123456789abcdef01234567",
         mode: hosted ? Mode.HOSTED : Mode.LOCAL,
         operatorVersion: "v0.2.5",
+        planContractVersion: 1,
+        kubernetesMinors: fixture.kubernetesMinors ?? ["1.35", "1.36", "1.37"],
       }),
     })
     service(SessionService, {
@@ -423,6 +430,7 @@ export function consoleTransport(fixture: Fixture) {
           operatorApi: fixture.operatorApi ?? { served: true },
           truncated: fixture.namespacesTruncated ?? false,
           maxNamespaces: 64,
+          kubernetesVersion: fixture.kubernetesVersion ?? "v1.36.4",
         }
       },
     })
