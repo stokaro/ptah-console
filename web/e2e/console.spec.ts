@@ -239,11 +239,28 @@ test("an approver reviews the new plans in the full console, approves them, and 
   await expect(page.getByRole("list", { name: "Runs, newest first" })).toContainText(
     "Run applied 1 version"
   )
-  await lab.audit("a migration's runs")
+  // The revision row the run wrote, as the operator's history read found it.
+  const ledgerSteps = page.getByRole("list", { name: "Migrations of ledger, newest first" })
+  await expect(ledgerSteps.getByRole("listitem")).toHaveCount(1)
+  await expect(ledgerSteps.getByRole("listitem")).toContainText("create ledger entries")
+  await expect(ledgerSteps.getByRole("listitem")).toContainText("applied")
+  const rows = page.getByRole("table", { name: "Revision rows of ledger" })
+  await expect(rows.getByRole("row")).toHaveCount(2)
+  await expect(rows.getByRole("row").nth(1)).toContainText("applied")
+  await lab.audit("a migration's runs and its revision rows")
   await lab.caption(
-    "ledger applied its migration. The page lists its runs from the journal, with how each ended and how long it took.",
-    5000
+    "ledger applied its migration. The page lists the revision row it wrote and the runs the journal keeps, with how each ended and how long it took.",
+    5500
   )
+
+  await page
+    .getByRole("tablist", { name: "Sections of ledger" })
+    .getByRole("tab", { name: "Events" })
+    .click()
+  // The chart's approver role reads no Events, and the panel says so rather
+  // than showing none.
+  await expect(page.getByText(/^Events: not granted/)).toBeVisible()
+  await lab.audit("a migration's Events, not granted")
 })
 
 test("an author suspends catalog and resumes it, and the operator follows both", async ({

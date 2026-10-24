@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { CommandBlock } from "./CommandBlock"
@@ -10,6 +11,7 @@ import { Segmented } from "./Segmented"
 import { Select } from "./Select"
 import { SequenceTable } from "./SequenceTable"
 import { StepDots } from "./StepDots"
+import { Tabs } from "./Tabs"
 import { Terminal } from "./Terminal"
 
 const fingerprint = "sha256:2069e386bdca701da7782dd0b2b29bd5c79151d90bcfc52f30a9678f97ac2aac"
@@ -175,5 +177,46 @@ describe("StepDots", () => {
     expect(
       screen.getByRole("img", { name: "Lifecycle of billing. Plan: done, Apply: failed" })
     ).toBeInTheDocument()
+  })
+})
+
+describe("Tabs", () => {
+  function Panels() {
+    const [value, setValue] = useState<"history" | "events" | "configuration">("history")
+    return (
+      <Tabs
+        label="Sections of billing"
+        value={value}
+        onChange={setValue}
+        tabs={[
+          { value: "history", label: "History" },
+          { value: "events", label: "Events", count: 3 },
+          { value: "configuration", label: "Configuration" },
+        ]}
+      >
+        <p>The {value} panel.</p>
+      </Tabs>
+    )
+  }
+
+  it("opens one panel at a time, by click and by the keyboard", async () => {
+    const user = userEvent.setup()
+    render(<Panels />)
+
+    const list = screen.getByRole("tablist", { name: "Sections of billing" })
+    expect(screen.getByRole("tab", { name: "History" })).toHaveAttribute("aria-selected", "true")
+    expect(screen.getByRole("tabpanel")).toHaveTextContent("The history panel.")
+    expect(list).toContainElement(screen.getByRole("tab", { name: "Events 3" }))
+
+    await user.click(screen.getByRole("tab", { name: "Events 3" }))
+    expect(screen.getByRole("tabpanel")).toHaveTextContent("The events panel.")
+
+    await user.keyboard("{ArrowRight}{Enter}")
+    expect(screen.getByRole("tab", { name: "Configuration" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    )
+    expect(screen.getAllByRole("tabpanel")).toHaveLength(1)
+    expect(screen.getByRole("tabpanel")).toHaveTextContent("The configuration panel.")
   })
 })

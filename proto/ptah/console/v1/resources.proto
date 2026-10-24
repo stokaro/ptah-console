@@ -487,6 +487,25 @@ message MigrationHistory {
   bool dirty = 6;
   repeated int64 modified_versions = 7;
   repeated int64 out_of_order_versions = 8;
+  // The newest rows of the revision table, newest first, at most 64. An
+  // operator before 0.2.7 publishes none.
+  repeated MigrationRevision revisions = 9;
+}
+
+// MigrationRevision is one row of the revision table, as the history read
+// found it. It carries no SQL and no error text.
+message MigrationRevision {
+  int64 version = 1;
+  string description = 2;
+  // The checksum the row recorded; a dirty row records none.
+  string checksum = 3;
+  // applied, modified or dirty.
+  string state = 4;
+  // When the row was written; absent from an executor that does not say.
+  google.protobuf.Timestamp applied_at = 5;
+  // How long the migration ran, in milliseconds; absent where the revision
+  // table records no duration, which is not the same as zero.
+  optional int64 execution_millis = 6;
 }
 
 message MigrationRun {

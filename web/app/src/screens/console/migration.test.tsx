@@ -9,7 +9,9 @@ import {
   AttentionKind,
   AttentionSchema,
   JournalSchema,
+  MigrationHistorySchema,
   MigrationPlanSchema,
+  MigrationRevisionSchema,
   MigrationRunSchema,
   StageState,
 } from "../../gen/ptah/console/v1/resources_pb"
@@ -40,6 +42,22 @@ const failed = syncedMigration((m) => {
     dirty: true,
     modifiedVersions: [],
     outOfOrderVersions: [],
+    revisions: [
+      create(MigrationRevisionSchema, {
+        version: 2n,
+        description: "read ledger",
+        state: "dirty",
+        appliedAt: minutesAgo(3),
+      }),
+      create(MigrationRevisionSchema, {
+        version: 1n,
+        description: "create entries",
+        checksum: "h1:3e1a9c2b0f4d17aa",
+        state: "applied",
+        appliedAt: minutesAgo(60),
+        executionMillis: 12n,
+      }),
+    ],
   }
   m.lastRun = {
     $typeName: "ptah.console.v1.MigrationRun",
@@ -81,16 +99,17 @@ describe("Migration detail", () => {
     expect(screen.getByRole("region", { name: "History" })).toHaveTextContent(
       "A failed or interrupted run left a row"
     )
-    const steps = await screen.findByRole("table", { name: "Steps of journal" })
+    const timeline = await screen.findByRole("list", {
+      name: "Migrations of journal, newest first",
+    })
     expect(
-      within(steps)
-        .getAllByRole("row")
-        .slice(1)
+      within(timeline)
+        .getAllByRole("listitem")
         .map((row) => row.textContent)
     ).toEqual([
-      "1Applied by the last run✓applied",
-      "2read ledger–held: the history is dirty",
-      "3add totals–held: the history is dirty",
+      "–3add totalsIn the plan, held: nothing applies while the history is dirtyheld",
+      "×2read ledgerA failed or interrupted run left this row, 3 min agodirty",
+      "✓1create entriesApplied, 1 h ago, ran 12 msapplied",
     ])
     expect(screen.getByRole("region", { name: "Supported actions" })).toHaveTextContent(
       "Retry, rollback and force are not offered"
@@ -183,28 +202,23 @@ describe("Migration detail", () => {
     ).toBeInTheDocument()
   })
 
-  it("says nothing is pending when the history is current", async () => {
+  it("says when the operator lists no row of the history yet", async () => {
     renderConsole("/console/migrations/application/billing", {
       migrations: [
         syncedMigration((m) => {
-          m.history = {
-            $typeName: "ptah.console.v1.MigrationHistory",
+          m.history = create(MigrationHistorySchema, {
             observedAt: minutesAgo(2),
             currentVersion: 4n,
-            checkpointVersion: 0n,
             appliedCount: 4,
-            pendingCount: 0,
-            dirty: false,
-            modifiedVersions: [],
-            outOfOrderVersions: [],
-          }
+          })
         }),
       ],
     })
 
     expect(
-      await screen.findByText("Nothing pending: the history stands at version 4.")
+      await screen.findByText(/The operator lists no migration of this history yet/)
     ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "↓ Jump to failed" })).toBeDisabled()
   })
 
   it("opens from the resource list", async () => {
@@ -231,6 +245,7 @@ describe("Migration runs", () => {
       dirty: false,
       modifiedVersions: [],
       outOfOrderVersions: [],
+      revisions: [],
     }
     m.journal = create(JournalSchema, {
       coveredSince: minutesAgo(600),

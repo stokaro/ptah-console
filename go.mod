@@ -58,7 +58,7 @@ require (
 	github.com/prometheus/client_model v0.6.3 // indirect
 	github.com/prometheus/common v0.71.0 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
-	github.com/stokaro/ptah-operator v0.2.7-0.20261024151632-adf7886c4c95
+	github.com/stokaro/ptah-operator v0.2.7-0.20261024170232-70bd7654e4a8
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
