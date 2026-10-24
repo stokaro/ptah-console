@@ -278,7 +278,7 @@ func schemaPlanChanged(ctx context.Context, c client.Client, request *consolev1.
 	switch {
 	case string(plan.UID) != request.GetPlanUid():
 		return "The plan under that name is a different object now. Nothing was approved.", nil
-	case plan.Spec.ContractVersion != planread.ContractVersion || plan.Spec.ContractVersion != request.GetContractVersion():
+	case !planread.SupportedContract(plan.Spec.ContractVersion) || plan.Spec.ContractVersion != request.GetContractVersion():
 		return fmt.Sprintf("The plan was written under contract %d, which this console does not approve. Nothing was approved.", plan.Spec.ContractVersion), nil
 	}
 	return "", nil

@@ -35,15 +35,35 @@ func NewInfo(mode consolev1.Mode, readOnly bool) *Info {
 func (i *Info) GetInfo(context.Context, *consolev1.GetInfoRequest) (*consolev1.GetInfoResponse, error) {
 	build := buildinfo.Read()
 	return &consolev1.GetInfoResponse{
-		Version:             build.Version,
-		Commit:              build.Commit,
-		Mode:                i.mode,
-		ReadOnly:            i.readOnly,
-		OperatorVersion:     build.Operator,
-		PlanContractVersion: planread.ContractVersion,
-		KubernetesMinors:    testedMinors(support.Compatibility),
+		Version:              build.Version,
+		Commit:               build.Commit,
+		Mode:                 i.mode,
+		ReadOnly:             i.readOnly,
+		OperatorVersion:      build.Operator,
+		PlanContractVersion:  readContracts[len(readContracts)-1],
+		KubernetesMinors:     testedMinors(support.Compatibility),
+		PlanContractVersions: readContracts,
 	}, nil
 }
+
+// maxContractProbed bounds the contract versions asked of the plan reader.
+const maxContractProbed = 32
+
+// readContracts are the plan contracts the plan reader this console is built
+// with reads, oldest first, asked of the reader itself rather than listed
+// here, so a new operator module brings its own.
+var readContracts = func() []int32 {
+	var read []int32
+	for version := int32(1); version <= maxContractProbed; version++ {
+		if planread.SupportedContract(version) {
+			read = append(read, version)
+		}
+	}
+	if len(read) == 0 {
+		panic("api: the plan reader reads no plan contract up to 32")
+	}
+	return read
+}()
 
 // testedMinors are the Kubernetes minors of the support record's first row,
 // the one that describes this tree, or none when the record cannot be read.

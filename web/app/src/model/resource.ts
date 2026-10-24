@@ -31,8 +31,9 @@ export interface ResourceView {
   stages: Stage[]
   attention: Attention[]
   conditions: Condition[]
-  /** The artifact as requested, such as an OCI reference. */
+  /** The source as requested: an OCI reference, a ConfigMap or a Git repository. */
   source: string
+  /** The OCI manifest digest, or the digest of the files a ConfigMap or Git source selected. */
   sourceDigest: string
   plan?: {
     name: string
@@ -68,7 +69,7 @@ export function fromSchema(schema: Schema): ResourceView {
     attention: schema.attention,
     conditions: schema.conditions,
     source: schema.source?.requested ?? "",
-    sourceDigest: schema.source?.digest ?? "",
+    sourceDigest: schema.source?.digest || schema.source?.contentDigest || "",
     plan: plan
       ? {
           name: plan.name,
@@ -100,7 +101,7 @@ export function fromMigration(migration: Migration): ResourceView {
     attention: migration.attention,
     conditions: migration.conditions,
     source: migration.source?.requested ?? "",
-    sourceDigest: migration.source?.digest ?? "",
+    sourceDigest: migration.source?.digest || migration.source?.contentDigest || "",
     plan: migration.planName
       ? {
           name: migration.planName,

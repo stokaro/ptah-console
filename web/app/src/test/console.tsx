@@ -337,7 +337,8 @@ export function consoleTransport(fixture: Fixture) {
         commit: "0123456789abcdef0123456789abcdef01234567",
         mode: hosted ? Mode.HOSTED : Mode.LOCAL,
         operatorVersion: "v0.2.5",
-        planContractVersion: 1,
+        planContractVersion: 2,
+        planContractVersions: [1, 2],
         kubernetesMinors: fixture.kubernetesMinors ?? ["1.35", "1.36", "1.37"],
       }),
     })

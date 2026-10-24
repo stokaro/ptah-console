@@ -91,18 +91,6 @@ func Schema(schema *operatorv1alpha1.PtahSchema) *consolev1.Schema {
 	return out
 }
 
-func schemaSource(schema *operatorv1alpha1.PtahSchema) *consolev1.Source {
-	source := schema.Status.Source
-	return &consolev1.Source{
-		Requested:  firstOf(source.RequestedReference, schema.Spec.Desired.OCIRef),
-		Resolved:   source.ResolvedReference,
-		Digest:     source.Digest,
-		Verified:   source.Verified,
-		ResolvedAt: timestamp(source.ResolvedAt),
-		VerifiedAt: timestamp(source.VerifiedAt),
-	}
-}
-
 func schemaTarget(schema *operatorv1alpha1.PtahSchema) *consolev1.Target {
 	target := schema.Status.Target
 	out := &consolev1.Target{
@@ -164,6 +152,20 @@ func schemaStages(schema *operatorv1alpha1.PtahSchema, c conditions) []*consolev
 
 func schemaResolve(schema *operatorv1alpha1.PtahSchema, c conditions) *consolev1.Stage {
 	status := schema.Status
+	if source := schemaSource(schema); unverifiedSource(source) {
+		// A ConfigMap or Git source has no verification policy: once its
+		// files are read, Resolve is done.
+		switch {
+		case c.is(operatorv1alpha1.ConditionArtifactResolved, metav1.ConditionFalse):
+			return stage(StageResolve, consolev1.StageState_STAGE_STATE_FAILED, c.message(operatorv1alpha1.ConditionArtifactResolved))
+		case c.is(operatorv1alpha1.ConditionArtifactResolved, metav1.ConditionTrue) && source.GetResolved() != "":
+			return stage(StageResolve, consolev1.StageState_STAGE_STATE_DONE, resolvedDetail(source))
+		case status.Phase == operatorv1alpha1.PhaseResolving || c.is(operatorv1alpha1.ConditionArtifactResolved, metav1.ConditionUnknown):
+			return stage(StageResolve, consolev1.StageState_STAGE_STATE_ACTIVE, "")
+		default:
+			return stage(StageResolve, consolev1.StageState_STAGE_STATE_WAITING, "")
+		}
+	}
 	switch {
 	case c.is(operatorv1alpha1.ConditionArtifactResolved, metav1.ConditionFalse):
 		return stage(StageResolve, consolev1.StageState_STAGE_STATE_FAILED, c.message(operatorv1alpha1.ConditionArtifactResolved))

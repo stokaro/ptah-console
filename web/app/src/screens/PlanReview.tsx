@@ -19,6 +19,7 @@ import {
   MigrationService,
   PlanSelection,
   SchemaService,
+  SourceKind,
   SqlAccess,
   type MigrationPlan,
   type SchemaPlan,
@@ -247,6 +248,16 @@ function bindings(
   const digest = schema?.artifactDigest ?? migration?.artifactDigest
   if (digest) {
     rows.push({ name: "Artifact", value: shortDigest(digest, 8) })
+  }
+  const source = schema?.source ?? migration?.source
+  if (source) {
+    rows.push({
+      name: "Source",
+      value: `${source.kind === SourceKind.GIT ? "Git" : "ConfigMap"}, content ${shortDigest(source.contentDigest, 8)}`,
+    })
+    if (source.policyDigest) {
+      rows.push({ name: "Source policy", value: shortDigest(source.policyDigest, 8) })
+    }
   }
   const created = schema?.createdAt ?? migration?.createdAt
   if (created) {

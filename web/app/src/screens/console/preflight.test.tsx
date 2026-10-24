@@ -217,7 +217,7 @@ describe("Pre-flight's actions and facts", () => {
     const row = (name: string) => within(table).getByRole("row", { name: new RegExp(`^${name}`) })
     expect(row("This console")).toHaveTextContent("v0.1.0commit 0123456789ab")
     expect(row("Built against")).toHaveTextContent("Ptah Operator v0.2.5")
-    expect(row("Plan contract")).toHaveTextContent("1")
+    expect(row("Plan contracts")).toHaveTextContent("1, 2")
     expect(row("Tested on")).toHaveTextContent(
       "Kubernetes 1.35, 1.36, 1.37this cluster runs v1.36.4"
     )

@@ -26,12 +26,15 @@ message GetInfoResponse {
   // recorded it. The console reads the operator's types and plan reader at
   // this version; the cluster's operator is not asked.
   string operator_version = 5;
-  // The plan contract this console's plan reader reads. A schema plan of
-  // another contract is shown without its SQL and is not approved here.
+  // The newest of plan_contract_versions.
   int32 plan_contract_version = 6;
   // The Kubernetes minors this console release was tested against, oldest
   // first, from its support record.
   repeated string kubernetes_minors = 7;
+  // The plan contracts this console's plan reader reads, oldest first. A
+  // schema plan of another contract is shown without its SQL and is not
+  // approved here.
+  repeated int32 plan_contract_versions = 10;
 }
 
 // Mode is how the console reaches Kubernetes and whom it acts for.

@@ -442,8 +442,9 @@ test("on call, a failed run shows its evidence and the next supported step", asy
   // The excerpt is the failed run's: the Apply Job the status names as the
   // last run, and the container that ran the migrations, not the history
   // read the operator started since or an init container. The runner logs
-  // only how Ptah exited. The status names the migration that failed; the
-  // database's error code waits on stokaro/ptah#4747.
+  // only how Ptah exited. The status names the migration that failed, the
+  // statement in it and the database's error code: the old ledger table was
+  // never created, so PostgreSQL answers 42P01.
   await expect(
     page.getByRole("region", {
       name: /^Log excerpt · ptah-m-apply-journal-\S+ \/ ptah · plain text$/,
@@ -454,7 +455,7 @@ test("on call, a failed run shows its evidence and the next supported step", asy
   await expect(
     page
       .getByText(
-        "Migration 2 (Backfill Entries) failed and committed nothing; 1 migrations before it are recorded applied",
+        "Migration 2 (Backfill Entries) failed at statement 1 of 1 with SQLSTATE 42P01 and committed nothing; 1 migrations before it are recorded applied",
         { exact: false }
       )
       .first()
@@ -466,7 +467,7 @@ test("on call, a failed run shows its evidence and the next supported step", asy
   )
   await log.scrollIntoViewIfNeeded()
   await lab.caption(
-    "The status names the migration that failed. The log says how Ptah exited; the database's error code is not published yet.",
+    "The status names the migration that failed, the statement and the database's error code. The log says how Ptah exited.",
     5500
   )
 
