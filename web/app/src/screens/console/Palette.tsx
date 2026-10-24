@@ -65,6 +65,19 @@ export function Palette({ open, onOpenChange }: PaletteProps) {
       go: () => void navigate({ to: "/console/activity" }),
     },
     {
+      value: "page:new-schema",
+      label: "New schema",
+      hint: "full console",
+      go: () => void navigate({ to: "/console/new", search: { kind: "schema", template: "oci" } }),
+    },
+    {
+      value: "page:new-migration",
+      label: "New migration",
+      hint: "full console",
+      go: () =>
+        void navigate({ to: "/console/new", search: { kind: "migration", template: "oci" } }),
+    },
+    {
       value: "page:architecture",
       label: "Architecture & safety",
       hint: "full console",

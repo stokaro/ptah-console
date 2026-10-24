@@ -12,7 +12,11 @@ import { ClusterProvider, readClusterSearch, type ClusterSearch } from "./api/cl
 import { Home, Launch, Login, providerRefusals, type ProviderRefusal } from "./screens/Auth"
 import { Loading } from "./screens/common"
 import { RouteError } from "./screens/RouteError"
-import { readActivitySearch, readResourcesSearch } from "./screens/console/search"
+import {
+  readActivitySearch,
+  readNewResourceSearch,
+  readResourcesSearch,
+} from "./screens/console/search"
 import { FocusLayout, Root } from "./screens/Shell"
 
 // Each screen is its own chunk: the first page loads the shell and the one
@@ -54,6 +58,7 @@ const Architecture = lazyRouteComponent(
   "Architecture"
 )
 const Activity = lazyRouteComponent(() => import("./screens/console/Activity"), "Activity")
+const NewResource = lazyRouteComponent(() => import("./screens/console/NewResource"), "NewResource")
 const ConsolePlanReview = lazyRouteComponent(
   () => import("./screens/console/PlanReview"),
   "ConsolePlanReview"
@@ -342,6 +347,25 @@ const consoleArchitecture = createRoute({
   component: Architecture,
 })
 
+const consoleNew = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "new",
+  validateSearch: readNewResourceSearch,
+  component: NewResourceRoute,
+})
+
+function NewResourceRoute() {
+  const search = consoleNew.useSearch()
+  const navigate = consoleNew.useNavigate()
+  return (
+    <NewResource
+      kind={search.kind}
+      template={search.template}
+      onChoose={(next) => void navigate({ search: next, replace: true })}
+    />
+  )
+}
+
 const consoleActivity = createRoute({
   getParentRoute: () => consoleRoute,
   path: "activity",
@@ -388,6 +412,7 @@ export const routeTree = rootRoute.addChildren([
     consolePreflight,
     consoleArchitecture,
     consoleActivity,
+    consoleNew,
   ]),
 ])
 

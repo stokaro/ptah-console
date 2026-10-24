@@ -105,6 +105,8 @@ message Capabilities {
   Answer read_pods = 11;
   Answer read_logs = 12;
   Answer read_events = 13;
+  Answer create_schemas = 14;
+  Answer create_migrations = 15;
 }
 
 message NamespaceScope {

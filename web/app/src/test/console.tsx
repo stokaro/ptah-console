@@ -8,6 +8,7 @@ import { render } from "@testing-library/react"
 import { App } from "../App"
 import { AppProviders } from "../AppProviders"
 import {
+  DecisionOutcome,
   DecisionResultSchema,
   DecisionService,
   type AcknowledgeMigrationRunRequest,
@@ -25,6 +26,11 @@ import {
   type ListEventsResponseSchema,
 } from "../gen/ptah/console/v1/diagnostics_pb"
 import { connectionHeader } from "../api/cluster"
+import {
+  AuthoringService,
+  type CreateResultSchema,
+  type ResourceDraft,
+} from "../gen/ptah/console/v1/authoring_pb"
 import {
   ConnectionService,
   type ConnectionSchema,
@@ -72,6 +78,8 @@ const allowed: MessageInitShape<typeof CapabilitiesSchema> = {
   readPods: Answer.ALLOWED,
   readLogs: Answer.ALLOWED,
   readEvents: Answer.ALLOWED,
+  createSchemas: Answer.ALLOWED,
+  createMigrations: Answer.ALLOWED,
 }
 
 /** A schema whose current plan waits for an approval. */
@@ -247,6 +255,14 @@ export interface Fixture {
     | ((request: GetDiagnosticsRequest) => MessageInitShape<typeof GetDiagnosticsResponseSchema>)
   /** The events about the operator's objects, or the error listing them gives. */
   events?: MessageInitShape<typeof ListEventsResponseSchema> | ConnectError
+  /**
+   * How the API server answers a new schema or migration; a dry run is
+   * accepted and a create is admitted by default, each with the draft as YAML.
+   */
+  authoring?: (
+    kind: "schema" | "migration",
+    request: { draft?: ResourceDraft; dryRun: boolean }
+  ) => MessageInitShape<typeof CreateResultSchema>
   /** What discovery says; served in full by default. */
   operatorApi?: MessageInitShape<typeof OperatorApiSchema>
   /** Namespaces whose lists stopped short. */
@@ -530,6 +546,20 @@ export function consoleTransport(fixture: Fixture) {
         }
         return fixture.events ?? {}
       },
+    })
+    const authored = (
+      kind: "schema" | "migration",
+      request: { draft?: ResourceDraft; dryRun: boolean }
+    ) =>
+      fixture.authoring?.(kind, request) ?? {
+        outcome: DecisionOutcome.ADMITTED,
+        dryRun: request.dryRun,
+        yaml: `kind: ${kind === "schema" ? "PtahSchema" : "PtahMigration"}\nmetadata:\n  name: ${request.draft?.name}\n`,
+        ref: { namespace: request.draft?.namespace, name: request.draft?.name },
+      }
+    service(AuthoringService, {
+      createSchema: (request) => ({ result: authored("schema", request) }),
+      createMigration: (request) => ({ result: authored("migration", request) }),
     })
     service(WatchService, {
       subscribe: (_request, context) => (fixture.watch ?? quietWatch)(context.signal),

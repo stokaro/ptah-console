@@ -68,6 +68,7 @@ type Dispatcher struct {
 	decisions   consolev1connect.DecisionServiceClient
 	watch       consolev1connect.WatchServiceClient
 	diagnostics consolev1connect.DiagnosticsServiceClient
+	authoring   consolev1connect.AuthoringServiceClient
 }
 
 // NewDispatcher returns a dispatcher for the factory's connection. Decisions
@@ -87,6 +88,7 @@ func NewDispatcher(factory *Factory, auditLog *audit.Logger, clock func() time.T
 	consolev1connect.RegisterDecisionServiceHandler(server, api.NewDecisionService(factory, scope, decision.NewLedger(), auditLog))
 	consolev1connect.RegisterWatchServiceHandler(server, api.NewWatchService(factory, scope, api.WatchOptions{StreamsPerSession: MaxPerAccount}))
 	consolev1connect.RegisterDiagnosticsServiceHandler(server, api.NewDiagnosticsService(factory, scope, nil))
+	consolev1connect.RegisterAuthoringServiceHandler(server, api.NewAuthoringService(factory, scope, auditLog))
 	client := connect.NewClient(connectinprocess.New(server))
 	return &Dispatcher{
 		factory: factory, ceiling: ceiling, now: clock, store: store, cookies: cookies,
@@ -97,6 +99,7 @@ func NewDispatcher(factory *Factory, auditLog *audit.Logger, clock func() time.T
 		decisions:   consolev1connect.NewDecisionServiceClient(client),
 		watch:       consolev1connect.NewWatchServiceClient(client),
 		diagnostics: consolev1connect.NewDiagnosticsServiceClient(client),
+		authoring:   consolev1connect.NewAuthoringServiceClient(client),
 	}
 }
 
@@ -245,6 +248,10 @@ func namespacesOf(request *agentv1.Request) ([]string, bool) {
 		return []string{action.GetDiagnostics.GetNamespace()}, true
 	case *agentv1.Request_ListEvents:
 		return action.ListEvents.GetNamespaces(), true
+	case *agentv1.Request_CreateSchema:
+		return []string{action.CreateSchema.GetDraft().GetNamespace()}, true
+	case *agentv1.Request_CreateMigration:
+		return []string{action.CreateMigration.GetDraft().GetNamespace()}, true
 	case *agentv1.Request_Watch:
 		return action.Watch.GetNamespaces(), true
 	default:
@@ -302,6 +309,12 @@ func (d *Dispatcher) call(ctx context.Context, account string, request *agentv1.
 	case *agentv1.Request_ListEvents:
 		response, err := d.diagnostics.ListEvents(ctx, action.ListEvents)
 		return &agentv1.Result{Outcome: &agentv1.Result_ListEvents{ListEvents: response}}, err
+	case *agentv1.Request_CreateSchema:
+		response, err := d.authoring.CreateSchema(ctx, action.CreateSchema)
+		return &agentv1.Result{Outcome: &agentv1.Result_CreateSchema{CreateSchema: response}}, err
+	case *agentv1.Request_CreateMigration:
+		response, err := d.authoring.CreateMigration(ctx, action.CreateMigration)
+		return &agentv1.Result{Outcome: &agentv1.Result_CreateMigration{CreateMigration: response}}, err
 	default:
 		return nil, connect.NewError(connect.CodeUnimplemented, "the agent serves no such request")
 	}
