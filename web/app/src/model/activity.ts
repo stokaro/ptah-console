@@ -317,3 +317,77 @@ export function filterActivity(entries: ActivityEntry[], filter: ActivityFilter,
 export function deciders(entries: ActivityEntry[]) {
   return [...new Set(entries.flatMap((entry) => (entry.who ? [entry.who] : [])))].sort()
 }
+
+/** One day of plans and executions, for the chart. */
+export interface DayCount {
+  /** Midnight, UTC, that starts the day. */
+  day: Date
+  plans: number
+  succeeded: number
+  failed: number
+  unknown: number
+}
+
+const dayMs = 86_400_000
+
+/**
+ * Plans published and Applies and runs that ended, per UTC day, over at most
+ * the last days days and never before the journals are complete: a day the
+ * journals do not cover in full is left out rather than drawn short.
+ */
+export function perDay(entries: ActivityEntry[], complete: Date | undefined, now: Date, days = 7) {
+  if (!complete) {
+    return []
+  }
+  const today = Math.floor(now.getTime() / dayMs) * dayMs
+  const firstCovered = Math.ceil(complete.getTime() / dayMs) * dayMs
+  // Today counts from midnight, or from when the journals became complete if
+  // that was today; the page says which.
+  const first = Math.min(today, Math.max(today - (days - 1) * dayMs, firstCovered))
+  const counts: DayCount[] = []
+  for (let day = first; day <= today; day += dayMs) {
+    counts.push({ day: new Date(day), plans: 0, succeeded: 0, failed: 0, unknown: 0 })
+  }
+  for (const entry of entries) {
+    const index = Math.floor((entry.at.getTime() - first) / dayMs)
+    const bucket = counts[index]
+    if (!bucket || entry.at.getTime() < first) {
+      continue
+    }
+    if (entry.type === "plan") {
+      bucket.plans++
+    } else if (entry.type === "apply") {
+      if (entry.tone === "ok") {
+        bucket.succeeded++
+      } else if (entry.tone === "unk") {
+        bucket.unknown++
+      } else {
+        bucket.failed++
+      }
+    }
+  }
+  return counts
+}
+
+/** What moved in a period, for the overview's tiles. */
+export interface Movement {
+  /** The start of the period counted: the last 24 hours, or since the journals are complete. */
+  since: Date
+  failures: number
+  executions: number
+  verified: number
+}
+
+export function movement(entries: ActivityEntry[], complete: Date | undefined, now: Date) {
+  if (!complete) {
+    return undefined
+  }
+  const since = new Date(Math.max(now.getTime() - dayMs, complete.getTime()))
+  const recent = entries.filter((entry) => entry.at >= since)
+  return {
+    since,
+    failures: recent.filter((entry) => entry.type === "failure" || entry.tone === "bad").length,
+    executions: recent.filter((entry) => entry.type === "apply").length,
+    verified: recent.filter((entry) => entry.type === "verification" && entry.tone === "ok").length,
+  } satisfies Movement
+}

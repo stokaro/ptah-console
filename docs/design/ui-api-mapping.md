@@ -117,17 +117,28 @@ each part.
 
 | Shows | Reads | Verbs |
 | --- | --- | --- |
-| How many resources are in each state, what needs a person, namespace health, recent condition changes | `ptahschemas`, `ptahmigrations` | list, watch |
+| How many resources are in each state, what needs a person, namespace health | `ptahschemas`, `ptahmigrations` | list, watch |
+| What moved, plans and executions per day, recent activity | the same resources' `status.journal`, and the decisions | list, watch |
 
-The overview reads nothing the resource list does not. "Needs attention" takes
-each resource's leading attention, the one the server lists first: an unknown
-outcome before a failure or a block, those before a plan waiting for approval,
-then drift and stale status, and within a kind the longest wait first. A
-suspended resource is counted as suspended, not as needing attention. "Recent
-activity" is the newest `lastTransitionTime` of the conditions each resource
-keeps; a condition keeps only its last change, so this is not a history, and
-the page says so. Kubernetes Events stay on each resource's page, where they
-are read for that resource alone.
+The overview reads nothing the resource list and the decision list do not.
+"Needs attention" takes each resource's leading attention, the one the server
+lists first: an unknown outcome before a failure or a block, those before a
+plan waiting for approval, then drift and stale status, and within a kind the
+longest wait first. A suspended resource is counted as suspended, not as
+needing attention.
+
+The tiles count the states the resources are in now. Under three of them the
+journals say what moved: failures, Applies and runs, and verifications that
+found the database in sync, over the last 24 hours or since the journals are
+complete, whichever is shorter, and the tile says which. "Plans and
+executions" counts plans published and Applies and runs that ended, per UTC
+day, over the days the journals cover in full and at most a week; today counts
+from midnight, or from when the journals became complete if that was today,
+and the page says so. "Recent activity" is the newest entries of the activity
+feed. Where no journal is kept, as under an operator older than 0.2.7, it is
+the newest `lastTransitionTime` of the conditions each resource keeps, which
+is not a history, and the page says that instead. Namespace health has a
+search and shows eight namespaces until asked for all.
 
 ## Full console: resources
 

@@ -8,7 +8,7 @@ import {
   SchemaSchema,
   type JournalEntrySchema,
 } from "../gen/ptah/console/v1/resources_pb"
-import { activity, coverage, deciders, filterActivity } from "./activity"
+import { activity, coverage, deciders, filterActivity, movement, perDay } from "./activity"
 import { fromMigration, fromSchema } from "./resource"
 
 const start = new Date("2026-10-24T07:00:00Z")
@@ -235,5 +235,101 @@ describe("Filtering the activity", () => {
 
   it("names everyone who decided, once each", () => {
     expect(deciders([...entries, ...entries])).toEqual(["alice"])
+  })
+})
+
+describe("Plans and executions per day", () => {
+  const now = new Date("2026-10-24T15:00:00Z")
+  const minutesBefore = (minutes: number) =>
+    timestampFromDate(new Date(now.getTime() - minutes * 60_000))
+  const entries = activity(
+    [
+      schema(
+        "storefront",
+        [
+          { type: "PlanPublished", at: minutesBefore(26 * 60) },
+          { type: "ApplyFinished", at: minutesBefore(25 * 60), outcome: "Succeeded" },
+          { type: "ApplyFinished", at: minutesBefore(30), outcome: "Unknown" },
+          { type: "PlanPublished", at: minutesBefore(20) },
+        ],
+        -10 * 24 * 60
+      ),
+      migration("billing", [{ type: "RunFinished", at: minutesBefore(10), outcome: "Failed" }]),
+    ],
+    []
+  )
+
+  it("counts each UTC day the journals cover, today included, at most a week", () => {
+    const days = perDay(entries, new Date("2026-10-01T00:00:00Z"), now)
+
+    expect(days).toHaveLength(7)
+    expect(days[0].day).toEqual(new Date("2026-10-18T00:00:00Z"))
+    expect(days.slice(-2)).toEqual([
+      { day: new Date("2026-10-23T00:00:00Z"), plans: 1, succeeded: 1, failed: 0, unknown: 0 },
+      { day: new Date("2026-10-24T00:00:00Z"), plans: 1, succeeded: 0, failed: 1, unknown: 1 },
+    ])
+  })
+
+  it("leaves out a day the journals do not cover in full", () => {
+    const days = perDay(entries, new Date("2026-10-22T09:00:00Z"), now)
+
+    expect(days.map((day) => day.day.toISOString().slice(0, 10))).toEqual([
+      "2026-10-23",
+      "2026-10-24",
+    ])
+  })
+
+  it("counts today from when the journals became complete, if that was today", () => {
+    const days = perDay(entries, new Date("2026-10-24T14:00:00Z"), now)
+
+    expect(days).toEqual([
+      { day: new Date("2026-10-24T00:00:00Z"), plans: 1, succeeded: 0, failed: 1, unknown: 1 },
+    ])
+  })
+
+  it("draws nothing without a journal", () => {
+    expect(perDay(entries, undefined, now)).toEqual([])
+  })
+})
+
+describe("What moved for the tiles", () => {
+  const now = new Date("2026-10-24T15:00:00Z")
+  const minutesBefore = (minutes: number) =>
+    timestampFromDate(new Date(now.getTime() - minutes * 60_000))
+  const entries = activity(
+    [
+      schema("storefront", [
+        { type: "Verified", at: minutesBefore(25 * 60), outcome: "InSync" },
+        { type: "Verified", at: minutesBefore(60), outcome: "InSync" },
+        { type: "ApplyFinished", at: minutesBefore(61), outcome: "Succeeded" },
+        { type: "OperationFailed", at: minutesBefore(90), operation: "Observe", reason: "Failed" },
+      ]),
+      migration("billing", [{ type: "RunFinished", at: minutesBefore(10), outcome: "Failed" }]),
+    ],
+    []
+  )
+
+  it("counts the last 24 hours", () => {
+    expect(movement(entries, new Date("2026-10-01T00:00:00Z"), now)).toEqual({
+      since: new Date("2026-10-23T15:00:00Z"),
+      failures: 2,
+      executions: 2,
+      verified: 1,
+    })
+  })
+
+  it("counts only since the journals are complete, when that is later", () => {
+    const moved = movement(entries, new Date("2026-10-24T14:30:00Z"), now)
+
+    expect(moved).toEqual({
+      since: new Date("2026-10-24T14:30:00Z"),
+      failures: 1,
+      executions: 1,
+      verified: 0,
+    })
+  })
+
+  it("counts nothing without a journal", () => {
+    expect(movement(entries, undefined, now)).toBeUndefined()
   })
 })
