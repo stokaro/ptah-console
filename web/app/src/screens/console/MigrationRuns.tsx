@@ -5,6 +5,7 @@ import { coverage, duration, type ActivityEntry } from "../../model/activity"
 import { ago } from "../../model/connection"
 import type { ResourceView } from "../../model/resource"
 import { filterRuns, migrationRuns, runCounts, timedRuns, type RunFilter } from "../../model/runs"
+import { GlanceTiles, type GlanceTile } from "./glance"
 
 const barColor: Partial<Record<Tone, string>> = {
   ok: "bg-green",
@@ -18,7 +19,7 @@ export function MigrationGlance({ resource }: { resource: ResourceView }) {
   const runs = migrationRuns(resource)
   const kept = coverage([resource])
   const failed = runCounts(runs).failed
-  const tiles: { label: string; value: string; sub: string; tone: Tone }[] = [
+  const tiles: GlanceTile[] = [
     {
       label: "Current version",
       value: history ? String(history.currentVersion) : "–",
@@ -50,28 +51,7 @@ export function MigrationGlance({ resource }: { resource: ResourceView }) {
       tone: failed > 0 ? "bad" : "off",
     },
   ]
-  return (
-    <ul
-      aria-label="At a glance"
-      className="m-0 grid list-none grid-cols-2 gap-2.5 p-0 lg:grid-cols-4"
-    >
-      {tiles.map((tile) => (
-        <li
-          key={tile.label}
-          className="flex flex-col gap-2 rounded-2xl border border-line bg-card p-3.5 shadow-card"
-        >
-          <span className="flex items-center gap-2 text-[13px] font-medium text-fg2">
-            <StatusGlyph tone={tile.tone} size={20} />
-            {tile.label}
-          </span>
-          <span className="font-mono text-[28px] leading-none font-semibold tracking-[-0.03em]">
-            {tile.value}
-          </span>
-          <span className="text-xs text-mute">{tile.sub}</span>
-        </li>
-      ))}
-    </ul>
-  )
+  return <GlanceTiles tiles={tiles} />
 }
 
 /**

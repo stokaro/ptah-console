@@ -167,6 +167,15 @@ where RBAC lets this identity patch it, and copies the page's link or the
 same menu. Reviewing the plan, execution and diagnosis, and the history stay
 beside it as links.
 
+The tiles above the page are the current plan and whether it waits, the
+drift the last read found, when a plan last reached the database, and when
+the next read is due. Where a GitOps controller manages the schema, the page
+says that a spec change made here is set back at its next sync. Recent
+observations are the journal's verifications and failed operations, newest
+first, and Verification says whether the Verify stage has proved what was
+applied, when a fresh read is due to settle an Apply, and the journal's last
+verification.
+
 The spec is shown read-only, as the API server stores it; a target in it
 names its Secret and key, never their content. "Copy as patch" copies a
 `kubectl patch --type merge` command that sets the spec to what the page

@@ -5,6 +5,8 @@ import { useResource } from "../../api/resources"
 import { say, steps } from "../../model/resource"
 import { Loading, ReadError, useNow } from "../common"
 import { Sentence } from "../Releases"
+import { GlanceTiles } from "./glance"
+import { GitOpsNote, RecentObservations, schemaTiles, VerificationCard } from "./schemaGlance"
 import {
   ArtifactCard,
   AttentionCard,
@@ -81,9 +83,11 @@ export function SchemaDetail({ namespace, name }: SchemaDetailProps) {
           ) : null
         }
       />
+      <GlanceTiles tiles={schemaTiles(resource, now)} />
       <Card label="Where it stands">
         <StepRail steps={steps(resource)} label={`Progress of ${resource.name}`} />
         <Sentence tone={sentence.tone} text={sentence.text} large />
+        <GitOpsNote resource={resource} />
       </Card>
       <AttentionCard resource={resource} />
       <div className="grid gap-4 lg:grid-cols-2">
@@ -151,6 +155,10 @@ export function SchemaDetail({ namespace, name }: SchemaDetailProps) {
       <div className="grid gap-4 lg:grid-cols-2">
         <ArtifactCard source={schema.source} now={now} />
         <TargetCard target={schema.target} now={now} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <RecentObservations resource={resource} now={now} />
+        <VerificationCard resource={resource} now={now} />
       </div>
       <Card title="Reconciliation">
         <Facts
