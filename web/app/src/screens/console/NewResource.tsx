@@ -14,9 +14,11 @@ import {
   emptyForm,
   engines,
   missing,
+  overSSH,
   sourceTemplates,
   toDraft,
   type AuthoringKind,
+  type ConfigMapFileForm,
   type DraftForm,
   type SourceTemplate,
 } from "../../model/draft"
@@ -325,19 +327,17 @@ function SourceFields({
             value={form.configMapName}
             onChange={(configMapName) => change({ configMapName })}
           />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Text
-              label="Key"
-              value={form.configMapKey}
-              onChange={(configMapKey) => change({ configMapKey })}
-            />
-            <Text
-              label="File name"
+          {form.kind === "schema" ? (
+            <FileFields
+              file={form.configMapFiles[0]}
               about="Its extension tells Ptah the format."
-              value={form.configMapPath}
-              onChange={(configMapPath) => change({ configMapPath })}
+              onChange={(file) =>
+                change({ configMapFiles: [file, ...form.configMapFiles.slice(1)] })
+              }
             />
-          </div>
+          ) : (
+            <MigrationFiles form={form} change={change} />
+          )}
         </>
       )
     case "git":
@@ -375,7 +375,11 @@ function SourceFields({
             />
             <Text
               label="Path"
-              about="The file in the repository."
+              about={
+                form.kind === "schema"
+                  ? "The schema file in the repository."
+                  : "The migration directory, where . is the root."
+              }
               value={form.gitPath}
               onChange={(gitPath) => change({ gitPath })}
             />
@@ -386,9 +390,110 @@ function SourceFields({
             value={form.gitSecret}
             onChange={(gitSecret) => change({ gitSecret })}
           />
+          {overSSH(form) ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Text
+                label="Known hosts ConfigMap"
+                about="The host keys the server may present. A fetch never trusts a key on first use."
+                value={form.gitKnownHostsName}
+                onChange={(gitKnownHostsName) => change({ gitKnownHostsName })}
+              />
+              <Text
+                label="Known hosts key"
+                value={form.gitKnownHostsKey}
+                onChange={(gitKnownHostsKey) => change({ gitKnownHostsKey })}
+              />
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Text
+                label="CA ConfigMap"
+                about="Optional: the only roots the server's certificate may chain to."
+                value={form.gitCaName}
+                onChange={(gitCaName) => change({ gitCaName })}
+              />
+              <Text
+                label="CA key"
+                value={form.gitCaKey}
+                onChange={(gitCaKey) => change({ gitCaKey })}
+              />
+            </div>
+          )}
         </>
       )
   }
+}
+
+/** One key of the ConfigMap and the file Ptah reads it as. */
+function FileFields({
+  file,
+  about,
+  onChange,
+}: {
+  file: ConfigMapFileForm
+  about?: string
+  onChange: (file: ConfigMapFileForm) => void
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Text label="Key" value={file.key} onChange={(key) => onChange({ ...file, key })} />
+      <Text
+        label="File name"
+        about={about}
+        value={file.path}
+        onChange={(path) => onChange({ ...file, path })}
+      />
+    </div>
+  )
+}
+
+/**
+ * The files of a migration directory, one ConfigMap key each. A key cannot
+ * hold "/", so the file name says where it lands; the names decide the order
+ * Ptah applies them in.
+ */
+function MigrationFiles({
+  form,
+  change,
+}: {
+  form: DraftForm
+  change: (patch: Partial<DraftForm>) => void
+}) {
+  const files = form.configMapFiles
+  const replace = (index: number, file: ConfigMapFileForm) =>
+    change({ configMapFiles: files.map((old, at) => (at === index ? file : old)) })
+  return (
+    <div className="flex flex-col gap-3">
+      {files.map((file, index) => (
+        <fieldset
+          key={index}
+          aria-label={`File ${index + 1}`}
+          className="m-0 flex flex-col gap-2 rounded-xl border border-line p-3"
+        >
+          <span className="flex items-center justify-between gap-2 text-xs font-medium text-mute">
+            File {index + 1}
+            <Button
+              aria-label={`Remove file ${index + 1}`}
+              disabled={files.length === 1}
+              onClick={() => change({ configMapFiles: files.filter((_, at) => at !== index) })}
+            >
+              Remove
+            </Button>
+          </span>
+          <FileFields
+            file={file}
+            about={index === 0 ? "Such as 0000000001_create_accounts.up.sql." : undefined}
+            onChange={(next) => replace(index, next)}
+          />
+        </fieldset>
+      ))}
+      <span>
+        <Button onClick={() => change({ configMapFiles: [...files, { key: "", path: "" }] })}>
+          Add a file
+        </Button>
+      </span>
+    </div>
+  )
 }
 
 function Choice({ label, children }: { label: string; children: ReactNode }) {

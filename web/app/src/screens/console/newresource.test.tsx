@@ -180,9 +180,154 @@ describe("A new schema or migration", () => {
             commit: "",
             path: "migrations",
             credentialsSecret: "",
+            caConfigMap: "",
+            caKey: "",
+            knownHostsConfigMap: "",
+            knownHostsKey: "",
           },
         },
       },
+    })
+  })
+
+  it("sends a schema's one ConfigMap file by key and path", async () => {
+    const user = userEvent.setup()
+    const lab = recording()
+    renderConsole("/console/new?template=configmap", {
+      schemas: [],
+      migrations: [],
+      authoring: lab.authoring,
+    })
+    const form = await screen.findByRole("form", { name: "New PtahSchema" })
+    await user.type(within(form).getByLabelText("Name"), "catalog")
+    await user.type(within(form).getByLabelText("Coordination key"), "e2e/catalog")
+    await user.type(within(form).getByLabelText("Connection Secret"), "catalog-database")
+    await user.type(within(form).getByLabelText("ConfigMap"), "catalog-schema")
+    await user.type(within(form).getByLabelText("Key"), "schema.sql")
+    await user.type(within(form).getByLabelText("File name"), "schema.sql")
+    expect(within(form).queryByRole("button", { name: "Add a file" })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Check with the API server" }))
+
+    await waitFor(() => expect(lab.sent).toHaveLength(1))
+    expect(lab.sent[0].draft?.source?.kind).toMatchObject({
+      case: "configMap",
+      value: { name: "catalog-schema", key: "schema.sql", path: "schema.sql", files: [] },
+    })
+  })
+
+  it("sends every file of a migration directory, and asks for each one's key and name", async () => {
+    const user = userEvent.setup()
+    const lab = recording()
+    const { container } = renderConsole("/console/new?kind=migration&template=configmap", {
+      schemas: [],
+      migrations: [],
+      authoring: lab.authoring,
+    })
+    const form = await screen.findByRole("form", { name: "New PtahMigration" })
+    await user.type(within(form).getByLabelText("Name"), "billing")
+    await user.type(within(form).getByLabelText("Coordination key"), "e2e/billing")
+    await user.type(within(form).getByLabelText("Connection Secret"), "billing-database")
+    await user.type(within(form).getByLabelText("ConfigMap"), "billing-migrations")
+    const first = within(form).getByRole("group", { name: "File 1" })
+    expect(within(first).getByRole("button", { name: "Remove file 1" })).toBeDisabled()
+    await user.type(within(first).getByLabelText("Key"), "0000000001-up")
+    await user.type(within(first).getByLabelText("File name"), "0000000001_create.up.sql")
+    await user.click(within(form).getByRole("button", { name: "Add a file" }))
+    expect(within(form).getByRole("status")).toHaveTextContent(
+      "Still empty: Key of file 2, File name of file 2."
+    )
+    const second = within(form).getByRole("group", { name: "File 2" })
+    await user.type(within(second).getByLabelText("Key"), "0000000002-up")
+    await user.type(within(second).getByLabelText("File name"), "0000000002_add.up.sql")
+    expect(await axe(container)).toHaveNoViolations()
+
+    await user.click(screen.getByRole("button", { name: "Check with the API server" }))
+
+    await waitFor(() => expect(lab.sent).toHaveLength(1))
+    expect(lab.sent[0].draft?.source?.kind).toMatchObject({
+      case: "configMap",
+      value: {
+        name: "billing-migrations",
+        key: "",
+        path: "",
+        files: [
+          { key: "0000000001-up", path: "0000000001_create.up.sql" },
+          { key: "0000000002-up", path: "0000000002_add.up.sql" },
+        ],
+      },
+    })
+
+    await user.click(within(form).getByRole("button", { name: "Remove file 1" }))
+
+    expect(within(form).queryByRole("group", { name: "File 2" })).not.toBeInTheDocument()
+    expect(
+      within(within(form).getByRole("group", { name: "File 1" })).getByLabelText("Key")
+    ).toHaveValue("0000000002-up")
+  })
+
+  it("asks an ssh repository for its known hosts, and sends them", async () => {
+    const user = userEvent.setup()
+    const lab = recording()
+    renderConsole("/console/new?kind=migration&template=git", {
+      schemas: [],
+      migrations: [],
+      authoring: lab.authoring,
+    })
+    const form = await screen.findByRole("form", { name: "New PtahMigration" })
+    await user.type(within(form).getByLabelText("Name"), "billing")
+    await user.type(within(form).getByLabelText("Coordination key"), "e2e/billing")
+    await user.type(within(form).getByLabelText("Connection Secret"), "billing-database")
+    await user.type(
+      within(form).getByLabelText("Repository"),
+      "ssh://git@git.example.com/shop/migrations.git"
+    )
+    await user.type(within(form).getByLabelText("Branch"), "main")
+    await user.type(within(form).getByLabelText("Path"), "migrations")
+    expect(within(form).queryByLabelText("CA ConfigMap")).not.toBeInTheDocument()
+    expect(within(form).getByRole("status")).toHaveTextContent(
+      "Still empty: Known hosts ConfigMap."
+    )
+    await user.type(within(form).getByLabelText("Known hosts ConfigMap"), "git-known-hosts")
+
+    await user.click(screen.getByRole("button", { name: "Check with the API server" }))
+
+    await waitFor(() => expect(lab.sent).toHaveLength(1))
+    expect(lab.sent[0].draft?.source?.kind).toMatchObject({
+      case: "git",
+      value: {
+        knownHostsConfigMap: "git-known-hosts",
+        knownHostsKey: "known_hosts",
+        caConfigMap: "",
+        caKey: "",
+      },
+    })
+  })
+
+  it("sends the CA of an https repository once one is named", async () => {
+    const user = userEvent.setup()
+    const lab = recording()
+    renderConsole("/console/new?template=git", {
+      schemas: [],
+      migrations: [],
+      authoring: lab.authoring,
+    })
+    const form = await screen.findByRole("form", { name: "New PtahSchema" })
+    await user.type(within(form).getByLabelText("Name"), "catalog")
+    await user.type(within(form).getByLabelText("Coordination key"), "e2e/catalog")
+    await user.type(within(form).getByLabelText("Connection Secret"), "catalog-database")
+    await user.type(within(form).getByLabelText("Repository"), "https://git.example.com/shop.git")
+    await user.type(within(form).getByLabelText("Branch"), "main")
+    await user.type(within(form).getByLabelText("Path"), "schema.sql")
+    expect(within(form).queryByLabelText("Known hosts ConfigMap")).not.toBeInTheDocument()
+    await user.type(within(form).getByLabelText("CA ConfigMap"), "git-ca")
+
+    await user.click(screen.getByRole("button", { name: "Check with the API server" }))
+
+    await waitFor(() => expect(lab.sent).toHaveLength(1))
+    expect(lab.sent[0].draft?.source?.kind).toMatchObject({
+      case: "git",
+      value: { caConfigMap: "git-ca", caKey: "ca.pem", knownHostsConfigMap: "", knownHostsKey: "" },
     })
   })
 

@@ -211,23 +211,58 @@ func sourceFrom(draft *consolev1.SourceDraft) (map[string]any, error) {
 		}
 		return source, nil
 	case *consolev1.SourceDraft_ConfigMap:
-		return map[string]any{"configMap": map[string]any{
-			"name":  kind.ConfigMap.GetName(),
-			"items": []any{map[string]any{"key": kind.ConfigMap.GetKey(), "path": kind.ConfigMap.GetPath()}},
-		}}, nil
-	case *consolev1.SourceDraft_Git:
-		ref := make(map[string]any)
-		set(ref, "branch", kind.Git.GetBranch())
-		set(ref, "tag", kind.Git.GetTag())
-		set(ref, "commit", kind.Git.GetCommit())
-		git := map[string]any{"url": kind.Git.GetUrl(), "ref": ref, "path": kind.Git.GetPath()}
-		if secret := kind.Git.GetCredentialsSecret(); secret != "" {
-			git["authFrom"] = map[string]any{"name": secret}
+		items, err := configMapItems(kind.ConfigMap)
+		if err != nil {
+			return nil, err
 		}
-		return map[string]any{"git": git}, nil
+		return map[string]any{"configMap": map[string]any{"name": kind.ConfigMap.GetName(), "items": items}}, nil
+	case *consolev1.SourceDraft_Git:
+		return map[string]any{"git": gitFrom(kind.Git)}, nil
 	default:
 		return nil, errDraft("a source is required: an OCI artifact, a ConfigMap or a Git repository")
 	}
+}
+
+// configMapItems is the one file a schema selects, or the files of a
+// migration directory. The CRD judges how many a kind may select.
+func configMapItems(draft *consolev1.ConfigMapSourceDraft) ([]any, error) {
+	files := draft.GetFiles()
+	if len(files) == 0 {
+		return []any{map[string]any{"key": draft.GetKey(), "path": draft.GetPath()}}, nil
+	}
+	if draft.GetKey() != "" || draft.GetPath() != "" {
+		return nil, errDraft("a ConfigMap source names one file by key and path, or several as files, not both")
+	}
+	items := make([]any, 0, len(files))
+	for _, file := range files {
+		items = append(items, map[string]any{"key": file.GetKey(), "path": file.GetPath()})
+	}
+	return items, nil
+}
+
+// gitFrom is a Git source: the commit, the path, and whom the fetch trusts.
+// The CRD refuses an ssh:// repository without known hosts and a trust that
+// names half a ConfigMap key.
+func gitFrom(draft *consolev1.GitSourceDraft) map[string]any {
+	ref := make(map[string]any)
+	set(ref, "branch", draft.GetBranch())
+	set(ref, "tag", draft.GetTag())
+	set(ref, "commit", draft.GetCommit())
+	git := map[string]any{"url": draft.GetUrl(), "ref": ref, "path": draft.GetPath()}
+	if secret := draft.GetCredentialsSecret(); secret != "" {
+		git["authFrom"] = map[string]any{"name": secret}
+	}
+	transport := make(map[string]any)
+	if name, key := draft.GetCaConfigMap(), draft.GetCaKey(); name != "" || key != "" {
+		transport["caFrom"] = map[string]any{"name": name, "key": key}
+	}
+	if name, key := draft.GetKnownHostsConfigMap(), draft.GetKnownHostsKey(); name != "" || key != "" {
+		transport["knownHostsFrom"] = map[string]any{"name": name, "key": key}
+	}
+	if len(transport) > 0 {
+		git["transport"] = transport
+	}
+	return git
 }
 
 // set puts value under key when it is not empty, as a manifest that leaves a

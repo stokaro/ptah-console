@@ -335,6 +335,15 @@ words, with the object as it would be stored. Only the draft that check
 accepted can be created, as the session's identity, under the console's field
 manager, and the create is audited. A namespace RBAC does not let the identity
 create in is not offered, and a read-only console sends nothing.
+
+The sources follow the operator's API. A ConfigMap source is one file for a
+schema and the files of a migration directory for a migration, each a key and
+the file name Ptah reads it as; the CRD refuses a schema that selects more
+than one. A Git source names whom the fetch trusts: the known hosts an
+`ssh://` server may present, which the CRD requires, or the CA an `https://`
+server's certificate must chain to, when it is not one of the system roots.
+The console reads neither ConfigMap; the operator's Jobs do.
+
 ## Read again now
 
 | Shows | Reads | Verbs |
