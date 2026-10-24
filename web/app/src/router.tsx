@@ -49,6 +49,10 @@ const ExecutionHistory = lazyRouteComponent(
   "ExecutionHistory"
 )
 const Preflight = lazyRouteComponent(() => import("./screens/console/Preflight"), "Preflight")
+const Architecture = lazyRouteComponent(
+  () => import("./screens/console/Architecture"),
+  "Architecture"
+)
 const SchemaDetail = lazyRouteComponent(
   () => import("./screens/console/SchemaDetail"),
   "SchemaDetail"
@@ -227,6 +231,12 @@ const consolePreflight = createRoute({
   component: Preflight,
 })
 
+const consoleArchitecture = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "architecture",
+  component: Architecture,
+})
+
 export const routeTree = rootRoute.addChildren([
   focus.addChildren([
     indexRoute,
@@ -252,6 +262,7 @@ export const routeTree = rootRoute.addChildren([
     consoleMigration,
     migrationHistory,
     consolePreflight,
+    consoleArchitecture,
   ]),
 ])
 

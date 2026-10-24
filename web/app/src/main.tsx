@@ -6,11 +6,13 @@ import { createApiTransport } from "./api/transport"
 import { App } from "./App"
 import { AppProviders } from "./AppProviders"
 import { exchangeLaunchToken } from "./launch"
+import { applyAccent, readAccent } from "./accent"
 import { applyTheme, readTheme } from "./theme"
 import "./index.css"
 
 // Before the first render, so the page never paints in the wrong theme.
 applyTheme(readTheme())
+applyAccent(readAccent())
 watchInteractions()
 
 const root = document.getElementById("root")

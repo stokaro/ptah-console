@@ -14,7 +14,7 @@ const tagStyles: Record<Tone, string> = {
   warn: "bg-amberbg text-amber",
   bad: "bg-redbg text-red",
   unk: "bg-violetbg text-violet",
-  run: "bg-pribg text-pri",
+  run: "bg-runbg text-run",
   off: "bg-greybg text-mute",
 }
 

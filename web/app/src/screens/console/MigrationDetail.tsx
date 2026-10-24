@@ -155,7 +155,7 @@ export function MigrationDetail({ namespace, name }: MigrationDetailProps) {
             <Link
               to="/approve/$namespace/$kind/$name"
               params={{ namespace, kind: "migration", name }}
-              className={`inline-flex min-h-10 items-center rounded-[11px] border px-3.5 text-[13.5px] font-semibold ${waiting ? "border-pri bg-pri text-white" : "border-line bg-card text-fg"}`}
+              className={`inline-flex min-h-10 items-center rounded-[11px] border px-3.5 text-[13.5px] font-semibold ${waiting ? "border-pri bg-pri text-onpri" : "border-line bg-card text-fg"}`}
             >
               Review plan
             </Link>

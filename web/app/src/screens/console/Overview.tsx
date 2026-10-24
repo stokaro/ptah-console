@@ -27,7 +27,7 @@ const stateTones: Record<ResourceState, Tone> = {
 
 const barColors: Record<ResourceState, string> = {
   attention: "bg-amber",
-  progress: "bg-pri",
+  progress: "bg-run",
   insync: "bg-green",
   suspended: "bg-mute",
   none: "bg-line",
@@ -343,7 +343,7 @@ function NamespaceSection({
                 {row.readable ? (
                   <>
                     <Count value={row.counts.attention} tone="text-amber" />
-                    <Count value={row.counts.progress} tone="text-pri" />
+                    <Count value={row.counts.progress} tone="text-run" />
                     <Count value={row.counts.insync} tone="text-green" />
                     <Count value={row.counts.suspended} tone="text-mute" />
                     <td className="py-2 pl-1.5 text-right font-mono">{row.total}</td>

@@ -140,15 +140,22 @@ function Header() {
   )
 }
 
+export interface SessionChipsProps {
+  /** Shows who the console acts as on a narrow screen only, for a layout that names it elsewhere when it is wide. */
+  identityOnNarrowOnly?: boolean
+}
+
 /** Who the console acts as, and what limits that: the header's left side. */
-export function SessionChips() {
+export function SessionChips({ identityOnNarrowOnly = false }: SessionChipsProps) {
   const session = useSession()
   // A failed refresh keeps the last session's data; it names nobody now.
   const identity = session.isSuccess ? session.data : undefined
   return (
     <>
       {identity ? (
-        <span className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-card px-2.5 text-xs">
+        <span
+          className={`inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-card px-2.5 text-xs ${identityOnNarrowOnly ? "md:hidden" : ""}`}
+        >
           {identity.displayName ? <span>{identity.displayName}</span> : null}
           <span className="text-mute">as</span>
           <b className="font-mono font-semibold">{identity.kubernetesUsername}</b>

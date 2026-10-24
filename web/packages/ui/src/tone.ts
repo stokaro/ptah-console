@@ -20,7 +20,7 @@ const styles: Record<Tone, ToneStyle> = {
   warn: { text: "text-amber", bg: "bg-amberbg", glyph: "!", label: "needs attention" },
   bad: { text: "text-red", bg: "bg-redbg", glyph: "×", label: "failed" },
   unk: { text: "text-violet", bg: "bg-violetbg", glyph: "?", label: "unknown" },
-  run: { text: "text-pri", bg: "bg-pribg", glyph: "●", label: "in progress" },
+  run: { text: "text-run", bg: "bg-runbg", glyph: "●", label: "in progress" },
   off: { text: "text-mute", bg: "bg-greybg", glyph: "–", label: "not applicable" },
 }
 
