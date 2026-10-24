@@ -87,7 +87,7 @@ test("an author creates a schema from a ConfigMap, checked by the API server fir
   )
 })
 
-test("an author creates a migration from a ConfigMap of one file", async ({ page, lab }) => {
+test("an author creates a migration from the files of a ConfigMap", async ({ page, lab }) => {
   await lab.signIn("author")
   await fullConsole(page)
   await page.keyboard.press("ControlOrMeta+k")
@@ -102,10 +102,16 @@ test("an author creates a migration from a ConfigMap of one file", async ({ page
   await form.getByLabel("Coordination key", { exact: true }).fill("e2e/ledger")
   await form.getByLabel("Connection Secret", { exact: true }).fill("e2e-database-ledger")
   await form.getByLabel("ConfigMap", { exact: true }).fill("ledger-migrations")
-  await form.getByLabel("Key", { exact: true }).fill("0000000001-up")
-  await form
+  const up = form.getByRole("group", { name: "File 1" })
+  await up.getByLabel("Key", { exact: true }).fill("0000000001-up")
+  await up.getByLabel("File name", { exact: true }).fill("0000000001_create_ledger_entries.up.sql")
+  await form.getByRole("button", { name: "Add a file" }).click()
+  const down = form.getByRole("group", { name: "File 2" })
+  await down.getByLabel("Key", { exact: true }).fill("0000000001-down")
+  await down
     .getByLabel("File name", { exact: true })
-    .fill("0000000001_create_ledger_entries.up.sql")
+    .fill("0000000001_create_ledger_entries.down.sql")
+  await lab.audit("a new migration from the files of a ConfigMap")
   await page.getByRole("button", { name: "Check with the API server" }).click()
   await expect(page.getByText("The API server accepts this PtahMigration")).toBeVisible({
     timeout: 30_000,
@@ -121,7 +127,7 @@ test("an author creates a migration from a ConfigMap of one file", async ({ page
   )
   await lab.audit("a migration the console created, waiting for approval")
   await lab.caption(
-    "The same form makes a PtahMigration. The ConfigMap key becomes the file Ptah reads, and the operator planned the one migration in it.",
+    "The same form makes a PtahMigration from several files of a ConfigMap, each key the file Ptah reads it as. The operator planned the migration in them.",
     5000
   )
 })
