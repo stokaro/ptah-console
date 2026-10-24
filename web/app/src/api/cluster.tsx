@@ -94,6 +94,14 @@ export function useConsoleTransport() {
 }
 
 /**
+ * How often the registry is read again while a page shows it. An agent
+ * connects, drops and comes back on its own, and nothing else tells the page:
+ * a page read in the moment between an activation and the agent's redial
+ * would otherwise go on saying the agent never came.
+ */
+export const registryRefreshMs = 10_000
+
+/**
  * The connections the person may see. Only a hosted console with the
  * registry has them; elsewhere the list is empty and the console shows the
  * one cluster it reaches.
@@ -103,6 +111,7 @@ export function useConnections() {
   const transport = useConsoleTransport()
   const query = useQuery(ConnectionService.method.listConnections, hosted ? {} : skipToken, {
     transport,
+    refetchInterval: registryRefreshMs,
   })
   const absent =
     query.error !== null &&

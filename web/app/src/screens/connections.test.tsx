@@ -1,8 +1,9 @@
 import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { axe } from "jest-axe"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
+import { registryRefreshMs } from "../api/cluster"
 import { ChannelState, ConnectionProfile } from "../gen/ptah/console/v1/connections_pb"
 import { Access } from "../gen/ptah/console/v1/resources_pb"
 import { minutesAgo, renderConsole, waitingSchema, type RegistryFixture } from "../test/console"
@@ -143,6 +144,36 @@ describe("The Admin role", () => {
     expect(screen.getByText("The operator's API is served")).toBeInTheDocument()
     expect(screen.getByText(/Ask the namespace's owner to bind a Ptah role/)).toBeInTheDocument()
     expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("follows an agent that connects after the page was read", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const fixture = registry((fixture) => {
+        fixture.connections.find((c) => c.connectionUid === lab)!.channel =
+          ChannelState.NEVER_CONNECTED
+      })
+      renderConsole("/connections/edge-lab", hosted(fixture))
+      expect(
+        await screen.findByRole("heading", { level: 1, name: /Awaiting the agent/ })
+      ).toBeVisible()
+      // Every reader of the registry is mounted, the lazy cluster switcher
+      // included, so a read from here on is the page's own refresh.
+      expect(await screen.findByRole("button", { name: /^Cluster: / })).toBeVisible()
+      await vi.advanceTimersByTimeAsync(0)
+
+      // The agent dials in after the page read the registry; nothing else
+      // tells the page, so it has to read the registry again on its own.
+      fixture.connections.find((c) => c.connectionUid === lab)!.channel = ChannelState.CONNECTED
+      await vi.advanceTimersByTimeAsync(registryRefreshMs)
+
+      expect(await screen.findByText("No Ptah permissions for you here")).toBeInTheDocument()
+      expect(
+        screen.queryByRole("heading", { level: 1, name: /Awaiting the agent/ })
+      ).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("quarantines a connection with a reason, after asking", async () => {
