@@ -33,6 +33,12 @@ export const applyPolicies = [
 ] as const
 export type ApplyPolicy = (typeof applyPolicies)[number]["value"]
 
+/** One key of a ConfigMap and the file it becomes. */
+export interface ConfigMapFileForm {
+  key: string
+  path: string
+}
+
 /** The form as a person fills it in. */
 export interface DraftForm {
   kind: AuthoringKind
@@ -50,13 +56,19 @@ export interface DraftForm {
   policyName: string
   policyKey: string
   configMapName: string
-  configMapKey: string
-  configMapPath: string
+  /** A schema reads the first; a migration directory holds them all. */
+  configMapFiles: ConfigMapFileForm[]
   gitUrl: string
   gitRefKind: "branch" | "tag" | "commit"
   gitRef: string
   gitPath: string
   gitSecret: string
+  /** The roots an https:// server may chain to, for a private CA. */
+  gitCaName: string
+  gitCaKey: string
+  /** The host keys an ssh:// server may present. */
+  gitKnownHostsName: string
+  gitKnownHostsKey: string
   apply: ApplyPolicy
 }
 
@@ -81,13 +93,16 @@ export function emptyForm(
     policyName: "",
     policyKey: "policy.yaml",
     configMapName: "",
-    configMapKey: "",
-    configMapPath: "",
+    configMapFiles: [{ key: "", path: "" }],
     gitUrl: "",
     gitRefKind: "branch",
     gitRef: "",
     gitPath: "",
     gitSecret: "",
+    gitCaName: "",
+    gitCaKey: "ca.pem",
+    gitKnownHostsName: "",
+    gitKnownHostsKey: "known_hosts",
     apply: "OnApproval",
   }
 }
@@ -108,17 +123,21 @@ export function toDraft(form: DraftForm): MessageInitShape<typeof ResourceDraftS
             },
           },
         }
-      case "configmap":
+      case "configmap": {
+        const files = shownFiles(form).map((file) => ({
+          key: trim(file.key),
+          path: trim(file.path),
+        }))
         return {
           kind: {
             case: "configMap",
-            value: {
-              name: trim(form.configMapName),
-              key: trim(form.configMapKey),
-              path: trim(form.configMapPath),
-            },
+            value:
+              form.kind === "schema"
+                ? { name: trim(form.configMapName), key: files[0].key, path: files[0].path }
+                : { name: trim(form.configMapName), files },
           },
         }
+      }
       case "git":
         return {
           kind: {
@@ -130,6 +149,7 @@ export function toDraft(form: DraftForm): MessageInitShape<typeof ResourceDraftS
               commit: form.gitRefKind === "commit" ? trim(form.gitRef) : "",
               path: trim(form.gitPath),
               credentialsSecret: trim(form.gitSecret),
+              ...gitTrust(form),
             },
           },
         }
@@ -148,6 +168,33 @@ export function toDraft(form: DraftForm): MessageInitShape<typeof ResourceDraftS
     source: source(),
     applyPolicy: form.apply,
   }
+}
+
+/** The files the form shows: a schema selects exactly one. */
+export function shownFiles(form: DraftForm): ConfigMapFileForm[] {
+  return form.kind === "schema" ? form.configMapFiles.slice(0, 1) : form.configMapFiles
+}
+
+/** Whether the repository is reached over SSH, which needs known hosts. */
+export function overSSH(form: DraftForm) {
+  return form.gitUrl.trim().startsWith("ssh://")
+}
+
+/**
+ * Whom the fetch trusts: the known hosts of an ssh:// server, or the CA of
+ * an https:// one when the form names one. The key alone, which the form
+ * fills in, says nothing.
+ */
+function gitTrust(form: DraftForm) {
+  if (overSSH(form)) {
+    return {
+      knownHostsConfigMap: form.gitKnownHostsName.trim(),
+      knownHostsKey: form.gitKnownHostsKey.trim(),
+    }
+  }
+  return form.gitCaName.trim() === ""
+    ? {}
+    : { caConfigMap: form.gitCaName.trim(), caKey: form.gitCaKey.trim() }
 }
 
 /**
@@ -173,15 +220,25 @@ export function missing(form: DraftForm): string[] {
         ["Policy key", form.policyKey]
       )
       break
-    case "configmap":
-      required.push(
-        ["ConfigMap", form.configMapName],
-        ["Key", form.configMapKey],
-        ["File name", form.configMapPath]
-      )
+    case "configmap": {
+      required.push(["ConfigMap", form.configMapName])
+      const files = shownFiles(form)
+      files.forEach((file, index) => {
+        const of = form.kind === "schema" ? "" : ` of file ${index + 1}`
+        required.push([`Key${of}`, file.key], [`File name${of}`, file.path])
+      })
       break
+    }
     case "git":
       required.push(["Repository", form.gitUrl], ["Ref", form.gitRef], ["Path", form.gitPath])
+      if (overSSH(form)) {
+        required.push(
+          ["Known hosts ConfigMap", form.gitKnownHostsName],
+          ["Known hosts key", form.gitKnownHostsKey]
+        )
+      } else if (form.gitCaName.trim() !== "") {
+        required.push(["CA key", form.gitCaKey])
+      }
       break
   }
   return required.filter(([, value]) => value.trim() === "").map(([label]) => label)

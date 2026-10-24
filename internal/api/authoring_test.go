@@ -118,6 +118,25 @@ func TestAuthoringBuildsTheObjectFromTheFields(t *testing.T) {
 			URL: "https://git.example.com/shop/schema.git", Ref: operatorv1alpha1.GitRef{Branch: "main"}, Path: "schema.sql",
 			AuthFrom: &operatorv1alpha1.GitAuthSource{Name: "shop-git"},
 		}}},
+		{name: "a Git tag over SSH, with its known hosts", source: &consolev1.SourceDraft{Kind: &consolev1.SourceDraft_Git{Git: &consolev1.GitSourceDraft{
+			Url: "ssh://git@git.example.com/shop/schema.git", Tag: "v1.0.0", Path: "schema.sql", CredentialsSecret: "shop-git",
+			KnownHostsConfigMap: "git-known-hosts", KnownHostsKey: "known_hosts",
+		}}}, want: operatorv1alpha1.SourceSpec{Git: &operatorv1alpha1.GitSourceSpec{
+			URL: "ssh://git@git.example.com/shop/schema.git", Ref: operatorv1alpha1.GitRef{Tag: "v1.0.0"}, Path: "schema.sql",
+			AuthFrom: &operatorv1alpha1.GitAuthSource{Name: "shop-git"},
+			Transport: operatorv1alpha1.GitTransportSpec{KnownHostsFrom: &corev1.ConfigMapKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: "git-known-hosts"}, Key: "known_hosts",
+			}},
+		}}},
+		{name: "a Git commit behind a private CA", source: &consolev1.SourceDraft{Kind: &consolev1.SourceDraft_Git{Git: &consolev1.GitSourceDraft{
+			Url: "https://git.example.com/shop/schema.git", Commit: "0123456789abcdef0123456789abcdef01234567", Path: "schema.sql",
+			CaConfigMap: "git-ca", CaKey: "ca.pem",
+		}}}, want: operatorv1alpha1.SourceSpec{Git: &operatorv1alpha1.GitSourceSpec{
+			URL: "https://git.example.com/shop/schema.git", Ref: operatorv1alpha1.GitRef{Commit: "0123456789abcdef0123456789abcdef01234567"}, Path: "schema.sql",
+			Transport: operatorv1alpha1.GitTransportSpec{CAFrom: &corev1.ConfigMapKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: "git-ca"}, Key: "ca.pem",
+			}},
+		}}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -146,6 +165,38 @@ func TestAuthoringBuildsTheObjectFromTheFields(t *testing.T) {
 			})
 		})
 	}
+}
+
+// A migration directory in a ConfigMap is every file the draft lists, each
+// key as the file it becomes.
+func TestAMigrationTakesEveryFileOfItsConfigMap(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	service := authoringService(t, api.Scope{}, nil)
+	sent := draft(&consolev1.SourceDraft{Kind: &consolev1.SourceDraft_ConfigMap{ConfigMap: &consolev1.ConfigMapSourceDraft{
+		Name: "billing-migrations",
+		Files: []*consolev1.ConfigMapFile{
+			{Key: "0000000001-up", Path: "0000000001_create_accounts.up.sql"},
+			{Key: "0000000001-down", Path: "0000000001_create_accounts.down.sql"},
+			{Key: "0000000002-up", Path: "0000000002_add_invoices.up.sql"},
+		},
+	}}})
+	sent.Name = "billing"
+
+	answer, err := service.client.CreateMigration(service.ctx, &consolev1.CreateMigrationRequest{Draft: sent})
+
+	c.Assert(err, qt.IsNil)
+	c.Assert(answer.GetResult().GetOutcome(), qt.Equals, consolev1.DecisionOutcome_DECISION_OUTCOME_ADMITTED)
+	migration := &operatorv1alpha1.PtahMigration{}
+	c.Assert(service.stored.Get(t.Context(), client.ObjectKey{Namespace: namespace, Name: "billing"}, migration), qt.IsNil)
+	c.Assert(migration.Spec.Artifact.ConfigMap, qt.DeepEquals, &operatorv1alpha1.ConfigMapSourceSpec{
+		Name: "billing-migrations",
+		Items: []operatorv1alpha1.ConfigMapSourceItem{
+			{Key: "0000000001-up", Path: "0000000001_create_accounts.up.sql"},
+			{Key: "0000000001-down", Path: "0000000001_create_accounts.down.sql"},
+			{Key: "0000000002-up", Path: "0000000002_add_invoices.up.sql"},
+		},
+	})
 }
 
 // A check sends a dry run: the API server's answer comes back with the
@@ -242,6 +293,12 @@ func TestAuthoringRefusesADraftBeforeSendingIt(t *testing.T) {
 			code: connect.CodeInvalidArgument, says: `engine "Oracle" is not one the operator supports`},
 		{name: "no source", change: func(d *consolev1.ResourceDraft) { d.Source = nil },
 			code: connect.CodeInvalidArgument, says: "a source is required: an OCI artifact, a ConfigMap or a Git repository"},
+		{name: "one ConfigMap file by key and more as files", change: func(d *consolev1.ResourceDraft) {
+			d.Source = &consolev1.SourceDraft{Kind: &consolev1.SourceDraft_ConfigMap{ConfigMap: &consolev1.ConfigMapSourceDraft{
+				Name: "storefront-schema", Key: "schema.sql", Path: "schema.sql",
+				Files: []*consolev1.ConfigMapFile{{Key: "extra.sql", Path: "extra.sql"}},
+			}}}
+		}, code: connect.CodeInvalidArgument, says: "a ConfigMap source names one file by key and path, or several as files, not both"},
 		{name: "an apply policy that is none", change: func(d *consolev1.ResourceDraft) { d.ApplyPolicy = "Sometimes" },
 			code: connect.CodeInvalidArgument, says: `apply policy "Sometimes" is not Never, OnApproval or Always`},
 		{name: "a namespace outside the ceiling", scope: api.Scope{Ceiling: []string{"billing"}}, change: func(*consolev1.ResourceDraft) {},

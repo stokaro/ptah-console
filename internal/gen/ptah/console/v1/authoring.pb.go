@@ -534,13 +534,18 @@ func (x *OciSourceDraft) GetVerificationPolicyKey() string {
 	return ""
 }
 
-// ConfigMapSourceDraft is one file of a ConfigMap in the namespace.
+// ConfigMapSourceDraft is files of a ConfigMap in the namespace: one file by
+// key and path, a schema's, or several as files, a migration directory's.
+// Setting both is refused.
 type ConfigMapSourceDraft struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Key   string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
 	// The file name Ptah reads it as; its extension tells Ptah the format.
-	Path          string `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	Path string `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	// The files a migration directory holds. Their names, not their order
+	// here, decide the order Ptah applies them in.
+	Files         []*ConfigMapFile `protobuf:"bytes,4,rep,name=files,proto3" json:"files,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -596,6 +601,66 @@ func (x *ConfigMapSourceDraft) GetPath() string {
 	return ""
 }
 
+func (x *ConfigMapSourceDraft) GetFiles() []*ConfigMapFile {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
+// ConfigMapFile is one key of a ConfigMap and the file it becomes.
+type ConfigMapFile struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfigMapFile) Reset() {
+	*x = ConfigMapFile{}
+	mi := &file_ptah_console_v1_authoring_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfigMapFile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfigMapFile) ProtoMessage() {}
+
+func (x *ConfigMapFile) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_authoring_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfigMapFile.ProtoReflect.Descriptor instead.
+func (*ConfigMapFile) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_authoring_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ConfigMapFile) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *ConfigMapFile) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
 // GitSourceDraft is one file of a Git repository.
 type GitSourceDraft struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -607,13 +672,21 @@ type GitSourceDraft struct {
 	Path   string `protobuf:"bytes,5,opt,name=path,proto3" json:"path,omitempty"`
 	// The Secret with the credential, by name; empty for a public repository.
 	CredentialsSecret string `protobuf:"bytes,6,opt,name=credentials_secret,json=credentialsSecret,proto3" json:"credentials_secret,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// The ConfigMap key with the only roots an https:// server's certificate
+	// may chain to; empty for the system roots.
+	CaConfigMap string `protobuf:"bytes,7,opt,name=ca_config_map,json=caConfigMap,proto3" json:"ca_config_map,omitempty"`
+	CaKey       string `protobuf:"bytes,8,opt,name=ca_key,json=caKey,proto3" json:"ca_key,omitempty"`
+	// The ConfigMap key with the host keys an ssh:// server may present. The
+	// operator requires it for an ssh:// repository.
+	KnownHostsConfigMap string `protobuf:"bytes,9,opt,name=known_hosts_config_map,json=knownHostsConfigMap,proto3" json:"known_hosts_config_map,omitempty"`
+	KnownHostsKey       string `protobuf:"bytes,10,opt,name=known_hosts_key,json=knownHostsKey,proto3" json:"known_hosts_key,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *GitSourceDraft) Reset() {
 	*x = GitSourceDraft{}
-	mi := &file_ptah_console_v1_authoring_proto_msgTypes[9]
+	mi := &file_ptah_console_v1_authoring_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -625,7 +698,7 @@ func (x *GitSourceDraft) String() string {
 func (*GitSourceDraft) ProtoMessage() {}
 
 func (x *GitSourceDraft) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_authoring_proto_msgTypes[9]
+	mi := &file_ptah_console_v1_authoring_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -638,7 +711,7 @@ func (x *GitSourceDraft) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitSourceDraft.ProtoReflect.Descriptor instead.
 func (*GitSourceDraft) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_authoring_proto_rawDescGZIP(), []int{9}
+	return file_ptah_console_v1_authoring_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GitSourceDraft) GetUrl() string {
@@ -683,6 +756,34 @@ func (x *GitSourceDraft) GetCredentialsSecret() string {
 	return ""
 }
 
+func (x *GitSourceDraft) GetCaConfigMap() string {
+	if x != nil {
+		return x.CaConfigMap
+	}
+	return ""
+}
+
+func (x *GitSourceDraft) GetCaKey() string {
+	if x != nil {
+		return x.CaKey
+	}
+	return ""
+}
+
+func (x *GitSourceDraft) GetKnownHostsConfigMap() string {
+	if x != nil {
+		return x.KnownHostsConfigMap
+	}
+	return ""
+}
+
+func (x *GitSourceDraft) GetKnownHostsKey() string {
+	if x != nil {
+		return x.KnownHostsKey
+	}
+	return ""
+}
+
 // CreateResult is how the API server answered.
 type CreateResult struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -701,7 +802,7 @@ type CreateResult struct {
 
 func (x *CreateResult) Reset() {
 	*x = CreateResult{}
-	mi := &file_ptah_console_v1_authoring_proto_msgTypes[10]
+	mi := &file_ptah_console_v1_authoring_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -713,7 +814,7 @@ func (x *CreateResult) String() string {
 func (*CreateResult) ProtoMessage() {}
 
 func (x *CreateResult) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_authoring_proto_msgTypes[10]
+	mi := &file_ptah_console_v1_authoring_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -726,7 +827,7 @@ func (x *CreateResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateResult.ProtoReflect.Descriptor instead.
 func (*CreateResult) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_authoring_proto_rawDescGZIP(), []int{10}
+	return file_ptah_console_v1_authoring_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreateResult) GetOutcome() DecisionOutcome {
@@ -800,18 +901,27 @@ const file_ptah_console_v1_authoring_proto_rawDesc = "" +
 	"\x0eOciSourceDraft\x12\x10\n" +
 	"\x03ref\x18\x01 \x01(\tR\x03ref\x128\n" +
 	"\x18verification_policy_name\x18\x02 \x01(\tR\x16verificationPolicyName\x126\n" +
-	"\x17verification_policy_key\x18\x03 \x01(\tR\x15verificationPolicyKey\"P\n" +
+	"\x17verification_policy_key\x18\x03 \x01(\tR\x15verificationPolicyKey\"\x86\x01\n" +
 	"\x14ConfigMapSourceDraft\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x12\n" +
-	"\x04path\x18\x03 \x01(\tR\x04path\"\xa7\x01\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\x124\n" +
+	"\x05files\x18\x04 \x03(\v2\x1e.ptah.console.v1.ConfigMapFileR\x05files\"5\n" +
+	"\rConfigMapFile\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x12\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\"\xbf\x02\n" +
 	"\x0eGitSourceDraft\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x10\n" +
 	"\x03tag\x18\x03 \x01(\tR\x03tag\x12\x16\n" +
 	"\x06commit\x18\x04 \x01(\tR\x06commit\x12\x12\n" +
 	"\x04path\x18\x05 \x01(\tR\x04path\x12-\n" +
-	"\x12credentials_secret\x18\x06 \x01(\tR\x11credentialsSecret\"\xbf\x01\n" +
+	"\x12credentials_secret\x18\x06 \x01(\tR\x11credentialsSecret\x12\"\n" +
+	"\rca_config_map\x18\a \x01(\tR\vcaConfigMap\x12\x15\n" +
+	"\x06ca_key\x18\b \x01(\tR\x05caKey\x123\n" +
+	"\x16known_hosts_config_map\x18\t \x01(\tR\x13knownHostsConfigMap\x12&\n" +
+	"\x0fknown_hosts_key\x18\n" +
+	" \x01(\tR\rknownHostsKey\"\xbf\x01\n" +
 	"\fCreateResult\x12:\n" +
 	"\aoutcome\x18\x01 \x01(\x0e2 .ptah.console.v1.DecisionOutcomeR\aoutcome\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x17\n" +
@@ -834,7 +944,7 @@ func file_ptah_console_v1_authoring_proto_rawDescGZIP() []byte {
 	return file_ptah_console_v1_authoring_proto_rawDescData
 }
 
-var file_ptah_console_v1_authoring_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_ptah_console_v1_authoring_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_ptah_console_v1_authoring_proto_goTypes = []any{
 	(*CreateSchemaRequest)(nil),     // 0: ptah.console.v1.CreateSchemaRequest
 	(*CreateSchemaResponse)(nil),    // 1: ptah.console.v1.CreateSchemaResponse
@@ -845,32 +955,34 @@ var file_ptah_console_v1_authoring_proto_goTypes = []any{
 	(*SourceDraft)(nil),             // 6: ptah.console.v1.SourceDraft
 	(*OciSourceDraft)(nil),          // 7: ptah.console.v1.OciSourceDraft
 	(*ConfigMapSourceDraft)(nil),    // 8: ptah.console.v1.ConfigMapSourceDraft
-	(*GitSourceDraft)(nil),          // 9: ptah.console.v1.GitSourceDraft
-	(*CreateResult)(nil),            // 10: ptah.console.v1.CreateResult
-	(DecisionOutcome)(0),            // 11: ptah.console.v1.DecisionOutcome
-	(*ObjectRef)(nil),               // 12: ptah.console.v1.ObjectRef
+	(*ConfigMapFile)(nil),           // 9: ptah.console.v1.ConfigMapFile
+	(*GitSourceDraft)(nil),          // 10: ptah.console.v1.GitSourceDraft
+	(*CreateResult)(nil),            // 11: ptah.console.v1.CreateResult
+	(DecisionOutcome)(0),            // 12: ptah.console.v1.DecisionOutcome
+	(*ObjectRef)(nil),               // 13: ptah.console.v1.ObjectRef
 }
 var file_ptah_console_v1_authoring_proto_depIdxs = []int32{
 	4,  // 0: ptah.console.v1.CreateSchemaRequest.draft:type_name -> ptah.console.v1.ResourceDraft
-	10, // 1: ptah.console.v1.CreateSchemaResponse.result:type_name -> ptah.console.v1.CreateResult
+	11, // 1: ptah.console.v1.CreateSchemaResponse.result:type_name -> ptah.console.v1.CreateResult
 	4,  // 2: ptah.console.v1.CreateMigrationRequest.draft:type_name -> ptah.console.v1.ResourceDraft
-	10, // 3: ptah.console.v1.CreateMigrationResponse.result:type_name -> ptah.console.v1.CreateResult
+	11, // 3: ptah.console.v1.CreateMigrationResponse.result:type_name -> ptah.console.v1.CreateResult
 	5,  // 4: ptah.console.v1.ResourceDraft.target:type_name -> ptah.console.v1.TargetDraft
 	6,  // 5: ptah.console.v1.ResourceDraft.source:type_name -> ptah.console.v1.SourceDraft
 	7,  // 6: ptah.console.v1.SourceDraft.oci:type_name -> ptah.console.v1.OciSourceDraft
 	8,  // 7: ptah.console.v1.SourceDraft.config_map:type_name -> ptah.console.v1.ConfigMapSourceDraft
-	9,  // 8: ptah.console.v1.SourceDraft.git:type_name -> ptah.console.v1.GitSourceDraft
-	11, // 9: ptah.console.v1.CreateResult.outcome:type_name -> ptah.console.v1.DecisionOutcome
-	12, // 10: ptah.console.v1.CreateResult.ref:type_name -> ptah.console.v1.ObjectRef
-	0,  // 11: ptah.console.v1.AuthoringService.CreateSchema:input_type -> ptah.console.v1.CreateSchemaRequest
-	2,  // 12: ptah.console.v1.AuthoringService.CreateMigration:input_type -> ptah.console.v1.CreateMigrationRequest
-	1,  // 13: ptah.console.v1.AuthoringService.CreateSchema:output_type -> ptah.console.v1.CreateSchemaResponse
-	3,  // 14: ptah.console.v1.AuthoringService.CreateMigration:output_type -> ptah.console.v1.CreateMigrationResponse
-	13, // [13:15] is the sub-list for method output_type
-	11, // [11:13] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	10, // 8: ptah.console.v1.SourceDraft.git:type_name -> ptah.console.v1.GitSourceDraft
+	9,  // 9: ptah.console.v1.ConfigMapSourceDraft.files:type_name -> ptah.console.v1.ConfigMapFile
+	12, // 10: ptah.console.v1.CreateResult.outcome:type_name -> ptah.console.v1.DecisionOutcome
+	13, // 11: ptah.console.v1.CreateResult.ref:type_name -> ptah.console.v1.ObjectRef
+	0,  // 12: ptah.console.v1.AuthoringService.CreateSchema:input_type -> ptah.console.v1.CreateSchemaRequest
+	2,  // 13: ptah.console.v1.AuthoringService.CreateMigration:input_type -> ptah.console.v1.CreateMigrationRequest
+	1,  // 14: ptah.console.v1.AuthoringService.CreateSchema:output_type -> ptah.console.v1.CreateSchemaResponse
+	3,  // 15: ptah.console.v1.AuthoringService.CreateMigration:output_type -> ptah.console.v1.CreateMigrationResponse
+	14, // [14:16] is the sub-list for method output_type
+	12, // [12:14] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_ptah_console_v1_authoring_proto_init() }
@@ -891,7 +1003,7 @@ func file_ptah_console_v1_authoring_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ptah_console_v1_authoring_proto_rawDesc), len(file_ptah_console_v1_authoring_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

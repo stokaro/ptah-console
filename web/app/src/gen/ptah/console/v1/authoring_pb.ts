@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ptah/console/v1/authoring.proto.
  */
 export const file_ptah_console_v1_authoring: GenFile = /*@__PURE__*/
-  fileDesc("Ch9wdGFoL2NvbnNvbGUvdjEvYXV0aG9yaW5nLnByb3RvEg9wdGFoLmNvbnNvbGUudjEiVQoTQ3JlYXRlU2NoZW1hUmVxdWVzdBItCgVkcmFmdBgBIAEoCzIeLnB0YWguY29uc29sZS52MS5SZXNvdXJjZURyYWZ0Eg8KB2RyeV9ydW4YAiABKAgiRQoUQ3JlYXRlU2NoZW1hUmVzcG9uc2USLQoGcmVzdWx0GAEgASgLMh0ucHRhaC5jb25zb2xlLnYxLkNyZWF0ZVJlc3VsdCJYChZDcmVhdGVNaWdyYXRpb25SZXF1ZXN0Ei0KBWRyYWZ0GAEgASgLMh4ucHRhaC5jb25zb2xlLnYxLlJlc291cmNlRHJhZnQSDwoHZHJ5X3J1bhgCIAEoCCJIChdDcmVhdGVNaWdyYXRpb25SZXNwb25zZRItCgZyZXN1bHQYASABKAsyHS5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlUmVzdWx0IqIBCg1SZXNvdXJjZURyYWZ0EhEKCW5hbWVzcGFjZRgBIAEoCRIMCgRuYW1lGAIgASgJEiwKBnRhcmdldBgDIAEoCzIcLnB0YWguY29uc29sZS52MS5UYXJnZXREcmFmdBIsCgZzb3VyY2UYBCABKAsyHC5wdGFoLmNvbnNvbGUudjEuU291cmNlRHJhZnQSFAoMYXBwbHlfcG9saWN5GAUgASgJIncKC1RhcmdldERyYWZ0Eg4KBmVuZ2luZRgBIAEoCRIYChBjb29yZGluYXRpb25fa2V5GAIgASgJEg0KBXJlYWxtGAMgASgJEhcKD3VybF9zZWNyZXRfbmFtZRgEIAEoCRIWCg51cmxfc2VjcmV0X2tleRgFIAEoCSKyAQoLU291cmNlRHJhZnQSLgoDb2NpGAEgASgLMh8ucHRhaC5jb25zb2xlLnYxLk9jaVNvdXJjZURyYWZ0SAASOwoKY29uZmlnX21hcBgCIAEoCzIlLnB0YWguY29uc29sZS52MS5Db25maWdNYXBTb3VyY2VEcmFmdEgAEi4KA2dpdBgDIAEoCzIfLnB0YWguY29uc29sZS52MS5HaXRTb3VyY2VEcmFmdEgAQgYKBGtpbmQiYAoOT2NpU291cmNlRHJhZnQSCwoDcmVmGAEgASgJEiAKGHZlcmlmaWNhdGlvbl9wb2xpY3lfbmFtZRgCIAEoCRIfChd2ZXJpZmljYXRpb25fcG9saWN5X2tleRgDIAEoCSI/ChRDb25maWdNYXBTb3VyY2VEcmFmdBIMCgRuYW1lGAEgASgJEgsKA2tleRgCIAEoCRIMCgRwYXRoGAMgASgJInQKDkdpdFNvdXJjZURyYWZ0EgsKA3VybBgBIAEoCRIOCgZicmFuY2gYAiABKAkSCwoDdGFnGAMgASgJEg4KBmNvbW1pdBgEIAEoCRIMCgRwYXRoGAUgASgJEhoKEmNyZWRlbnRpYWxzX3NlY3JldBgGIAEoCSKaAQoMQ3JlYXRlUmVzdWx0EjEKB291dGNvbWUYASABKA4yIC5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25PdXRjb21lEg8KB21lc3NhZ2UYAiABKAkSDwoHZHJ5X3J1bhgDIAEoCBIMCgR5YW1sGAQgASgJEicKA3JlZhgFIAEoCzIaLnB0YWguY29uc29sZS52MS5PYmplY3RSZWYy1QEKEEF1dGhvcmluZ1NlcnZpY2USWwoMQ3JlYXRlU2NoZW1hEiQucHRhaC5jb25zb2xlLnYxLkNyZWF0ZVNjaGVtYVJlcXVlc3QaJS5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlU2NoZW1hUmVzcG9uc2USZAoPQ3JlYXRlTWlncmF0aW9uEicucHRhaC5jb25zb2xlLnYxLkNyZWF0ZU1pZ3JhdGlvblJlcXVlc3QaKC5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlTWlncmF0aW9uUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9zdG9rYXJvL3B0YWgtY29uc29sZS9pbnRlcm5hbC9nZW4vcHRhaC9jb25zb2xlL3YxO2NvbnNvbGV2MWIGcHJvdG8z", [file_ptah_console_v1_decisions, file_ptah_console_v1_resources]);
+  fileDesc("Ch9wdGFoL2NvbnNvbGUvdjEvYXV0aG9yaW5nLnByb3RvEg9wdGFoLmNvbnNvbGUudjEiVQoTQ3JlYXRlU2NoZW1hUmVxdWVzdBItCgVkcmFmdBgBIAEoCzIeLnB0YWguY29uc29sZS52MS5SZXNvdXJjZURyYWZ0Eg8KB2RyeV9ydW4YAiABKAgiRQoUQ3JlYXRlU2NoZW1hUmVzcG9uc2USLQoGcmVzdWx0GAEgASgLMh0ucHRhaC5jb25zb2xlLnYxLkNyZWF0ZVJlc3VsdCJYChZDcmVhdGVNaWdyYXRpb25SZXF1ZXN0Ei0KBWRyYWZ0GAEgASgLMh4ucHRhaC5jb25zb2xlLnYxLlJlc291cmNlRHJhZnQSDwoHZHJ5X3J1bhgCIAEoCCJIChdDcmVhdGVNaWdyYXRpb25SZXNwb25zZRItCgZyZXN1bHQYASABKAsyHS5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlUmVzdWx0IqIBCg1SZXNvdXJjZURyYWZ0EhEKCW5hbWVzcGFjZRgBIAEoCRIMCgRuYW1lGAIgASgJEiwKBnRhcmdldBgDIAEoCzIcLnB0YWguY29uc29sZS52MS5UYXJnZXREcmFmdBIsCgZzb3VyY2UYBCABKAsyHC5wdGFoLmNvbnNvbGUudjEuU291cmNlRHJhZnQSFAoMYXBwbHlfcG9saWN5GAUgASgJIncKC1RhcmdldERyYWZ0Eg4KBmVuZ2luZRgBIAEoCRIYChBjb29yZGluYXRpb25fa2V5GAIgASgJEg0KBXJlYWxtGAMgASgJEhcKD3VybF9zZWNyZXRfbmFtZRgEIAEoCRIWCg51cmxfc2VjcmV0X2tleRgFIAEoCSKyAQoLU291cmNlRHJhZnQSLgoDb2NpGAEgASgLMh8ucHRhaC5jb25zb2xlLnYxLk9jaVNvdXJjZURyYWZ0SAASOwoKY29uZmlnX21hcBgCIAEoCzIlLnB0YWguY29uc29sZS52MS5Db25maWdNYXBTb3VyY2VEcmFmdEgAEi4KA2dpdBgDIAEoCzIfLnB0YWguY29uc29sZS52MS5HaXRTb3VyY2VEcmFmdEgAQgYKBGtpbmQiYAoOT2NpU291cmNlRHJhZnQSCwoDcmVmGAEgASgJEiAKGHZlcmlmaWNhdGlvbl9wb2xpY3lfbmFtZRgCIAEoCRIfChd2ZXJpZmljYXRpb25fcG9saWN5X2tleRgDIAEoCSJuChRDb25maWdNYXBTb3VyY2VEcmFmdBIMCgRuYW1lGAEgASgJEgsKA2tleRgCIAEoCRIMCgRwYXRoGAMgASgJEi0KBWZpbGVzGAQgAygLMh4ucHRhaC5jb25zb2xlLnYxLkNvbmZpZ01hcEZpbGUiKgoNQ29uZmlnTWFwRmlsZRILCgNrZXkYASABKAkSDAoEcGF0aBgCIAEoCSLUAQoOR2l0U291cmNlRHJhZnQSCwoDdXJsGAEgASgJEg4KBmJyYW5jaBgCIAEoCRILCgN0YWcYAyABKAkSDgoGY29tbWl0GAQgASgJEgwKBHBhdGgYBSABKAkSGgoSY3JlZGVudGlhbHNfc2VjcmV0GAYgASgJEhUKDWNhX2NvbmZpZ19tYXAYByABKAkSDgoGY2Ffa2V5GAggASgJEh4KFmtub3duX2hvc3RzX2NvbmZpZ19tYXAYCSABKAkSFwoPa25vd25faG9zdHNfa2V5GAogASgJIpoBCgxDcmVhdGVSZXN1bHQSMQoHb3V0Y29tZRgBIAEoDjIgLnB0YWguY29uc29sZS52MS5EZWNpc2lvbk91dGNvbWUSDwoHbWVzc2FnZRgCIAEoCRIPCgdkcnlfcnVuGAMgASgIEgwKBHlhbWwYBCABKAkSJwoDcmVmGAUgASgLMhoucHRhaC5jb25zb2xlLnYxLk9iamVjdFJlZjLVAQoQQXV0aG9yaW5nU2VydmljZRJbCgxDcmVhdGVTY2hlbWESJC5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlU2NoZW1hUmVxdWVzdBolLnB0YWguY29uc29sZS52MS5DcmVhdGVTY2hlbWFSZXNwb25zZRJkCg9DcmVhdGVNaWdyYXRpb24SJy5wdGFoLmNvbnNvbGUudjEuQ3JlYXRlTWlncmF0aW9uUmVxdWVzdBooLnB0YWguY29uc29sZS52MS5DcmVhdGVNaWdyYXRpb25SZXNwb25zZUJIWkZnaXRodWIuY29tL3N0b2thcm8vcHRhaC1jb25zb2xlL2ludGVybmFsL2dlbi9wdGFoL2NvbnNvbGUvdjE7Y29uc29sZXYxYgZwcm90bzM", [file_ptah_console_v1_decisions, file_ptah_console_v1_resources]);
 
 /**
  * @generated from message ptah.console.v1.CreateSchemaRequest
@@ -252,7 +252,9 @@ export const OciSourceDraftSchema: GenMessage<OciSourceDraft> = /*@__PURE__*/
   messageDesc(file_ptah_console_v1_authoring, 7);
 
 /**
- * ConfigMapSourceDraft is one file of a ConfigMap in the namespace.
+ * ConfigMapSourceDraft is files of a ConfigMap in the namespace: one file by
+ * key and path, a schema's, or several as files, a migration directory's.
+ * Setting both is refused.
  *
  * @generated from message ptah.console.v1.ConfigMapSourceDraft
  */
@@ -273,6 +275,14 @@ export type ConfigMapSourceDraft = Message<"ptah.console.v1.ConfigMapSourceDraft
    * @generated from field: string path = 3;
    */
   path: string;
+
+  /**
+   * The files a migration directory holds. Their names, not their order
+   * here, decide the order Ptah applies them in.
+   *
+   * @generated from field: repeated ptah.console.v1.ConfigMapFile files = 4;
+   */
+  files: ConfigMapFile[];
 };
 
 /**
@@ -281,6 +291,30 @@ export type ConfigMapSourceDraft = Message<"ptah.console.v1.ConfigMapSourceDraft
  */
 export const ConfigMapSourceDraftSchema: GenMessage<ConfigMapSourceDraft> = /*@__PURE__*/
   messageDesc(file_ptah_console_v1_authoring, 8);
+
+/**
+ * ConfigMapFile is one key of a ConfigMap and the file it becomes.
+ *
+ * @generated from message ptah.console.v1.ConfigMapFile
+ */
+export type ConfigMapFile = Message<"ptah.console.v1.ConfigMapFile"> & {
+  /**
+   * @generated from field: string key = 1;
+   */
+  key: string;
+
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
+};
+
+/**
+ * Describes the message ptah.console.v1.ConfigMapFile.
+ * Use `create(ConfigMapFileSchema)` to create a new message.
+ */
+export const ConfigMapFileSchema: GenMessage<ConfigMapFile> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_authoring, 9);
 
 /**
  * GitSourceDraft is one file of a Git repository.
@@ -321,6 +355,32 @@ export type GitSourceDraft = Message<"ptah.console.v1.GitSourceDraft"> & {
    * @generated from field: string credentials_secret = 6;
    */
   credentialsSecret: string;
+
+  /**
+   * The ConfigMap key with the only roots an https:// server's certificate
+   * may chain to; empty for the system roots.
+   *
+   * @generated from field: string ca_config_map = 7;
+   */
+  caConfigMap: string;
+
+  /**
+   * @generated from field: string ca_key = 8;
+   */
+  caKey: string;
+
+  /**
+   * The ConfigMap key with the host keys an ssh:// server may present. The
+   * operator requires it for an ssh:// repository.
+   *
+   * @generated from field: string known_hosts_config_map = 9;
+   */
+  knownHostsConfigMap: string;
+
+  /**
+   * @generated from field: string known_hosts_key = 10;
+   */
+  knownHostsKey: string;
 };
 
 /**
@@ -328,7 +388,7 @@ export type GitSourceDraft = Message<"ptah.console.v1.GitSourceDraft"> & {
  * Use `create(GitSourceDraftSchema)` to create a new message.
  */
 export const GitSourceDraftSchema: GenMessage<GitSourceDraft> = /*@__PURE__*/
-  messageDesc(file_ptah_console_v1_authoring, 9);
+  messageDesc(file_ptah_console_v1_authoring, 10);
 
 /**
  * CreateResult is how the API server answered.
@@ -374,7 +434,7 @@ export type CreateResult = Message<"ptah.console.v1.CreateResult"> & {
  * Use `create(CreateResultSchema)` to create a new message.
  */
 export const CreateResultSchema: GenMessage<CreateResult> = /*@__PURE__*/
-  messageDesc(file_ptah_console_v1_authoring, 10);
+  messageDesc(file_ptah_console_v1_authoring, 11);
 
 /**
  * AuthoringService creates a PtahSchema or a PtahMigration from typed

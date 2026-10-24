@@ -162,3 +162,56 @@ func TestTheAPIServerJudgesTheDraft(t *testing.T) {
 	c.Assert(forbidden.GetResult().GetOutcome(), qt.Equals, consolev1.DecisionOutcome_DECISION_OUTCOME_FORBIDDEN)
 	c.Assert(forbidden.GetResult().GetMessage(), qt.Contains, `cannot create resource "ptahschemas"`)
 }
+
+// The CRD, not the console, says how many files a kind takes from a
+// ConfigMap and whom a Git fetch must trust: a migration directory takes
+// several files and a schema exactly one, and an ssh:// repository is
+// refused until it names its known hosts.
+func TestTheCRDJudgesFilesAndTrust(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	namespace := arrange(t, "sources", "create")
+	service, ctx, _ := serviceAs(t, "sources")
+	files := func() *consolev1.SourceDraft {
+		return &consolev1.SourceDraft{Kind: &consolev1.SourceDraft_ConfigMap{ConfigMap: &consolev1.ConfigMapSourceDraft{
+			Name: "billing-migrations",
+			Files: []*consolev1.ConfigMapFile{
+				{Key: "0000000001-up", Path: "0000000001_create_accounts.up.sql"},
+				{Key: "0000000002-up", Path: "0000000002_add_invoices.up.sql"},
+			},
+		}}}
+	}
+	overSSH := func(knownHosts string) *consolev1.SourceDraft {
+		return &consolev1.SourceDraft{Kind: &consolev1.SourceDraft_Git{Git: &consolev1.GitSourceDraft{
+			Url: "ssh://git@git.example.com/shop/migrations.git", Branch: "main", Path: "migrations",
+			KnownHostsConfigMap: knownHosts, KnownHostsKey: "known_hosts",
+		}}}
+	}
+	migration := draft(namespace)
+	migration.Source = files()
+	schema := draft(namespace)
+	schema.Source = files()
+	untrusted := draft(namespace)
+	untrusted.Source = overSSH("")
+	untrusted.Source.GetGit().KnownHostsKey = ""
+	trusted := draft(namespace)
+	trusted.Source = overSSH("git-known-hosts")
+
+	directory, err := service.CreateMigration(ctx, &consolev1.CreateMigrationRequest{Draft: migration, DryRun: true})
+	c.Assert(err, qt.IsNil)
+	twoForASchema, err := service.CreateSchema(ctx, &consolev1.CreateSchemaRequest{Draft: schema, DryRun: true})
+	c.Assert(err, qt.IsNil)
+	noKnownHosts, err := service.CreateMigration(ctx, &consolev1.CreateMigrationRequest{Draft: untrusted, DryRun: true})
+	c.Assert(err, qt.IsNil)
+	knownHosts, err := service.CreateMigration(ctx, &consolev1.CreateMigrationRequest{Draft: trusted, DryRun: true})
+	c.Assert(err, qt.IsNil)
+
+	c.Assert(directory.GetResult().GetOutcome(), qt.Equals, consolev1.DecisionOutcome_DECISION_OUTCOME_ADMITTED, qt.Commentf("%s", directory.GetResult().GetMessage()))
+	c.Assert(directory.GetResult().GetYaml(), qt.Contains, "path: 0000000002_add_invoices.up.sql")
+	c.Assert(twoForASchema.GetResult().GetOutcome(), qt.Equals, consolev1.DecisionOutcome_DECISION_OUTCOME_REFUSED)
+	c.Assert(twoForASchema.GetResult().GetMessage(), qt.Contains, "desired.configMap selects exactly one file for a schema")
+	c.Assert(noKnownHosts.GetResult().GetOutcome(), qt.Equals, consolev1.DecisionOutcome_DECISION_OUTCOME_REFUSED)
+	c.Assert(noKnownHosts.GetResult().GetMessage(), qt.Contains, "an ssh:// repository needs transport.knownHostsFrom")
+	c.Assert(knownHosts.GetResult().GetOutcome(), qt.Equals, consolev1.DecisionOutcome_DECISION_OUTCOME_ADMITTED, qt.Commentf("%s", knownHosts.GetResult().GetMessage()))
+	c.Assert(knownHosts.GetResult().GetYaml(), qt.Contains, "knownHostsFrom:")
+}

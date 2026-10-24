@@ -78,12 +78,23 @@ message OciSourceDraft {
   string verification_policy_key = 3;
 }
 
-// ConfigMapSourceDraft is one file of a ConfigMap in the namespace.
+// ConfigMapSourceDraft is files of a ConfigMap in the namespace: one file by
+// key and path, a schema's, or several as files, a migration directory's.
+// Setting both is refused.
 message ConfigMapSourceDraft {
   string name = 1;
   string key = 2;
   // The file name Ptah reads it as; its extension tells Ptah the format.
   string path = 3;
+  // The files a migration directory holds. Their names, not their order
+  // here, decide the order Ptah applies them in.
+  repeated ConfigMapFile files = 4;
+}
+
+// ConfigMapFile is one key of a ConfigMap and the file it becomes.
+message ConfigMapFile {
+  string key = 1;
+  string path = 2;
 }
 
 // GitSourceDraft is one file of a Git repository.
@@ -96,6 +107,14 @@ message GitSourceDraft {
   string path = 5;
   // The Secret with the credential, by name; empty for a public repository.
   string credentials_secret = 6;
+  // The ConfigMap key with the only roots an https:// server's certificate
+  // may chain to; empty for the system roots.
+  string ca_config_map = 7;
+  string ca_key = 8;
+  // The ConfigMap key with the host keys an ssh:// server may present. The
+  // operator requires it for an ssh:// repository.
+  string known_hosts_config_map = 9;
+  string known_hosts_key = 10;
 }
 
 // CreateResult is how the API server answered.
