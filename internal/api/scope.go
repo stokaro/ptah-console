@@ -44,6 +44,8 @@ func capabilityChecks(namespace string) []kube.Check {
 		{Namespace: namespace, Verb: "list", Resource: "pods"},
 		{Namespace: namespace, Verb: "get", Resource: "pods", Subresource: "log"},
 		{Namespace: namespace, Verb: "list", Resource: "events"},
+		{Namespace: namespace, Verb: "create", Group: operatorGroup, Resource: "ptahschemas"},
+		{Namespace: namespace, Verb: "create", Group: operatorGroup, Resource: "ptahmigrations"},
 	}
 }
 
@@ -54,6 +56,7 @@ func capabilities(hints []kube.Hint) *consolev1.Capabilities {
 		ApproveSchemaPlans: a(3), ApproveMigrationPlans: a(4), AcknowledgeRuns: a(5),
 		SuspendSchemas: a(6), SuspendMigrations: a(7), ListDecisions: a(8),
 		ReadJobs: a(9), ReadPods: a(10), ReadLogs: a(11), ReadEvents: a(12),
+		CreateSchemas: a(13), CreateMigrations: a(14),
 	}
 }
 

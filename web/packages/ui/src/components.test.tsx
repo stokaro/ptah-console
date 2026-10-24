@@ -6,6 +6,7 @@ import { CommandBlock } from "./CommandBlock"
 import { Fingerprint } from "./Fingerprint"
 import { Freshness } from "./Freshness"
 import { Segmented } from "./Segmented"
+import { Select } from "./Select"
 import { SequenceTable } from "./SequenceTable"
 import { StepDots } from "./StepDots"
 import { Terminal } from "./Terminal"
@@ -87,6 +88,27 @@ describe("SequenceTable", () => {
 
     expect(screen.getByRole("table", { name: "Steps in order" })).toBeInTheDocument()
     expect(screen.getByRole("columnheader", { name: "Checksum" })).toBeInTheDocument()
+  })
+})
+
+describe("Select", () => {
+  it("reports the value chosen, not the event", async () => {
+    const chosen: string[] = []
+    render(
+      <Select
+        aria-label="Engine"
+        value="PostgreSQL"
+        onChange={(value) => chosen.push(value)}
+        options={[
+          { value: "PostgreSQL", label: "PostgreSQL" },
+          { value: "MySQL", label: "MySQL" },
+        ]}
+      />
+    )
+
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Engine" }), "MySQL")
+
+    expect(chosen).toEqual(["MySQL"])
   })
 })
 

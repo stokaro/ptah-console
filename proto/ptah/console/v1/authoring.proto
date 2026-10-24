@@ -1,0 +1,112 @@
+syntax = "proto3";
+
+package ptah.console.v1;
+
+import "ptah/console/v1/decisions.proto";
+import "ptah/console/v1/resources.proto";
+
+option go_package = "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1";
+
+// AuthoringService creates a PtahSchema or a PtahMigration from typed
+// fields, as the session's identity. The console builds the object from the
+// fields alone; it forwards no document a person wrote, so a field it does
+// not offer is set after creation, the way any other change is. A request
+// that asks only for a check sends a server-side dry run: the API server
+// validates the object against the operator's CRD and admission, defaults
+// it, and stores nothing.
+service AuthoringService {
+  rpc CreateSchema(CreateSchemaRequest) returns (CreateSchemaResponse);
+  rpc CreateMigration(CreateMigrationRequest) returns (CreateMigrationResponse);
+}
+
+message CreateSchemaRequest {
+  ResourceDraft draft = 1;
+  // Ask the API server to check the object and store nothing.
+  bool dry_run = 2;
+}
+
+message CreateSchemaResponse {
+  CreateResult result = 1;
+}
+
+message CreateMigrationRequest {
+  ResourceDraft draft = 1;
+  bool dry_run = 2;
+}
+
+message CreateMigrationResponse {
+  CreateResult result = 1;
+}
+
+// ResourceDraft is a new schema or migration as a person filled it in.
+message ResourceDraft {
+  string namespace = 1;
+  string name = 2;
+  TargetDraft target = 3;
+  // Where the desired schema, or the migration sequence, comes from.
+  SourceDraft source = 4;
+  // OnApproval or Always; empty leaves the operator's default, OnApproval.
+  string apply_policy = 5;
+}
+
+// TargetDraft is the database the resource manages.
+message TargetDraft {
+  // One of the engines the operator supports, such as PostgreSQL.
+  string engine = 1;
+  // Exactly one of coordination_key and realm.
+  string coordination_key = 2;
+  string realm = 3;
+  // The Secret key that holds the connection URL. The console never reads it.
+  string url_secret_name = 4;
+  string url_secret_key = 5;
+}
+
+message SourceDraft {
+  oneof kind {
+    OciSourceDraft oci = 1;
+    ConfigMapSourceDraft config_map = 2;
+    GitSourceDraft git = 3;
+  }
+}
+
+// OciSourceDraft is an artifact in an OCI registry, held to a verification
+// policy.
+message OciSourceDraft {
+  string ref = 1;
+  // The ConfigMap key that holds the verification policy.
+  string verification_policy_name = 2;
+  string verification_policy_key = 3;
+}
+
+// ConfigMapSourceDraft is one file of a ConfigMap in the namespace.
+message ConfigMapSourceDraft {
+  string name = 1;
+  string key = 2;
+  // The file name Ptah reads it as; its extension tells Ptah the format.
+  string path = 3;
+}
+
+// GitSourceDraft is one file of a Git repository.
+message GitSourceDraft {
+  string url = 1;
+  // Exactly one of branch, tag and commit.
+  string branch = 2;
+  string tag = 3;
+  string commit = 4;
+  string path = 5;
+  // The Secret with the credential, by name; empty for a public repository.
+  string credentials_secret = 6;
+}
+
+// CreateResult is how the API server answered.
+message CreateResult {
+  // Admitted means created, or for a dry run, accepted and not stored.
+  DecisionOutcome outcome = 1;
+  // The API server's or admission's own words for a refusal.
+  string message = 2;
+  bool dry_run = 3;
+  // The object as the API server returned it, defaults filled in, as YAML:
+  // its name, namespace and spec.
+  string yaml = 4;
+  ObjectRef ref = 5;
+}

@@ -9,7 +9,7 @@ import {
 } from "@ptah/console-ui"
 import { Link } from "@tanstack/react-router"
 
-import { useResources } from "../../api/resources"
+import { canAnywhere, useResources } from "../../api/resources"
 import {
   pageSizes,
   paginate,
@@ -25,6 +25,9 @@ import { namespacesRead } from "../../model/scope"
 import { Loading, ReadError, TruncatedNotice, UnreadableNamespaces, useNow } from "../common"
 import { resourceLink } from "./links"
 import type { ResourcesSearch } from "./search"
+
+const newLink =
+  "inline-flex min-h-10 items-center rounded-[11px] border border-line bg-card px-3.5 text-[13.5px] font-medium text-fg"
 
 export interface ResourcesProps {
   search: ResourcesSearch
@@ -50,15 +53,37 @@ export function Resources({ search, onSearch }: ResourcesProps) {
 
   return (
     <>
-      <section className="flex flex-col gap-1.5">
-        <Eyebrow>Workspace</Eyebrow>
-        <h1 className="m-0 flex flex-wrap items-baseline gap-3 font-display text-[28px] leading-[1.1] font-semibold tracking-[-0.035em]">
-          Resources
-          <span className="font-mono text-base font-medium text-mute">{resources.length}</span>
-        </h1>
-        <span className="text-[13.5px] text-fg2">
-          Every schema and migration in {namespacesRead(namespaces.length, scope.readable.length)}{" "}
-          this identity may read.
+      <section className="flex flex-wrap items-end justify-between gap-3">
+        <span className="flex flex-col gap-1.5">
+          <Eyebrow>Workspace</Eyebrow>
+          <h1 className="m-0 flex flex-wrap items-baseline gap-3 font-display text-[28px] leading-[1.1] font-semibold tracking-[-0.035em]">
+            Resources
+            <span className="font-mono text-base font-medium text-mute">{resources.length}</span>
+          </h1>
+          <span className="text-[13.5px] text-fg2">
+            Every schema and migration in {namespacesRead(namespaces.length, scope.readable.length)}{" "}
+            this identity may read.
+          </span>
+        </span>
+        <span className="flex flex-wrap gap-2">
+          {canAnywhere(scope.scopes, "createSchemas") ? (
+            <Link
+              to="/console/new"
+              search={{ kind: "schema", template: "oci" }}
+              className={newLink}
+            >
+              New schema
+            </Link>
+          ) : null}
+          {canAnywhere(scope.scopes, "createMigrations") ? (
+            <Link
+              to="/console/new"
+              search={{ kind: "migration", template: "oci" }}
+              className={newLink}
+            >
+              New migration
+            </Link>
+          ) : null}
         </span>
       </section>
       <UnreadableNamespaces scopes={scope.scopes} />

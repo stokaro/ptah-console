@@ -19,4 +19,5 @@ func Register(rpc *connect.Server, sessions *Session, factory kube.ClientFactory
 	consolev1connect.RegisterDecisionServiceHandler(rpc, NewDecisionService(factory, scope, decision.NewLedger(), auditLog))
 	consolev1connect.RegisterWatchServiceHandler(rpc, NewWatchService(factory, scope, WatchOptions{}))
 	consolev1connect.RegisterDiagnosticsServiceHandler(rpc, NewDiagnosticsService(factory, scope, nil))
+	consolev1connect.RegisterAuthoringServiceHandler(rpc, NewAuthoringService(factory, scope, auditLog))
 }

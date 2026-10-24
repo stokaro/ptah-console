@@ -316,6 +316,25 @@ schemas and migrations the pages already listed, by name, namespace and
 state, and moves the browser to the one chosen. ⌘K or Ctrl+K opens it
 anywhere, and `/` outside a field.
 
+## New schema or migration
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| Where this identity may create one | `selfsubjectaccessreviews`, for `create` on `ptahschemas` and `ptahmigrations` | create |
+| What the API server says of the draft, and the object with the defaults it filled in | `ptahschemas` or `ptahmigrations`, as a server-side dry run | create with `dryRun=All` |
+| The created resource | `ptahschemas` or `ptahmigrations` | create |
+
+The page offers typed fields for what a resource needs and builds the object
+from them, the way a person writes a manifest: only the fields set, so every
+other field takes the CRD's default. A typed object would send each zero
+value it holds, such as an interval of `0s`, which the CRD refuses. A draft is
+first sent as a dry run, which the CRD's schema, its CEL rules and admission
+judge and which stores nothing; the answer is shown in the API server's own
+words, with the object as it would be stored. Only the draft that check
+accepted can be created, as the session's identity, under the console's field
+manager, and the create is audited. A namespace RBAC does not let the identity
+create in is not offered, and a read-only console sends nothing.
+
 ## Suspend and resume
 
 | Does | Writes | Verbs |

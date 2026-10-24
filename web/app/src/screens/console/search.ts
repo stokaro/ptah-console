@@ -1,4 +1,5 @@
 import { activityPeriods, activityTypes, type ActivityFilter } from "../../model/activity"
+import { sourceTemplates, type AuthoringKind, type SourceTemplate } from "../../model/draft"
 import {
   pageSizes,
   resourceStates,
@@ -45,6 +46,23 @@ export function readResourcesSearch(search: Record<string, unknown>): ResourcesS
 
 const activityTypeValues = activityTypes.map((type) => type.value)
 const activityPeriodValues = activityPeriods.map((period) => period.value)
+
+/** What a new-resource page starts from. */
+export interface NewResourceSearch {
+  kind: AuthoringKind
+  template: SourceTemplate
+}
+
+const authoringKinds: AuthoringKind[] = ["schema", "migration"]
+const templateValues = sourceTemplates.map((template) => template.value)
+
+/** Reads the kind and the template out of the address; a schema from an artifact otherwise. */
+export function readNewResourceSearch(search: Record<string, unknown>): NewResourceSearch {
+  return {
+    kind: oneOf(search.kind, authoringKinds) ?? "schema",
+    template: oneOf(search.template, templateValues) ?? "oci",
+  }
+}
 
 /** Reads the activity filters out of the address; anything unknown is dropped. */
 export function readActivitySearch(search: Record<string, unknown>): ActivityFilter {

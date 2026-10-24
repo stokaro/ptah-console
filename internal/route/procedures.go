@@ -82,5 +82,11 @@ var procedures = map[string]procedure{
 	cv1.DiagnosticsServiceListEventsProcedure: across(func(r *consolev1.ListEventsRequest) *agentv1.Request {
 		return &agentv1.Request{Action: &agentv1.Request_ListEvents{ListEvents: r}}
 	}, (*agentv1.Result).GetListEvents, false),
+	cv1.AuthoringServiceCreateSchemaProcedure: across(func(r *consolev1.CreateSchemaRequest) *agentv1.Request {
+		return &agentv1.Request{Action: &agentv1.Request_CreateSchema{CreateSchema: r}}
+	}, (*agentv1.Result).GetCreateSchema, true),
+	cv1.AuthoringServiceCreateMigrationProcedure: across(func(r *consolev1.CreateMigrationRequest) *agentv1.Request {
+		return &agentv1.Request{Action: &agentv1.Request_CreateMigration{CreateMigration: r}}
+	}, (*agentv1.Result).GetCreateMigration, true),
 	cv1.WatchServiceSubscribeProcedure: {watch: true},
 }

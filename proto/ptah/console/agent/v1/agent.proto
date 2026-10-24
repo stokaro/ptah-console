@@ -4,6 +4,7 @@ package ptah.console.agent.v1;
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
+import "ptah/console/v1/authoring.proto";
 import "ptah/console/v1/decisions.proto";
 import "ptah/console/v1/diagnostics.proto";
 import "ptah/console/v1/resources.proto";
@@ -97,6 +98,8 @@ message Request {
     // Watch is one window: the agent watches until the deadline and ends.
     ptah.console.v1.SubscribeRequest watch = 25;
     ptah.console.v1.ListEventsRequest list_events = 26;
+    ptah.console.v1.CreateSchemaRequest create_schema = 27;
+    ptah.console.v1.CreateMigrationRequest create_migration = 28;
   }
 }
 
@@ -140,6 +143,8 @@ message Result {
     ptah.console.v1.GetDiagnosticsResponse get_diagnostics = 24;
     ptah.console.v1.SubscribeResponse watch = 25;
     ptah.console.v1.ListEventsResponse list_events = 26;
+    ptah.console.v1.CreateSchemaResponse create_schema = 27;
+    ptah.console.v1.CreateMigrationResponse create_migration = 28;
   }
 }
 
