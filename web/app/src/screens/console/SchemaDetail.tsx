@@ -71,8 +71,9 @@ export function SchemaDetail({ namespace, name }: SchemaDetailProps) {
         actions={
           plan ? (
             <Link
-              to="/approve/$namespace/$kind/$name"
-              params={{ namespace, kind: "schema", name }}
+              to="/console/schemas/$namespace/$name/plan"
+              params={{ namespace, name }}
+              search={{ plan: plan.name }}
               className="inline-flex min-h-10 items-center rounded-[11px] border border-pri bg-pri px-3.5 text-[13.5px] font-semibold text-onpri"
             >
               Review plan

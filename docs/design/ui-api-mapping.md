@@ -185,6 +185,29 @@ the refused versions, and says that the earlier versions are a count. The
 next history read is `status.nextReconciliationTime`; there is no "read now",
 because the operator has no such action, and no retry, rollback or force.
 
+## Full console: plan review
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| What the plan changes, from its manifest | `ptahschemaplans` or `ptahmigrationplans` | get |
+| The exact SQL with the plan's own marks, and whether its chunks checked out | `ptahschemaplanchunks`, through the operator's plan reader | get |
+| Whether this identity may approve here | `selfsubjectaccessreviews` | create |
+| A plan a link named that is no longer current | the resource's `status.journal`, and the decisions | get, list |
+
+The page is the focused view's plan review in the full console, with what
+an approver weighs beside it. Statement types count the marks Ptah gave each
+statement, its severity and reason; the console parses no SQL. Integrity says
+what the plan reader established: every chunk checked by size, digest and
+order before any SQL is shown, the manifest alone for an identity that may not
+read the chunks, and nothing of a plan that failed a check. The SQL can be
+filtered, or narrowed to the marked statements, and keeps the plan's
+numbering. The approval panel lists what the console checks before it offers
+to send one: the plan read is the current one, its contract is one the console
+reads, for a schema plan, and RBAC lets this identity create the approval;
+admission and the operator decide again either way. A link that names a plan
+by `?plan=` says when that plan is no longer current, what replaced it, and
+what the journal and the decisions record of it, and approves nothing from it.
+
 ## Full console: execution and history
 
 | Shows | Reads | Verbs |

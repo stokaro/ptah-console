@@ -54,7 +54,7 @@ describe("Schema detail", () => {
     expect(within(plan).getByText("Not approved")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Review plan" })).toHaveAttribute(
       "href",
-      "/approve/application/schema/storefront"
+      "/console/schemas/application/storefront/plan?plan=storefront-p-8f2c"
     )
     const conditions = screen.getByRole("table", { name: "Conditions" })
     expect(within(conditions).getByRole("row", { name: /ApprovalRequired/ })).toHaveTextContent(
