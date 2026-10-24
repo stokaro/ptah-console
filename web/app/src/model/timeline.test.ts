@@ -55,6 +55,17 @@ describe("A migration's timeline", () => {
     ])
   })
 
+  it("names the step a run stopped in by its file, where the plan has it", () => {
+    const stopped = migration()
+    stopped.lastRun!.failure!.version = 6n
+
+    expect(migrationTimeline(stopped, plan)[0]).toMatchObject({
+      label: "6",
+      name: "add view",
+      state: "failed",
+    })
+  })
+
   it("names the failed step only for a run that stopped", () => {
     const steps = migrationTimeline(migration("Applied"), plan)
 

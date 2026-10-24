@@ -129,6 +129,8 @@ describe("A migration's timeline", () => {
 
     expect(versions()).toHaveLength(50)
     await waitFor(() => expect(document.activeElement?.id).toBe("step-71"))
+    expect(document.getElementById("step-71")).toHaveAttribute("aria-current", "true")
+    expect(document.getElementById("step-71")).toHaveTextContent("read ledger")
   })
 })
 
@@ -139,7 +141,10 @@ describe("A migration's revision rows", () => {
       migrationPlan: longPlan,
     })
 
+    const user = userEvent.setup()
     const table = await screen.findByRole("table", { name: "Revision rows of billing" })
+    expect(within(table).getAllByRole("row").slice(1)).toHaveLength(20)
+    await user.click(screen.getByRole("button", { name: "Show all 64 rows" }))
     const rows = within(table).getAllByRole("row").slice(1)
     expect(rows).toHaveLength(64)
     expect(rows[0]).toHaveTextContent("70step 70h1:70aaaa…aaaa70✓applied1 h ago700 ms")
@@ -175,6 +180,7 @@ describe("A migration's revision rows", () => {
     const rows = within(chart).getAllByRole("row").slice(1)
     expect(rows).toHaveLength(25)
     expect(rows.at(-1)).toHaveTextContent("70step 70700 ms")
+    expect(screen.getByText(/The longest shown is version 70, 700 ms/)).toBeVisible()
     expect(rows.every((row) => Number(row.firstChild?.textContent) % 2 === 0)).toBe(true)
   })
 

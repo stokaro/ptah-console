@@ -15,6 +15,9 @@ export default defineConfig({
     // element fails with its own error rather than as a timed-out test.
     testTimeout: 15_000,
     setupFiles: ["./test/setup.ts"],
+    // The theme's stylesheet is read as text by the contrast test; every
+    // other stylesheet stays out of the tests.
+    css: { include: [/app\/src\/index\.css/] },
     include: ["app/src/**/*.test.{ts,tsx}", "packages/*/src/**/*.test.{ts,tsx}"],
     coverage: {
       provider: "v8",
