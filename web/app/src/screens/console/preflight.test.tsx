@@ -208,6 +208,25 @@ describe("Pre-flight's actions and facts", () => {
     )
   })
 
+  it("asks with the person's own sign-in when the session holds an OpenID Connect token", async () => {
+    const user = userEvent.setup()
+    renderConsole("/console/preflight", {
+      hosted: { login: () => {}, signedIn: true, provider: "Example SSO" },
+      username: "oidc:alex@example.com",
+    })
+    await matrix()
+
+    await user.click(screen.getByRole("button", { name: "Copy kubectl command" }))
+
+    const command = await navigator.clipboard.readText()
+    expect(command).toContain('kubectl auth can-i --list --namespace "$ns"')
+    expect(command).not.toContain("--as")
+    expect(
+      screen.getByText(/Acts as oidc:alex@example.com with its OpenID Connect token/)
+    ).toBeVisible()
+    expect(screen.queryByText(/impersonation/)).not.toBeInTheDocument()
+  })
+
   it("says what this console was built and tested against", async () => {
     renderConsole("/console/preflight")
 

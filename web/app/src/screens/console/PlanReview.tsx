@@ -16,7 +16,6 @@ import { useState } from "react"
 
 import { useDecisions, useOffer, useResource, useSession } from "../../api/resources"
 import { DecisionState } from "../../gen/ptah/console/v1/decisions_pb"
-import { Mode } from "../../gen/ptah/console/v1/info_pb"
 import {
   MigrationService,
   PlanSelection,
@@ -25,6 +24,7 @@ import {
   type SchemaPlan,
 } from "../../gen/ptah/console/v1/resources_pb"
 import { decisionState } from "../../model/decision"
+import { sessionSource } from "../../model/session"
 import {
   approvalChecks,
   filterStatements,
@@ -241,8 +241,14 @@ export function ConsolePlanReview({
             <span className="text-xs text-mute">
               Approving as{" "}
               <b className="font-mono font-semibold text-fg">{identity.kubernetesUsername}</b>,{" "}
-              {identity.mode === Mode.LOCAL ? "from the kubeconfig" : "a Console account"};
-              admission records who.
+              {
+                {
+                  kubeconfig: "from the kubeconfig",
+                  account: "a Console account",
+                  oidc: "with an OpenID Connect token",
+                }[sessionSource(identity)]
+              }
+              ; admission records who.
             </span>
           ) : null}
           <ul

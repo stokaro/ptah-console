@@ -1,9 +1,10 @@
 import type { Tone } from "@ptah/console-ui"
 
 import type { LiveState } from "../api/live"
-import { Mode } from "../gen/ptah/console/v1/info_pb"
+import type { Mode, SignIn } from "../gen/ptah/console/v1/info_pb"
 import { Access, type NamespaceScope, type OperatorApi } from "../gen/ptah/console/v1/resources_pb"
 import type { Punctuality } from "./operator"
+import { sessionSource } from "./session"
 
 /** One pre-flight check: a verdict, what it is about, and what the console saw. */
 export interface Check {
@@ -63,16 +64,24 @@ export function kubernetesCheck(version: string, tested: string[]): Check {
 /** What the session acts as, and whether it sends decisions at all. */
 export function sessionCheck(
   session:
-    { mode: Mode; context: string; kubernetesUsername: string; readOnly: boolean } | undefined
+    | {
+        mode: Mode
+        signIn?: SignIn
+        context: string
+        kubernetesUsername: string
+        readOnly: boolean
+      }
+    | undefined
 ): Check {
   const title = "Session"
   if (!session) {
     return { tone: "unk", title, detail: "Not read yet." }
   }
-  const through =
-    session.mode === Mode.LOCAL
-      ? `through the kubeconfig, context ${session.context}`
-      : "through impersonation by the hosted console"
+  const through = {
+    kubeconfig: `through the kubeconfig, context ${session.context}`,
+    account: "through impersonation by the hosted console",
+    oidc: "with its OpenID Connect token, which the API server checks itself",
+  }[sessionSource(session)]
   return session.readOnly
     ? {
         tone: "warn",
@@ -146,19 +155,24 @@ export function scheduleCheck(punctual: Punctuality): Check {
 
 /**
  * The kubectl command that asks the API server what this page asks, for the
- * namespaces shown. A hosted console's identity is an impersonated account,
- * which kubectl reaches only with --as and the right to impersonate it.
+ * namespaces shown. A hosted console's account is an impersonated identity,
+ * which kubectl reaches only with --as and the right to impersonate it; an
+ * OpenID Connect identity is reached by signing in to the same provider.
  */
 export function kubectlCommand(
-  session: { mode: Mode; context: string; kubernetesUsername: string } | undefined,
+  session: { mode: Mode; signIn?: SignIn; context: string; kubernetesUsername: string } | undefined,
   namespaces: string[]
 ) {
   const who =
     session === undefined
       ? ""
-      : session.mode === Mode.LOCAL
-        ? ` --context ${quote(session.context)}`
-        : ` --as ${quote(session.kubernetesUsername)}`
+      : {
+          kubeconfig: ` --context ${quote(session.context)}`,
+          account: ` --as ${quote(session.kubernetesUsername)}`,
+          // The person's own kubeconfig signs in to the same provider; the
+          // username is the API server's, not one to impersonate.
+          oidc: "",
+        }[sessionSource(session)]
   const list = namespaces.length > 0 ? namespaces.join(" ") : "<namespace>"
   return `for ns in ${list}; do echo "== $ns"; kubectl${who} auth can-i --list --namespace "$ns"; done`
 }

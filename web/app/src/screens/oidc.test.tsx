@@ -52,4 +52,16 @@ describe("Signing in with an OpenID Connect provider", () => {
     expect(await screen.findByText("oidc:alex@example.com")).toBeVisible()
     expect(screen.getByText(/· OIDC in-cluster/)).toBeVisible()
   })
+
+  it("names the session's source as OIDC, never as a Console account", async () => {
+    renderConsole("/console", {
+      hosted: { ...provider, signedIn: true },
+      username: "oidc:alex@example.com",
+    })
+
+    const identity = await screen.findByRole("region", { name: "Acting as" })
+    expect(identity).toHaveTextContent("oidc:alex@example.com")
+    expect(identity).toHaveTextContent("OIDC · in-cluster")
+    expect(identity).not.toHaveTextContent("Console account")
+  })
 })
