@@ -3,7 +3,13 @@ import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 
 import { useOffer, useResources, useSession } from "../api/resources"
-import { age, planRisks, waitingForApproval, type ResourceView } from "../model/resource"
+import {
+  age,
+  planRisks,
+  readingAgain,
+  waitingForApproval,
+  type ResourceView,
+} from "../model/resource"
 import {
   Hero,
   Loading,
@@ -43,7 +49,10 @@ export function ApproverQueue() {
   const { resources, scope, truncated, loading, error } = useResources()
   const session = useSession()
   const now = useNow()
-  const [approving, setApproving] = useState<ResourceView>()
+  const [approvingUid, setApprovingUid] = useState<string>()
+  // The dialog follows the resource as it is read again, so it knows when
+  // the operator starts reading it and admission would refuse an approval.
+  const approving = resources.find((resource) => resource.ref.uid === approvingUid)
   const context = session.data?.context
   const waiting = resources
     .filter((resource) => waitingForApproval(resource))
@@ -122,8 +131,8 @@ export function ApproverQueue() {
                   findings={planRisks(resource).filter((risk) => risk.tone !== "off")}
                 />
                 <div className="flex flex-wrap gap-2">
-                  {resource.plan && approvable(resource) ? (
-                    <Button variant="primary" onClick={() => setApproving(resource)}>
+                  {resource.plan && approvable(resource) && resource.approvalOpen ? (
+                    <Button variant="primary" onClick={() => setApprovingUid(resource.ref.uid)}>
                       Approve…
                     </Button>
                   ) : null}
@@ -134,6 +143,11 @@ export function ApproverQueue() {
                     Review
                   </Link>
                 </div>
+                {resource.plan && approvable(resource) && !resource.approvalOpen ? (
+                  <span role="status" className="text-[13px] text-fg2">
+                    {readingAgain(resource)}
+                  </span>
+                ) : null}
               </li>
             )
           })}
@@ -143,7 +157,7 @@ export function ApproverQueue() {
         <ApproveDialog
           resource={approving}
           context={context}
-          onClose={() => setApproving(undefined)}
+          onClose={() => setApprovingUid(undefined)}
         />
       ) : null}
     </>

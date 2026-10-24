@@ -79,6 +79,7 @@ func Schema(schema *operatorv1alpha1.PtahSchema) *consolev1.Schema {
 			ApplyJobUid: string(pending.ApplyJobUID), ObserveAfter: timestamp(pending.ObserveAfter),
 		}
 	}
+	out.ApprovalOpen = schemaApprovalOpen(status, c)
 	out.Stages = schemaStages(schema, c)
 	out.Attention = schemaAttention(schema, c)
 	for _, attention := range out.Attention {
@@ -279,6 +280,19 @@ func outcomeUnknown(status operatorv1alpha1.PtahSchemaStatus, c conditions) bool
 	return false
 }
 
+// schemaApprovalOpen says whether the operator's admission admits an approval
+// of the current plan now, by the checks it makes on the schema's status: a
+// published plan nobody approved yet, the AwaitingApproval phase, no operation
+// running, and approval required. A schema waiting for approval leaves the
+// phase while the operator reads it again at its interval, its plan still
+// current, and admission refuses an approval until the read ends.
+func schemaApprovalOpen(status operatorv1alpha1.PtahSchemaStatus, c conditions) bool {
+	return status.Plan != nil && status.Plan.Approval == nil &&
+		status.Phase == operatorv1alpha1.PhaseAwaitingApproval &&
+		status.ActiveOperation == nil &&
+		c.is(operatorv1alpha1.ConditionApprovalRequired, metav1.ConditionTrue)
+}
+
 func schemaAttention(schema *operatorv1alpha1.PtahSchema, c conditions) []*consolev1.Attention {
 	status := schema.Status
 	current := statusCurrent(schema.Generation, status.ObservedGeneration)
@@ -299,10 +313,15 @@ func schemaAttention(schema *operatorv1alpha1.PtahSchema, c conditions) []*conso
 	}
 	if c.is(operatorv1alpha1.ConditionApprovalRequired, metav1.ConditionTrue) {
 		next := "Review the plan and approve it. Nothing changes in the database until someone does."
-		if status.Plan == nil {
+		switch {
+		case status.Plan == nil:
 			// Each interval the operator refreshes the source and plans
 			// again; until it publishes the plan there is nothing to approve.
 			next = "The operator is planning again. The plan can be approved once it is published; nothing changes in the database until then."
+		case status.Phase != operatorv1alpha1.PhaseAwaitingApproval || status.ActiveOperation != nil:
+			// The read each interval starts: admission refuses an approval
+			// until it ends.
+			next = "The operator is reading the schema again, as it does each interval. The plan can be approved when the read ends, unless the read replaces it."
 		}
 		add(consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL,
 			c.message(operatorv1alpha1.ConditionApprovalRequired), next,

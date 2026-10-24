@@ -27,6 +27,7 @@ import {
 import {
   parseKind,
   planRisks,
+  readingAgain,
   statementTag,
   waitingForApproval,
   type ResourceView,
@@ -144,7 +145,11 @@ export function PlanReview() {
             Nothing to approve until the operator publishes the plan again. This page follows it.
           </span>
         ) : waiting ? (
-          mayApprove === "allowed" ? (
+          mayApprove === "allowed" && !resource.approvalOpen ? (
+            <span role="status" className="flex-auto p-2.5 text-sm text-fg2">
+              {readingAgain(resource)} This page follows it.
+            </span>
+          ) : mayApprove === "allowed" ? (
             <Button
               variant="primary"
               className="flex-[1_1_200px]"

@@ -2128,7 +2128,12 @@ type Schema struct {
 	// Absent from an operator that keeps no journal.
 	Journal *Journal `protobuf:"bytes,21,opt,name=journal,proto3" json:"journal,omitempty"`
 	// The last request to read the database now, and the one the operator answered.
-	ReadRequest   *ReadRequest `protobuf:"bytes,22,opt,name=read_request,json=readRequest,proto3" json:"read_request,omitempty"`
+	ReadRequest *ReadRequest `protobuf:"bytes,22,opt,name=read_request,json=readRequest,proto3" json:"read_request,omitempty"`
+	// Whether the operator's admission admits an approval of the current plan
+	// now. A schema waiting for approval leaves AwaitingApproval while the
+	// operator reads it again at its interval, its plan still current, and
+	// admission refuses an approval until that read ends.
+	ApprovalOpen  bool `protobuf:"varint,23,opt,name=approval_open,json=approvalOpen,proto3" json:"approval_open,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2315,6 +2320,13 @@ func (x *Schema) GetReadRequest() *ReadRequest {
 		return x.ReadRequest
 	}
 	return nil
+}
+
+func (x *Schema) GetApprovalOpen() bool {
+	if x != nil {
+		return x.ApprovalOpen
+	}
+	return false
 }
 
 // Journal is the bounded record of a resource's lifecycle the operator keeps
@@ -3809,7 +3821,11 @@ type Migration struct {
 	// Absent from an operator that keeps no journal.
 	Journal *Journal `protobuf:"bytes,21,opt,name=journal,proto3" json:"journal,omitempty"`
 	// The last request to read the database now, and the one the operator answered.
-	ReadRequest   *ReadRequest `protobuf:"bytes,22,opt,name=read_request,json=readRequest,proto3" json:"read_request,omitempty"`
+	ReadRequest *ReadRequest `protobuf:"bytes,22,opt,name=read_request,json=readRequest,proto3" json:"read_request,omitempty"`
+	// Whether the operator's admission admits an approval of the current plan
+	// now, as on Schema: while the operator reads the history again at its
+	// interval, admission refuses one.
+	ApprovalOpen  bool `protobuf:"varint,23,opt,name=approval_open,json=approvalOpen,proto3" json:"approval_open,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3996,6 +4012,13 @@ func (x *Migration) GetReadRequest() *ReadRequest {
 		return x.ReadRequest
 	}
 	return nil
+}
+
+func (x *Migration) GetApprovalOpen() bool {
+	if x != nil {
+		return x.ApprovalOpen
+	}
+	return false
 }
 
 type ListMigrationsRequest struct {
@@ -4731,7 +4754,7 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\aoutcome\x18\x01 \x01(\tR\aoutcome\x12$\n" +
 	"\x0eapply_job_name\x18\x02 \x01(\tR\fapplyJobName\x12\"\n" +
 	"\rapply_job_uid\x18\x03 \x01(\tR\vapplyJobUid\x12?\n" +
-	"\robserve_after\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\fobserveAfter\"\xb8\t\n" +
+	"\robserve_after\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\fobserveAfter\"\xdd\t\n" +
 	"\x06Schema\x12,\n" +
 	"\x03ref\x18\x01 \x01(\v2\x1a.ptah.console.v1.ObjectRefR\x03ref\x12\x14\n" +
 	"\x05phase\x18\x02 \x01(\tR\x05phase\x12%\n" +
@@ -4757,7 +4780,8 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\x06gitops\x18\x13 \x01(\v2\x17.ptah.console.v1.GitOpsR\x06gitops\x12\x1b\n" +
 	"\tspec_yaml\x18\x14 \x01(\tR\bspecYaml\x122\n" +
 	"\ajournal\x18\x15 \x01(\v2\x18.ptah.console.v1.JournalR\ajournal\x12?\n" +
-	"\fread_request\x18\x16 \x01(\v2\x1c.ptah.console.v1.ReadRequestR\vreadRequest\"\x83\x01\n" +
+	"\fread_request\x18\x16 \x01(\v2\x1c.ptah.console.v1.ReadRequestR\vreadRequest\x12#\n" +
+	"\rapproval_open\x18\x17 \x01(\bR\fapprovalOpen\"\x83\x01\n" +
 	"\aJournal\x12?\n" +
 	"\rcovered_since\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\fcoveredSince\x127\n" +
 	"\aentries\x18\x02 \x03(\v2\x1d.ptah.console.v1.JournalEntryR\aentries\"\xe5\x04\n" +
@@ -4905,7 +4929,7 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"resolution\x12'\n" +
 	"\x0facknowledged_by\x18\x04 \x01(\tR\x0eacknowledgedBy\x12;\n" +
 	"\vresolved_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"resolvedAt\"\xcd\b\n" +
+	"resolvedAt\"\xf2\b\n" +
 	"\tMigration\x12,\n" +
 	"\x03ref\x18\x01 \x01(\v2\x1a.ptah.console.v1.ObjectRefR\x03ref\x12\x14\n" +
 	"\x05phase\x18\x02 \x01(\tR\x05phase\x12%\n" +
@@ -4931,7 +4955,8 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\x06gitops\x18\x13 \x01(\v2\x17.ptah.console.v1.GitOpsR\x06gitops\x12\x1b\n" +
 	"\tspec_yaml\x18\x14 \x01(\tR\bspecYaml\x122\n" +
 	"\ajournal\x18\x15 \x01(\v2\x18.ptah.console.v1.JournalR\ajournal\x12?\n" +
-	"\fread_request\x18\x16 \x01(\v2\x1c.ptah.console.v1.ReadRequestR\vreadRequest\"7\n" +
+	"\fread_request\x18\x16 \x01(\v2\x1c.ptah.console.v1.ReadRequestR\vreadRequest\x12#\n" +
+	"\rapproval_open\x18\x17 \x01(\bR\fapprovalOpen\"7\n" +
 	"\x15ListMigrationsRequest\x12\x1e\n" +
 	"\n" +
 	"namespaces\x18\x01 \x03(\tR\n" +

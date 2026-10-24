@@ -127,6 +127,7 @@ export function ConsolePlanReview({
   const removed = tombstone(resource, followed, decisions.data?.decisions ?? [])
   const checks = approvalChecks({
     current: !replaced && !removed,
+    open: resource.approvalOpen,
     contractSupported: kind === "schema" ? (sPlan?.contractSupported ?? true) : undefined,
     allowed,
     namespace,

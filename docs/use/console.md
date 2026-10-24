@@ -46,6 +46,11 @@ then sends that plan and nothing else. The answer is one of:
   four-eyes control: the person who wrote the change may not approve it.
 - **Kubernetes does not let you**: RBAC refused the request.
 
+Each interval the operator reads a resource that waits for approval again.
+The plan stays current while it does, but admission refuses an approval until
+the read ends, so the console offers none: the page says the operator is
+reading the resource and offers the approval again when the read ends.
+
 If you may read the plan but not the chunks its SQL is stored in, the page
 says so and shows the plan's manifest without SQL. A migration plan lists its
 steps in order with their checksums; the operator API carries no SQL for

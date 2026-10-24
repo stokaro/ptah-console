@@ -333,6 +333,11 @@ message Schema {
   Journal journal = 21;
   // The last request to read the database now, and the one the operator answered.
   ReadRequest read_request = 22;
+  // Whether the operator's admission admits an approval of the current plan
+  // now. A schema waiting for approval leaves AwaitingApproval while the
+  // operator reads it again at its interval, its plan still current, and
+  // admission refuses an approval until that read ends.
+  bool approval_open = 23;
 }
 
 // Journal is the bounded record of a resource's lifecycle the operator keeps
@@ -565,6 +570,10 @@ message Migration {
   Journal journal = 21;
   // The last request to read the database now, and the one the operator answered.
   ReadRequest read_request = 22;
+  // Whether the operator's admission admits an approval of the current plan
+  // now, as on Schema: while the operator reads the history again at its
+  // interval, admission refuses one.
+  bool approval_open = 23;
 }
 
 message ListMigrationsRequest {

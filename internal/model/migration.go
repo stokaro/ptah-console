@@ -91,6 +91,7 @@ func Migration(migration *operatorv1alpha1.PtahMigration) *consolev1.Migration {
 			JobUid: string(operation.JobUID), StartedAt: timestamp(&operation.StartedAt), Attempt: operation.Attempt,
 		}
 	}
+	out.ApprovalOpen = migrationApprovalOpen(status, c)
 	out.Stages = migrationStages(migration, c)
 	out.Attention = migrationAttention(migration, c)
 	for _, attention := range out.Attention {
@@ -237,6 +238,18 @@ func unresolved(status operatorv1alpha1.PtahMigrationStatus) bool {
 	return status.ResolvedRun == nil || status.ResolvedRun.OperationID != run.OperationID
 }
 
+// migrationApprovalOpen says whether the operator's admission admits an
+// approval of the current plan now, by the checks it makes on the migration's
+// status: a current plan, the AwaitingApproval phase, approval required, no
+// operation running, and a history read. While the operator reads the history
+// again at its interval, admission refuses an approval.
+func migrationApprovalOpen(status operatorv1alpha1.PtahMigrationStatus, c conditions) bool {
+	return status.Plan != nil && status.History != nil &&
+		status.Phase == operatorv1alpha1.MigrationPhaseAwaitingApproval &&
+		status.ActiveOperation == nil &&
+		c.is(operatorv1alpha1.ConditionMigrationApprovalRequired, metav1.ConditionTrue)
+}
+
 func migrationAttention(migration *operatorv1alpha1.PtahMigration, c conditions) []*consolev1.Attention {
 	status := migration.Status
 	current := statusCurrent(migration.Generation, status.ObservedGeneration)
@@ -269,9 +282,12 @@ func migrationAttention(migration *operatorv1alpha1.PtahMigration, c conditions)
 			operatorv1alpha1.ConditionMigrationReady)
 	}
 	if c.is(operatorv1alpha1.ConditionMigrationApprovalRequired, metav1.ConditionTrue) {
+		next := "Review the steps and approve them. Nothing runs until someone does."
+		if status.Plan != nil && (status.Phase != operatorv1alpha1.MigrationPhaseAwaitingApproval || status.ActiveOperation != nil) {
+			next = "The operator is reading the history again, as it does each interval. The steps can be approved when the read ends, unless the read replaces the plan."
+		}
 		add(consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL,
-			c.message(operatorv1alpha1.ConditionMigrationApprovalRequired),
-			"Review the steps and approve them. Nothing runs until someone does.",
+			c.message(operatorv1alpha1.ConditionMigrationApprovalRequired), next,
 			operatorv1alpha1.ConditionMigrationApprovalRequired)
 	}
 	if migration.Spec.Suspend {
