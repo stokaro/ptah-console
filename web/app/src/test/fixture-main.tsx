@@ -12,7 +12,16 @@ import { AppProviders } from "../AppProviders"
 import { DecisionKind, DecisionOutcome, DecisionSchema } from "../gen/ptah/console/v1/decisions_pb"
 import { applyAccent, readAccent } from "../accent"
 import { applyTheme, readTheme } from "../theme"
-import { consoleTransport, result, waitingSchema } from "./console"
+import { Evidence } from "../gen/ptah/console/v1/diagnostics_pb"
+import {
+  JournalSchema,
+  MigrationHistorySchema,
+  MigrationPlanSchema,
+  MigrationRevisionSchema,
+  MigrationRunSchema,
+  StageState,
+} from "../gen/ptah/console/v1/resources_pb"
+import { consoleTransport, minutesAgo, result, syncedMigration, waitingSchema } from "./console"
 import "../index.css"
 
 applyTheme(readTheme())
@@ -22,7 +31,92 @@ window.history.replaceState(null, "", "/approve")
 
 const transport = consoleTransport({
   username: "system:serviceaccount:application:demo-approver",
-  schemas: [waitingSchema()],
+  schemas: [
+    waitingSchema((schema) => {
+      schema.gitops = {
+        $typeName: "ptah.console.v1.GitOps",
+        controller: "Argo CD",
+        application: "storefront",
+      }
+      schema.journal = create(JournalSchema, {
+        coveredSince: minutesAgo(900),
+        entries: [
+          { type: "Verified", at: minutesAgo(400), outcome: "InSync", plan: "storefront-p-71aa" },
+          {
+            type: "PlanPublished",
+            at: minutesAgo(12),
+            plan: "storefront-p-8f2c",
+            statements: 3,
+            destructive: true,
+          },
+        ],
+      })
+    }),
+  ],
+  // A sequence of 70 migrations, the run that stopped in 71, and 72 waiting.
+  migrations: [
+    syncedMigration((migration) => {
+      migration.phase = "Failed"
+      migration.planName = "billing-p-9"
+      migration.stages[4].state = StageState.FAILED
+      migration.history = create(MigrationHistorySchema, {
+        observedAt: minutesAgo(1),
+        currentVersion: 70n,
+        appliedCount: 70,
+        pendingCount: 2,
+        revisions: Array.from({ length: 64 }, (_, index) => {
+          const version = BigInt(70 - index)
+          return create(MigrationRevisionSchema, {
+            version,
+            description: `step ${version}`,
+            checksum: `h1:${version}a6f0c2b9d4e81f37${version}`,
+            state: "applied",
+            appliedAt: minutesAgo((71 - Number(version)) * 7),
+            executionMillis: BigInt(((Number(version) * 37) % 2400) + 40),
+          })
+        }),
+      })
+      migration.lastRun = create(MigrationRunSchema, {
+        outcome: "Failed",
+        jobName: "ptah-m-apply-billing-9",
+        startedAt: minutesAgo(3),
+        finishedAt: minutesAgo(2),
+        appliedVersions: [],
+        message: "Migration 71 (read ledger) failed at statement 2 of 3 and committed nothing",
+        failure: { version: 71n, statement: 2, statements: 3, sqlState: "42P01" },
+      })
+    }),
+  ],
+  migrationPlan: create(MigrationPlanSchema, {
+    namespace: "application",
+    migration: "billing",
+    name: "billing-p-9",
+    migrations: [
+      { version: 71n, versionKey: "71", description: "read ledger", checksum: "h1:71" },
+      { version: 72n, versionKey: "72", description: "add totals", checksum: "h1:72" },
+    ],
+  }),
+  diagnostics: {
+    events: {
+      evidence: Evidence.SHOWN,
+      events: [
+        {
+          type: "Warning",
+          reason: "RunFailed",
+          message: "Migration 71 failed",
+          count: 2,
+          lastSeen: minutesAgo(2),
+        },
+        {
+          type: "Normal",
+          reason: "PlanPublished",
+          message: "Plan billing-p-9",
+          count: 1,
+          lastSeen: minutesAgo(9),
+        },
+      ],
+    },
+  },
   approve: async (request) => {
     await new Promise((resolve) => setTimeout(resolve, 600))
     return result({

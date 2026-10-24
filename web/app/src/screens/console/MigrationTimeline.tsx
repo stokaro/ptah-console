@@ -117,7 +117,8 @@ export function TimelineCard({
               key={String(step.version)}
               id={`step-${step.version}`}
               tabIndex={-1}
-              className="grid grid-cols-[20px_minmax(64px,auto)_minmax(0,1fr)_auto] items-start gap-2.5 rounded-md border-b border-line py-2 text-[13px] last:border-b-0 focus-visible:outline-2 focus-visible:outline-pri"
+              aria-current={step.version === jumped ? "true" : undefined}
+              className="grid grid-cols-[20px_minmax(64px,auto)_minmax(0,1fr)_auto] items-start gap-2.5 rounded-md border-b border-line px-1 py-2 text-[13px] last:border-b-0 focus:outline-2 focus:outline-pri aria-[current=true]:bg-redbg"
             >
               <StatusGlyph tone={step.tone} size={20} />
               <span className="font-mono font-semibold">{step.label}</span>
@@ -178,6 +179,7 @@ export function ExecutionTimesCard({ revisions }: { revisions: MigrationRevision
   }
   const shown = range === "all" ? timed : timed.slice(-Number(range))
   const longest = Math.max(1, ...shown.map((entry) => entry.ms))
+  const slowest = shown.reduce((a, b) => (b.ms > a.ms ? b : a))
   return (
     <Card title="Migration execution times">
       <Segmented
@@ -192,7 +194,8 @@ export function ExecutionTimesCard({ revisions }: { revisions: MigrationRevision
       />
       <figure className="m-0 flex flex-col gap-1.5">
         <figcaption className="text-xs font-medium text-fg2">
-          How long each migration ran, oldest first
+          How long each migration ran, oldest first. The longest shown is version{" "}
+          {String(slowest.row.version)}, {runTime(slowest.ms)}; hover a bar for the others.
         </figcaption>
         <div aria-hidden="true" className="flex h-[112px] items-end gap-1">
           {shown.map(({ row, ms }) => (
@@ -230,6 +233,9 @@ export function ExecutionTimesCard({ revisions }: { revisions: MigrationRevision
 
 type RowFilter = "all" | MigrationRevision["state"]
 
+/** How many revision rows the table shows before it is asked for all. */
+export const revisionPage = 20
+
 /**
  * The revision table as the operator last read it: its newest rows, each
  * with the checksum it recorded, when it was written and how long it ran.
@@ -244,8 +250,10 @@ export function RevisionHistoryCard({
   now: Date
 }) {
   const [filter, setFilter] = useState<RowFilter>("all")
+  const [all, setAll] = useState(false)
   const count = (state: string) => revisions.filter((row) => row.state === state).length
-  const shown = revisions.filter((row) => filter === "all" || row.state === filter)
+  const matching = revisions.filter((row) => filter === "all" || row.state === filter)
+  const shown = all ? matching : matching.slice(0, revisionPage)
   return (
     <Card title="Migration history">
       {revisions.length === 0 ? (
@@ -309,6 +317,11 @@ export function RevisionHistoryCard({
               </tbody>
             </table>
           </ScrollRegion>
+          {matching.length > shown.length ? (
+            <Button className="self-start" onClick={() => setAll(true)}>
+              Show all {matching.length} rows
+            </Button>
+          ) : null}
           <span className="text-xs text-mute">
             The newest rows the operator read, at most 64. A modified row shows the checksum the
             database recorded, not the file&apos;s.

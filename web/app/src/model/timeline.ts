@@ -94,6 +94,15 @@ function revisionStep(row: MigrationRevision): TimelineStep {
  */
 export function migrationTimeline(migration: Migration, plan?: MigrationPlan): TimelineStep[] {
   const steps = new Map<bigint, TimelineStep>()
+  // A version the run stopped in, or one refused as out of order, is named
+  // by whatever else names it: the plan's file, or its row.
+  const names = new Map<bigint, string>()
+  for (const file of plan?.migrations ?? []) {
+    names.set(file.version, file.description)
+  }
+  for (const row of migration.history?.revisions ?? []) {
+    names.set(row.version, row.description)
+  }
   const add = (step: TimelineStep) => {
     if (!steps.has(step.version)) {
       steps.set(step.version, step)
@@ -107,7 +116,7 @@ export function migrationTimeline(migration: Migration, plan?: MigrationPlan): T
     add({
       version: run.failure.version,
       label: String(run.failure.version),
-      name: "",
+      name: names.get(run.failure.version) ?? "",
       state: "failed",
       tone: stepTones.failed,
       note: `The last run stopped here: ${whereStopped(run.failure)}`,
@@ -131,7 +140,7 @@ export function migrationTimeline(migration: Migration, plan?: MigrationPlan): T
     add({
       version,
       label: String(version),
-      name: "",
+      name: names.get(version) ?? "",
       state: "out-of-order",
       tone: stepTones["out-of-order"],
       note: "Below a version the database already applied; linear execution refuses it",
