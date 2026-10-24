@@ -200,11 +200,16 @@ describe("originalError", () => {
 })
 
 describe("the journal on the timeline", () => {
-  const finished = minutesAgo(8)
+  // Both ends of the run from one reading of the clock, so the run takes
+  // exactly the minute between them.
+  const anchor = Date.now()
+  const before = (minutes: number) => timestampFromDate(new Date(anchor - minutes * 60_000))
+  const started = before(9)
+  const finished = before(8)
   const journaled = syncedMigration((m) => {
     m.lastRun = create(MigrationRunSchema, {
       outcome: "Failed",
-      startedAt: minutesAgo(9),
+      startedAt: started,
       finishedAt: finished,
       message: "Migration 2 failed and committed nothing",
       failure: { version: 2n, statement: 1, statements: 3, sqlState: "23505" },
@@ -216,7 +221,7 @@ describe("the journal on the timeline", () => {
         {
           type: "RunFinished",
           at: finished,
-          startedAt: minutesAgo(9),
+          startedAt: started,
           outcome: "Failed",
           failure: { version: 2n, statement: 1, statements: 3, sqlState: "23505" },
         },

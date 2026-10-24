@@ -11,6 +11,10 @@ import { renderConsole, syncedMigration, waitingSchema } from "../../test/consol
 const minutesAgo = (minutes: number) => timestampFromDate(new Date(Date.now() - minutes * 60_000))
 
 function journaled() {
+  // Every instant from one reading of the clock, so the Apply takes exactly
+  // the minute between its start and its end.
+  const anchor = Date.now()
+  const minutesAgo = (minutes: number) => timestampFromDate(new Date(anchor - minutes * 60_000))
   return waitingSchema((schema) => {
     schema.journal = {
       $typeName: "ptah.console.v1.Journal",
