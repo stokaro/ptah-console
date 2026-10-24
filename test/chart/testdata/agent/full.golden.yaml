@@ -10,9 +10,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 spec:
   podSelector:
     matchLabels:
@@ -59,9 +59,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 
 ---
 # Source: ptah-console-agent/templates/accounts.yaml
@@ -75,9 +75,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 data:
   accounts.yaml: |
     apiVersion: console.ptah.run/v1alpha1
@@ -98,9 +98,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 data:
   agent.yaml: |
     apiVersion: console.ptah.run/v1alpha1
@@ -140,9 +140,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 rules:
   - apiGroups: [""]
     resources: ["users"]
@@ -160,9 +160,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -182,9 +182,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 rules:
   - apiGroups:
     - operator.ptah.run
@@ -211,9 +211,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 rules:
   - apiGroups:
     - operator.ptah.run
@@ -240,9 +240,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -265,9 +265,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -287,9 +287,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -312,9 +312,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -334,9 +334,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console-agent
     app.kubernetes.io/instance: agent
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-agent-0.1.0
+    helm.sh/chart: ptah-console-agent-0.2.0
 spec:
   # One channel per connection: a rollout replaces the agent whole.
   replicas: 1
@@ -352,7 +352,7 @@ spec:
         app.kubernetes.io/name: ptah-console-agent
         app.kubernetes.io/instance: agent
       annotations:
-        checksum/configuration: 592b2471e8be394a8ee847a70750eae2aece13242643e745de257f3b17ce5769
+        checksum/configuration: 89b204f49df1af47be8c859fe20492f60f1ef0e06892e3b07c15f7168b6a3d6f
         example.com/team: databases
     spec:
       serviceAccountName: agent-ptah-console-agent
@@ -367,7 +367,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: agent
-          image: ghcr.io/stokaro/ptah-console-agent:0.1.0@sha256:f68968558f0634c1e388f2be3f8d9d0f7c5916631abe16c5bae55d21e8e909c0
+          image: ghcr.io/stokaro/ptah-console-agent:0.2.0@sha256:f68968558f0634c1e388f2be3f8d9d0f7c5916631abe16c5bae55d21e8e909c0
           imagePullPolicy: IfNotPresent
           args:
             - --config=/etc/ptah-console-agent/configuration/agent.yaml

@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "releases": [
     {
+      "console": "0.2.0",
+      "operator": "v0.2.7-0.20261024111152-ffdfdff0a508",
+      "kubernetes": ["1.35", "1.36", "1.37"]
+    },
+    {
       "console": "0.1.0",
       "operator": "v0.2.5",
       "kubernetes": ["1.35", "1.36", "1.37"]
