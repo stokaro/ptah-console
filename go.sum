@@ -145,8 +145,8 @@ github.com/spf13/cobra v1.10.2/go.mod h1:7C1pvHqHw5A4vrJfjNwvOdzYu0Gml16OCs2GRiT
 github.com/spf13/pflag v1.0.9/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/spf13/pflag v1.0.10 h1:4EBh2KAYBwaONj6b2Ye1GiHfwjqyROoF4RwYO+vPwFk=
 github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
-github.com/stokaro/ptah-operator v0.2.7-0.20261024151632-adf7886c4c95 h1:qWksypmqsO8cURW6T4R40UFuKp8FIeuWKU0QqiNR/Og=
-github.com/stokaro/ptah-operator v0.2.7-0.20261024151632-adf7886c4c95/go.mod h1:5ksXVlDJZgIiiQt4r2o5w0hdL5hWQTEE1ob629pWwM0=
+github.com/stokaro/ptah-operator v0.2.7-0.20261024170232-70bd7654e4a8 h1:vkjxeCrTmA9JwTIuW7Xab15I02rTkivsnra/94hhocY=
+github.com/stokaro/ptah-operator v0.2.7-0.20261024170232-70bd7654e4a8/go.mod h1:5ksXVlDJZgIiiQt4r2o5w0hdL5hWQTEE1ob629pWwM0=
 github.com/stokaro/teststyle v0.2.0 h1:jCyBstcPX+doEkmw5jRoiwPj/9I3srYyI27avIB+7kY=
 github.com/stokaro/teststyle v0.2.0/go.mod h1:/eSKEwaWErHF/URpcA0yaXLbNOD5951tH4y89wX2zio=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

@@ -11,6 +11,7 @@ import { ClusterProvider, readClusterSearch, type ClusterSearch } from "./api/cl
 
 import { Home, Launch, Login, providerRefusals, type ProviderRefusal } from "./screens/Auth"
 import { Loading } from "./screens/common"
+import { migrationTabs, type MigrationTab } from "./screens/console/migrationTabs"
 import { RouteError } from "./screens/RouteError"
 import {
   readActivitySearch,
@@ -236,15 +237,40 @@ function SchemaRoute() {
   return <SchemaDetail namespace={namespace} name={name} />
 }
 
+interface MigrationSearch {
+  tab?: MigrationTab
+}
+
+/** The open panel of a migration's page; History when the address names none it has. */
+function readMigrationSearch(search: Record<string, unknown>): MigrationSearch {
+  return typeof search.tab === "string" &&
+    search.tab !== "history" &&
+    (migrationTabs as readonly string[]).includes(search.tab)
+    ? { tab: search.tab as MigrationTab }
+    : {}
+}
+
 const consoleMigration = createRoute({
   getParentRoute: () => consoleRoute,
   path: "migrations/$namespace/$name",
+  validateSearch: readMigrationSearch,
   component: MigrationRoute,
 })
 
 function MigrationRoute() {
   const { namespace, name } = consoleMigration.useParams()
-  return <MigrationDetail namespace={namespace} name={name} />
+  const search = consoleMigration.useSearch()
+  const navigate = consoleMigration.useNavigate()
+  return (
+    <MigrationDetail
+      namespace={namespace}
+      name={name}
+      tab={search.tab ?? "history"}
+      onTab={(tab) =>
+        void navigate({ search: { ...search, tab: tab === "history" ? undefined : tab } })
+      }
+    />
+  )
 }
 
 const schemaHistory = createRoute({

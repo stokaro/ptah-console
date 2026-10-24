@@ -576,3 +576,35 @@ func TestAttentionNamesTheCommandThatShowsIt(t *testing.T) {
 		})
 	}
 }
+
+// The revision rows reach the console as the operator published them, newest
+// first, and a duration the revision table did not record stays absent: a
+// migration that took no measurable time and one nobody timed are not the
+// same row.
+func TestMigrationRevisionsAreCarriedAsPublished(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	written := metav1.NewTime(time.Date(2026, 10, 24, 7, 42, 30, 0, time.UTC))
+	instant := int64(0)
+	migration := &operatorv1alpha1.PtahMigration{}
+	migration.Status.History = &operatorv1alpha1.MigrationHistoryStatus{
+		CurrentVersion: 2,
+		Revisions: []operatorv1alpha1.MigrationRevisionStatus{
+			{Version: 2, Description: "add invoices", Checksum: "h1:two", State: "applied", AppliedAt: &written, ExecutionMillis: &instant},
+			{Version: 1, Description: "create accounts", Checksum: "h1:one", State: "modified", AppliedAt: &written},
+		},
+	}
+
+	rows := model.Migration(migration).GetHistory().GetRevisions()
+
+	c.Assert(rows, qt.HasLen, 2)
+	c.Assert(rows[0].GetVersion(), qt.Equals, int64(2))
+	c.Assert(rows[0].GetAppliedAt().AsTime(), qt.Equals, written.Time)
+	c.Assert(rows[0].ExecutionMillis, qt.IsNotNil)
+	c.Assert(rows[0].GetExecutionMillis(), qt.Equals, int64(0))
+	c.Assert(rows[1].GetState(), qt.Equals, "modified")
+	c.Assert(rows[1].ExecutionMillis, qt.IsNil)
+
+	migration.Status.History.Revisions = nil
+	c.Assert(model.Migration(migration).GetHistory().GetRevisions(), qt.IsNil)
+}

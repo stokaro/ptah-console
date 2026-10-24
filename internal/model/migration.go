@@ -54,6 +54,7 @@ func Migration(migration *operatorv1alpha1.PtahMigration) *consolev1.Migration {
 			CheckpointVersion: history.CheckpointVersion, AppliedCount: history.AppliedCount,
 			PendingCount: history.PendingCount, Dirty: history.Dirty,
 			ModifiedVersions: history.ModifiedVersions, OutOfOrderVersions: history.OutOfOrderVersions,
+			Revisions: revisions(history.Revisions),
 		}
 	}
 	if plan := status.Plan; plan != nil {
@@ -288,4 +289,24 @@ func migrationAttention(migration *operatorv1alpha1.PtahMigration, c conditions)
 
 func failedRun(run *operatorv1alpha1.MigrationRunStatus) bool {
 	return run != nil && (run.Outcome == operatorv1alpha1.MigrationRunOutcomeFailed || run.Outcome == operatorv1alpha1.MigrationRunOutcomePartial)
+}
+
+// revisions are the revision rows as the operator published them, newest
+// first. A duration the table did not record stays absent rather than zero.
+func revisions(rows []operatorv1alpha1.MigrationRevisionStatus) []*consolev1.MigrationRevision {
+	if len(rows) == 0 {
+		return nil
+	}
+	out := make([]*consolev1.MigrationRevision, 0, len(rows))
+	for _, row := range rows {
+		revision := &consolev1.MigrationRevision{
+			Version: row.Version, Description: row.Description, Checksum: row.Checksum,
+			State: string(row.State), AppliedAt: timestamp(row.AppliedAt),
+		}
+		if row.ExecutionMillis != nil {
+			revision.ExecutionMillis = new(*row.ExecutionMillis)
+		}
+		out = append(out, revision)
+	}
+	return out
 }

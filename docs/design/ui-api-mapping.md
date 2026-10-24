@@ -174,24 +174,36 @@ none.
 | Shows | Reads | Verbs |
 | --- | --- | --- |
 | How far the history is, how the last run ended, what the current plan would apply, the run waiting for a person, every condition, the artifact, the target, the spec | `ptahmigrations` | list, watch; get when opened from a link |
+| The revision table's newest rows, with each one's checksum, when it was written and how long it ran | the migration's `status.history.revisions` | get |
 | The files the plan would apply | `ptahmigrationplans` | get |
 | Acknowledge an unresolved run | `ptahmigrationrunacknowledgments` | create, as on call |
 | The runs the journal keeps, how each ended and how long it took | the migration's `status.journal` | get |
+| The Kubernetes Events about the migration, in the Events panel | `events`, by `involvedObject.uid`, as on the execution page | list |
 
 The tiles above the page are the history's own numbers (current version and
 checkpoint, applied, pending) and the runs the journal keeps, with how many
-failed since it is complete. The runs list is newest first and narrows by how
-a run ended; its chart draws one bar per run that recorded its start, because
-the operator records a run, not each migration in it.
+failed since it is complete. Below them the page has four panels, and the
+address keeps which one is open: History, Events, Configuration and Related.
+The Events panel reads the Events only when it is opened.
 
-The operator publishes a summary of the revision table, not its rows: the
-current version and checkpoint, how many migrations are applied and pending,
-whether a row is dirty, and the versions that were modified or arrived out of
-order. The page lists the versions the last run applied, the plan's files and
-the refused versions, and says that the earlier versions are a count. The
-next history read is `status.nextReconciliationTime`. "Read again now" asks
-for it sooner through the `operator.ptah.run/read-requested-at` annotation; there
-is no retry, rollback or force, because the operator has none.
+History holds the last run, the supported actions and the migration
+timeline. The timeline lists the sequence newest first: the revision rows the
+operator published, the migration the last run stopped in, the plan's files,
+and the versions the history refuses as out of order, each version once. It
+searches by version or file name, narrows by state, jumps to the step that
+needs a person, and shows fifty steps at a time. The operator publishes the
+newest 64 rows, so where the history counts more applied migrations than the
+rows hold, the timeline says how many it does not list. The revision table
+below shows those rows with the checksum each recorded, and the chart draws
+how long each migration ran, leaving out a row whose table records no
+duration rather than drawing it as instant. The runs list is newest first and
+narrows by how a run ended. Its chart draws one bar per run, because the
+journal records a run, not each migration in it.
+
+The next history read is `status.nextReconciliationTime`. "Read again now"
+asks for it sooner through the `operator.ptah.run/read-requested-at`
+annotation. There is no retry, rollback or force, because the operator has
+none.
 
 ## Full console: plan review
 

@@ -17,13 +17,12 @@ import { ResourceKind } from "../../gen/ptah/console/v1/decisions_pb"
 import {
   DiagnosticsService,
   Evidence,
-  type GetDiagnosticsResponse,
   type JobEvidence,
 } from "../../gen/ptah/console/v1/diagnostics_pb"
 import { StageState } from "../../gen/ptah/console/v1/resources_pb"
 import { coverage, duration } from "../../model/activity"
 import { ago } from "../../model/connection"
-import { failureCauses, lastOutcome, relatedResources } from "../../model/diagnosis"
+import { failureCauses, lastOutcome } from "../../model/diagnosis"
 import { goneWord, jobRank, lastLog } from "../../model/execution"
 import {
   incident,
@@ -34,6 +33,7 @@ import {
 } from "../../model/resource"
 import { Loading, ReadError, useNow } from "../common"
 import { Facts } from "./detail"
+import { RelatedResources, ResourceEvents } from "./evidence"
 import { resourceLink } from "./links"
 
 export interface ExecutionDiagnosisProps {
@@ -258,17 +258,7 @@ export function ExecutionDiagnosis({ kind, namespace, name }: ExecutionDiagnosis
           </Card>
 
           <Card title="Related resources">
-            <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-[13px]">
-              {relatedResources(resource).map((item) => (
-                <li key={`${item.kind}/${item.name}/${item.note}`} className="flex flex-col">
-                  <span>
-                    <span className="text-mute">{item.kind}</span>{" "}
-                    <span className="font-mono break-all">{item.name}</span>
-                  </span>
-                  {item.note ? <span className="text-xs text-mute">{item.note}</span> : null}
-                </li>
-              ))}
-            </ul>
+            <RelatedResources resource={resource} />
           </Card>
 
           <Card title="Failure causes">
@@ -432,50 +422,4 @@ function DatabaseState({ resource, now }: { resource: ResourceView; now: Date })
     )
   }
   return <span className="text-sm text-fg2">The database has not been read yet.</span>
-}
-
-function ResourceEvents({ response, now }: { response?: GetDiagnosticsResponse; now: Date }) {
-  const list = response?.events
-  if (!list) {
-    return <span className="text-sm text-fg2">Not read yet.</span>
-  }
-  if (list.evidence !== Evidence.SHOWN) {
-    return (
-      <span className="text-sm text-fg2">
-        {goneWord(list.evidence)}
-        {list.problem ? `: ${list.problem}` : ""}
-      </span>
-    )
-  }
-  if (list.events.length === 0) {
-    return <span className="text-sm text-fg2">No Event is kept about this resource.</span>
-  }
-  return (
-    <>
-      <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-[13px]">
-        {list.events.map((event, index) => {
-          const seen = date(event.lastSeen ?? event.firstSeen)
-          return (
-            <li
-              key={`${event.reason}-${index}`}
-              className="grid grid-cols-[20px_minmax(0,1fr)_auto] gap-2"
-            >
-              <StatusGlyph tone={event.type === "Warning" ? "warn" : "off"} size={20} />
-              <span className="flex min-w-0 flex-col">
-                <b className="font-semibold">
-                  {event.reason}
-                  {event.count > 1 ? ` ×${event.count}` : ""}
-                </b>
-                <span className="text-fg2">{event.message}</span>
-              </span>
-              <span className="text-xs whitespace-nowrap text-mute">
-                {seen ? ago(seen, now) : "–"}
-              </span>
-            </li>
-          )
-        })}
-      </ul>
-      <span className="text-xs text-mute">The API server keeps Events for an hour by default.</span>
-    </>
-  )
 }
