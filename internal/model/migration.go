@@ -42,6 +42,7 @@ func Migration(migration *operatorv1alpha1.PtahMigration) *consolev1.Migration {
 		NextReconciliation: timestamp(status.NextReconciliationTime),
 		Gitops:             gitOps(migration.ObjectMeta),
 		SpecYaml:           specYAML(migration.Spec),
+		Journal:            journal(status.Journal),
 	}
 	if realm := migration.Spec.Target.RealmRef; realm != nil {
 		out.Target.Realm = realm.Name
@@ -62,6 +63,7 @@ func Migration(migration *operatorv1alpha1.PtahMigration) *consolev1.Migration {
 			Outcome: string(run.Outcome), JobName: run.JobName, JobUid: string(run.JobUID),
 			StartedAt: timestamp(&run.StartedAt), FinishedAt: timestamp(run.FinishedAt),
 			AppliedVersions: run.AppliedVersions, Message: run.Message,
+			Failure: runFailure(run.Failure),
 		}
 	}
 	if run := status.UnresolvedRun; run != nil {

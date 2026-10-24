@@ -326,6 +326,61 @@ message Schema {
   // names its Secret and key; no Secret content is in it. The console never
   // writes from it.
   string spec_yaml = 20;
+  // The significant events of the schema's lifecycle the operator kept.
+  // Absent from an operator that keeps no journal.
+  Journal journal = 21;
+}
+
+// Journal is the bounded record of a resource's lifecycle the operator keeps
+// in status.journal: significant events only, at most 64 of them, none more
+// than 30 days older than the newest.
+message Journal {
+  // From when the journal is complete. An event before it may be missing.
+  google.protobuf.Timestamp covered_since = 1;
+  // Oldest first.
+  repeated JournalEntry entries = 2;
+}
+
+// JournalEntry is one event. Which fields it carries depends on its type,
+// as the operator's API reference says.
+message JournalEntry {
+  // PlanPublished, ApprovalAccepted, ApplyFinished, Verified, RunFinished,
+  // RunAcknowledged or OperationFailed.
+  string type = 1;
+  google.protobuf.Timestamp at = 2;
+  // When the Apply or the run started.
+  google.protobuf.Timestamp started_at = 3;
+  // For attempts that failed alike in a row: when the last of them did.
+  google.protobuf.Timestamp last_at = 4;
+  // For attempts that failed alike in a row: how many.
+  int32 count = 5;
+  string plan = 6;
+  int32 statements = 7;
+  bool destructive = 8;
+  string approval = 9;
+  // Who approved, as admission stamped it; a migration's approval does not
+  // carry it.
+  string approver = 10;
+  string outcome = 11;
+  string operation = 12;
+  // A condition reason, never a message.
+  string reason = 13;
+  // How many versions a run applied.
+  int32 applied_versions = 14;
+  RunFailure failure = 15;
+  string acknowledgment = 16;
+  string acknowledged_by = 17;
+}
+
+// RunFailure is where a migration run stopped. It carries no engine message:
+// one can quote row data.
+message RunFailure {
+  int64 version = 1;
+  // The statement's position in the migration, from 1, and how many it has.
+  int32 statement = 2;
+  int32 statements = 3;
+  string sql_state = 4;
+  int32 error_number = 5;
 }
 
 message ListSchemasRequest {
@@ -438,6 +493,8 @@ message MigrationRun {
   google.protobuf.Timestamp finished_at = 5;
   repeated int64 applied_versions = 6;
   string message = 7;
+  // Where a failed or partial run stopped.
+  RunFailure failure = 8;
 }
 
 message UnresolvedRun {
@@ -480,6 +537,9 @@ message Migration {
   GitOps gitops = 19;
   // The spec as YAML, for reading, as on Schema.
   string spec_yaml = 20;
+  // The significant events of the migration's lifecycle the operator kept.
+  // Absent from an operator that keeps no journal.
+  Journal journal = 21;
 }
 
 message ListMigrationsRequest {

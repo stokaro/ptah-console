@@ -225,6 +225,8 @@ export interface Fixture {
   /** The migrations, read again on every request. */
   migrations?: Migration[] | (() => Migration[])
   decisions?: Decision[]
+  /** Listing decisions is refused. */
+  decisionsRefused?: boolean
   /** The current plan, read again on every request. */
   plan?: SchemaPlan | (() => SchemaPlan)
   /** A migration's current plan, or the error reading it gives. */
@@ -491,7 +493,12 @@ export function consoleTransport(fixture: Fixture) {
       },
     })
     service(DecisionService, {
-      listDecisions: () => ({ decisions: fixture.decisions ?? [] }),
+      listDecisions: () => {
+        if (fixture.decisionsRefused) {
+          throw new ConnectError("may not list ptahschemaapprovals", Code.PermissionDenied)
+        }
+        return { decisions: fixture.decisions ?? [] }
+      },
       getDecision: (request) => ({ decision: fixture.getDecision?.(request) }),
       approveSchemaPlan: async (request) => ({ result: await fixture.approve?.(request) }),
       acknowledgeMigrationRun: (request) => ({ result: fixture.acknowledge?.(request) }),

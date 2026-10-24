@@ -190,6 +190,27 @@ pinned above the lanes: a failed run's own message for a migration, the
 failure condition otherwise, and failing those the first container that
 exited with an error.
 
+## Full console: activity
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| Plans, Applies and runs, verifications and failures | `ptahschemas`, `ptahmigrations`, their `status.journal` | list, watch |
+| Approvals and acknowledgments, with who decided | `ptahschemaapprovals`, `ptahmigrationapprovals`, `ptahmigrationrunacknowledgments` | list |
+
+The feed reads nothing the resource list and the decision list do not. Each
+resource's journal is the operator's own bounded record of its lifecycle:
+significant events only, at most 64 of them, none more than 30 days older
+than the newest. The page says from when the journals it read are complete,
+the latest `coveredSince` among them, and how far back the earliest reaches,
+and it promises no period beyond that. A decision the console can list stands
+for the journal's acceptance or acknowledgment entry it led to, so an approval
+appears once, with who made it as admission recorded; one it cannot list
+leaves the journal's entry in place. A failed run names the migration, the
+statement's position and the SQLSTATE or error number, never the engine's
+message. The type, period and person filters live in the address. A resource
+whose operator keeps no journal is counted and named as such rather than
+shown as quiet.
+
 ## Full console: pre-flight
 
 | Shows | Reads | Verbs |
