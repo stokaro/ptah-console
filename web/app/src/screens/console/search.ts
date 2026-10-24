@@ -1,3 +1,4 @@
+import { activityPeriods, activityTypes, type ActivityFilter } from "../../model/activity"
 import {
   pageSizes,
   resourceStates,
@@ -39,5 +40,17 @@ export function readResourcesSearch(search: Record<string, unknown>): ResourcesS
     sort: oneOf(search.sort, sorts),
     page: Number.isInteger(page) && page > 1 ? page : undefined,
     size: pageSizes.find((candidate) => candidate === size),
+  }
+}
+
+const activityTypeValues = activityTypes.map((type) => type.value)
+const activityPeriodValues = activityPeriods.map((period) => period.value)
+
+/** Reads the activity filters out of the address; anything unknown is dropped. */
+export function readActivitySearch(search: Record<string, unknown>): ActivityFilter {
+  return {
+    type: oneOf(search.type, activityTypeValues),
+    period: oneOf(search.period, activityPeriodValues),
+    who: typeof search.who === "string" && search.who !== "" ? search.who : undefined,
   }
 }

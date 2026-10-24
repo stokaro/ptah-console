@@ -1,8 +1,19 @@
-import { Eyebrow, Segmented, StatusGlyph, type Tone } from "@ptah/console-ui"
+import { Button, Eyebrow, Segmented, StatusGlyph, type Tone } from "@ptah/console-ui"
+import { useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react"
 
-import { useResources } from "../../api/resources"
+import { useDecisions, useResources } from "../../api/resources"
+import {
+  activity,
+  coverage,
+  movement,
+  perDay,
+  type ActivityEntry,
+  type DayCount,
+  type Movement,
+} from "../../model/activity"
+import { ago } from "../../model/connection"
 import { resourceStates, stateLabel, type ResourceState } from "../../model/catalog"
 import {
   attentionGroups,
@@ -37,10 +48,13 @@ const barColors: Record<ResourceState, string> = {
 /** How many rows of the attention table and of the activity list the page shows. */
 const attentionRows = 8
 const activityRows = 8
+const namespaceRows = 8
 
 export function Overview() {
   const { resources, scope, namespaces, truncated, loading, error } = useResources()
+  const { decisions } = useDecisions()
   const now = useNow()
+  const queryClient = useQueryClient()
   if (loading) {
     return <Loading what="the resources" />
   }
@@ -48,17 +62,25 @@ export function Overview() {
     return <ReadError error={error} what="the resources" />
   }
   const { counts, total } = stateCounts(resources)
+  const feed = activity(resources, decisions.data?.decisions ?? [])
+  const kept = coverage(resources)
+  const moved = movement(feed, kept.complete, now)
   return (
     <>
-      <section className="flex flex-col gap-1.5">
-        <Eyebrow>Workspace</Eyebrow>
-        <h1 className="m-0 font-display text-[28px] leading-[1.1] font-semibold tracking-[-0.035em]">
-          Overview
-        </h1>
-        <span className="text-[13.5px] text-fg2">
-          {total} {total === 1 ? "resource" : "resources"} in{" "}
-          {namespacesRead(namespaces.length, scope.readable.length)} this identity may read.
+      <section className="flex flex-wrap items-end justify-between gap-3">
+        <span className="flex flex-col gap-1.5">
+          <Eyebrow>Workspace</Eyebrow>
+          <h1 className="m-0 font-display text-[28px] leading-[1.1] font-semibold tracking-[-0.035em]">
+            Overview
+          </h1>
+          <span className="text-[13.5px] text-fg2">
+            {total} {total === 1 ? "resource" : "resources"} in{" "}
+            {namespacesRead(namespaces.length, scope.readable.length)} this identity may read.
+          </span>
         </span>
+        <Button onClick={() => void queryClient.invalidateQueries()} disabled={scope.isFetching}>
+          {scope.isFetching ? "Reading…" : "Refresh"}
+        </Button>
       </section>
       <TruncatedNotice namespaces={truncated} />
       <nav
@@ -79,6 +101,7 @@ export function Overview() {
             <span className="font-display text-[30px] leading-none font-semibold tracking-[-0.03em]">
               {counts[state.value]}
             </span>
+            <TileMovement state={state.value} moved={moved} now={now} />
           </Link>
         ))}
       </nav>
@@ -89,8 +112,220 @@ export function Overview() {
           <NamespaceSection resources={resources} scope={scope.scopes} />
         </div>
       </div>
-      <ActivitySection resources={resources} now={now} />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <ExecutionsSection days={perDay(feed, kept.complete, now)} complete={kept.complete} />
+        <LifecycleSection />
+      </div>
+      {kept.complete ? (
+        <JournalActivitySection entries={feed} now={now} />
+      ) : (
+        <ActivitySection resources={resources} now={now} />
+      )}
     </>
+  )
+}
+
+/** What the journals say moved in the period the tiles count, for the states it bears on. */
+function TileMovement({
+  state,
+  moved,
+  now,
+}: {
+  state: ResourceState
+  moved: Movement | undefined
+  now: Date
+}) {
+  if (!moved) {
+    return null
+  }
+  const counted: Partial<Record<ResourceState, [number, string, string]>> = {
+    attention: [moved.failures, "failure", "failures"],
+    progress: [moved.executions, "Apply or run", "Applies and runs"],
+    insync: [moved.verified, "verified in sync", "verified in sync"],
+  }
+  const entry = counted[state]
+  if (!entry) {
+    return null
+  }
+  const [count, one, many] = entry
+  const day = now.getTime() - moved.since.getTime() >= 86_399_000
+  return (
+    <span className="text-xs text-mute">
+      {count} {count === 1 ? one : many}{" "}
+      {day ? "in the last 24 h" : `since ${moved.since.toLocaleTimeString()}`}
+    </span>
+  )
+}
+
+const dayFormat = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  timeZone: "UTC",
+})
+
+/**
+ * Plans published and Applies and runs that ended, per day, over the days the
+ * journals cover; never a week the operator did not keep.
+ */
+function ExecutionsSection({ days, complete }: { days: DayCount[]; complete?: Date }) {
+  if (!complete || days.length === 0) {
+    return (
+      <Section title="Plans and executions">
+        <p className="m-0 text-sm text-fg2">
+          No journal is kept for these resources, so there is nothing to count per day.
+        </p>
+      </Section>
+    )
+  }
+  const most = Math.max(1, ...days.map((d) => d.plans + d.succeeded + d.failed + d.unknown))
+  const todayFrom = days.at(-1)!.day.getTime() < complete.getTime() ? complete : undefined
+  const parts: { key: keyof Omit<DayCount, "day">; label: string; color: string }[] = [
+    { key: "succeeded", label: "Succeeded", color: "bg-green" },
+    { key: "failed", label: "Failed", color: "bg-red" },
+    { key: "unknown", label: "Outcome unknown", color: "bg-violet" },
+    { key: "plans", label: "Plans published", color: "bg-line2" },
+  ]
+  return (
+    <Section
+      title="Plans and executions"
+      sub={`Per UTC day, over the ${days.length} ${days.length === 1 ? "day" : "days"} the journals cover`}
+    >
+      <ul aria-label="Legend" className="m-0 flex list-none flex-wrap gap-3 p-0 text-xs text-fg2">
+        {parts.map((part) => (
+          <li key={part.key} className="inline-flex items-center gap-1.5">
+            <span aria-hidden="true" className={`size-2.5 rounded-sm ${part.color}`} />
+            {part.label}
+          </li>
+        ))}
+      </ul>
+      <div aria-hidden="true" className="flex h-[140px] items-end gap-2">
+        {days.map((day) => (
+          <span
+            key={day.day.toISOString()}
+            className="flex h-full flex-1 flex-col items-center gap-1"
+          >
+            <span className="flex w-full max-w-[42px] flex-auto flex-col-reverse overflow-hidden rounded-md bg-[color-mix(in_oklab,var(--line)_35%,transparent)]">
+              {parts.map((part) =>
+                day[part.key] > 0 ? (
+                  <span
+                    key={part.key}
+                    className={part.color}
+                    style={{ height: `${(day[part.key] / most) * 100}%` }}
+                  />
+                ) : null
+              )}
+            </span>
+            <span className="text-[11px] text-mute">{dayFormat.format(day.day)}</span>
+          </span>
+        ))}
+      </div>
+      <table className="sr-only">
+        <caption>Plans and executions per UTC day</caption>
+        <thead>
+          <tr>
+            <th scope="col">Day</th>
+            {parts.map((part) => (
+              <th key={part.key} scope="col">
+                {part.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {days.map((day) => (
+            <tr key={day.day.toISOString()}>
+              <th scope="row">{dayFormat.format(day.day)}</th>
+              {parts.map((part) => (
+                <td key={part.key}>{day[part.key]}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {todayFrom ? (
+        <span className="text-xs text-mute">
+          The journals are complete only since {todayFrom.toLocaleString()}, so today counts from
+          then.
+        </span>
+      ) : null}
+    </Section>
+  )
+}
+
+const lifecycleSteps = [
+  "Resolve the source and pin what it names",
+  "Verify it under the verification policy",
+  "Observe the database, read-only",
+  "Plan the exact change",
+  "Wait for an approval where the policy asks",
+  "Apply the approved plan in a Job",
+  "Verify convergence with a fresh observation",
+]
+
+/** The loop every resource repeats, beside the counts it produces. */
+function LifecycleSection() {
+  return (
+    <Section title="Operator lifecycle" sub="What each resource repeats at its interval">
+      <ol className="m-0 flex list-none flex-col gap-1.5 p-0 text-[13px]">
+        {lifecycleSteps.map((step, index) => (
+          <li key={step} className="flex items-center gap-2.5">
+            <span className="flex size-5 flex-none items-center justify-center rounded-full bg-pribg font-mono text-[11px] text-pri">
+              {index + 1}
+            </span>
+            {step}
+          </li>
+        ))}
+      </ol>
+      <span className="text-xs text-mute">
+        ↻ The loop repeats at each resource&apos;s interval, so drift and a moved tag are noticed
+        without anyone asking.{" "}
+        <Link to="/console/architecture" className="font-medium text-pri">
+          How it works →
+        </Link>
+      </span>
+    </Section>
+  )
+}
+
+/** The newest events the journals and the decisions record, with the way to all of them. */
+function JournalActivitySection({ entries, now }: { entries: ActivityEntry[]; now: Date }) {
+  const shown = entries.slice(0, activityRows)
+  return (
+    <Section title="Recent activity" sub="The newest events the journals and the decisions record">
+      {shown.length === 0 ? (
+        <p className="m-0 text-sm text-fg2">No journal holds an event yet.</p>
+      ) : (
+        <ol className="m-0 flex list-none flex-col p-0">
+          {shown.map((entry) => (
+            <li
+              key={entry.key}
+              className="grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-3 border-b border-line py-2 last:border-b-0"
+            >
+              <StatusGlyph tone={entry.tone} size={20} />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="truncate text-sm font-medium">{entry.title}</span>
+                <span className="truncate text-xs text-mute">
+                  {entry.namespace}/{entry.name} · {entry.kind}
+                </span>
+              </span>
+              <time
+                dateTime={entry.at.toISOString()}
+                title={entry.at.toLocaleString()}
+                className="font-mono text-xs whitespace-nowrap text-mute"
+              >
+                {ago(entry.at, now)}
+              </time>
+            </li>
+          ))}
+        </ol>
+      )}
+      <span className="flex text-xs">
+        <span className="flex-auto" />
+        <Link to="/console/activity" className="font-medium text-pri">
+          All activity →
+        </Link>
+      </span>
+    </Section>
   )
 }
 
@@ -299,9 +534,26 @@ function NamespaceSection({
   resources: ResourceView[]
   scope: NamespaceScope[]
 }) {
-  const rows = namespaceHealth(resources, scope)
+  const [query, setQuery] = useState("")
+  const [expanded, setExpanded] = useState(false)
+  const all = namespaceHealth(resources, scope)
+  const wanted = query.trim().toLowerCase()
+  const matched = all.filter((row) => row.namespace.toLowerCase().includes(wanted))
+  const rows = expanded ? matched : matched.slice(0, namespaceRows)
   return (
     <Section title="Namespace health" sub="Resource states by namespace">
+      {all.length > namespaceRows ? (
+        <label className="flex h-9 items-center gap-2 rounded-[10px] border border-line bg-bg px-2.5 text-mute">
+          <span aria-hidden="true">⌕</span>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={`Search ${all.length} namespaces…`}
+            aria-label="Search namespaces"
+            className="min-w-0 flex-auto border-0 bg-transparent text-sm text-fg outline-0"
+          />
+        </label>
+      ) : null}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[13px]">
           <caption className="sr-only">Resource states by namespace</caption>
@@ -359,6 +611,18 @@ function NamespaceSection({
           </tbody>
         </table>
       </div>
+      {matched.length === 0 ? (
+        <p className="m-0 text-sm text-fg2">No namespace matches “{query.trim()}”.</p>
+      ) : null}
+      {matched.length > namespaceRows ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="self-start cursor-pointer border-0 bg-transparent p-0 text-xs font-medium text-pri"
+        >
+          {expanded ? "Show fewer" : `Show all ${matched.length}`}
+        </button>
+      ) : null}
     </Section>
   )
 }

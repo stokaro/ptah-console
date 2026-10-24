@@ -12,7 +12,7 @@ import { ClusterProvider, readClusterSearch, type ClusterSearch } from "./api/cl
 import { Home, Launch, Login } from "./screens/Auth"
 import { Loading } from "./screens/common"
 import { RouteError } from "./screens/RouteError"
-import { readResourcesSearch } from "./screens/console/search"
+import { readActivitySearch, readResourcesSearch } from "./screens/console/search"
 import { FocusLayout, Root } from "./screens/Shell"
 
 // Each screen is its own chunk: the first page loads the shell and the one
@@ -53,6 +53,7 @@ const Architecture = lazyRouteComponent(
   () => import("./screens/console/Architecture"),
   "Architecture"
 )
+const Activity = lazyRouteComponent(() => import("./screens/console/Activity"), "Activity")
 const SchemaDetail = lazyRouteComponent(
   () => import("./screens/console/SchemaDetail"),
   "SchemaDetail"
@@ -237,6 +238,21 @@ const consoleArchitecture = createRoute({
   component: Architecture,
 })
 
+const consoleActivity = createRoute({
+  getParentRoute: () => consoleRoute,
+  path: "activity",
+  validateSearch: readActivitySearch,
+  component: ActivityRoute,
+})
+
+function ActivityRoute() {
+  const search = consoleActivity.useSearch()
+  const navigate = consoleActivity.useNavigate()
+  return (
+    <Activity search={search} onSearch={(next) => void navigate({ search: next, replace: true })} />
+  )
+}
+
 export const routeTree = rootRoute.addChildren([
   focus.addChildren([
     indexRoute,
@@ -263,6 +279,7 @@ export const routeTree = rootRoute.addChildren([
     migrationHistory,
     consolePreflight,
     consoleArchitecture,
+    consoleActivity,
   ]),
 ])
 

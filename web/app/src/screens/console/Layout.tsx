@@ -26,6 +26,7 @@ interface Page {
   to:
     | "/console"
     | "/console/resources"
+    | "/console/activity"
     | "/console/architecture"
     | "/console/preflight"
     | "/connections"
@@ -47,6 +48,7 @@ const groups: { label: string; pages: Page[] }[] = [
   {
     label: "Installation",
     pages: [
+      { to: "/console/activity", label: "Activity", icon: "activity" },
       { to: "/console/architecture", label: "Architecture & safety", icon: "safety" },
       { to: "/console/preflight", label: "Pre-flight", icon: "preflight" },
     ],

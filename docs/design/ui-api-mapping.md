@@ -117,17 +117,28 @@ each part.
 
 | Shows | Reads | Verbs |
 | --- | --- | --- |
-| How many resources are in each state, what needs a person, namespace health, recent condition changes | `ptahschemas`, `ptahmigrations` | list, watch |
+| How many resources are in each state, what needs a person, namespace health | `ptahschemas`, `ptahmigrations` | list, watch |
+| What moved, plans and executions per day, recent activity | the same resources' `status.journal`, and the decisions | list, watch |
 
-The overview reads nothing the resource list does not. "Needs attention" takes
-each resource's leading attention, the one the server lists first: an unknown
-outcome before a failure or a block, those before a plan waiting for approval,
-then drift and stale status, and within a kind the longest wait first. A
-suspended resource is counted as suspended, not as needing attention. "Recent
-activity" is the newest `lastTransitionTime` of the conditions each resource
-keeps; a condition keeps only its last change, so this is not a history, and
-the page says so. Kubernetes Events stay on each resource's page, where they
-are read for that resource alone.
+The overview reads nothing the resource list and the decision list do not.
+"Needs attention" takes each resource's leading attention, the one the server
+lists first: an unknown outcome before a failure or a block, those before a
+plan waiting for approval, then drift and stale status, and within a kind the
+longest wait first. A suspended resource is counted as suspended, not as
+needing attention.
+
+The tiles count the states the resources are in now. Under three of them the
+journals say what moved: failures, Applies and runs, and verifications that
+found the database in sync, over the last 24 hours or since the journals are
+complete, whichever is shorter, and the tile says which. "Plans and
+executions" counts plans published and Applies and runs that ended, per UTC
+day, over the days the journals cover in full and at most a week; today counts
+from midnight, or from when the journals became complete if that was today,
+and the page says so. "Recent activity" is the newest entries of the activity
+feed. Where no journal is kept, as under an operator older than 0.2.7, it is
+the newest `lastTransitionTime` of the conditions each resource keeps, which
+is not a history, and the page says that instead. Namespace health has a
+search and shows eight namespaces until asked for all.
 
 ## Full console: resources
 
@@ -181,14 +192,39 @@ because the operator has no such action, and no retry, rollback or force.
 | The controller's conditions and Events, the claimed operation and the next reconciliation | the resource's status, `events` for its UID | get; list with a field selector |
 | The Jobs status names, their Pods, containers and log excerpts | `jobs`, `pods`, `events`, `pods/log`, as on call | get, list, get |
 | What status records about the database: the applied plan, the last read, a fresh read due, the history and the last run | the resource's status | get |
+| The resource's journal: plans, approvals, Applies and runs with how long they took, verifications, acknowledgments and failed attempts | the resource's `status.journal` | get |
 
 The three lanes are the evidence the on-call page reads, laid out by who
-left it. Entries with a time come oldest first; a container's end keeps no
+left it, and the journal's events: what the controller decided on the
+controller lane, what reached the database on the database lane. A run the
+journal records is listed once, from the journal, with its start. Entries with a time come oldest first; a container's end keeps no
 time of its own and follows them; evidence that is gone stays as an entry
 that says why: not retained, not granted or unreadable. The original error is
-pinned above the lanes: a failed run's own message for a migration, the
-failure condition otherwise, and failing those the first container that
-exited with an error.
+pinned above the lanes: a failed run's own message for a migration, with
+where it stopped when the run recorded it, the failure condition otherwise,
+and failing those the first container that exited with an error. The page
+says from when the journal is complete, or that none is kept.
+
+## Full console: activity
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| Plans, Applies and runs, verifications and failures | `ptahschemas`, `ptahmigrations`, their `status.journal` | list, watch |
+| Approvals and acknowledgments, with who decided | `ptahschemaapprovals`, `ptahmigrationapprovals`, `ptahmigrationrunacknowledgments` | list |
+
+The feed reads nothing the resource list and the decision list do not. Each
+resource's journal is the operator's own bounded record of its lifecycle:
+significant events only, at most 64 of them, none more than 30 days older
+than the newest. The page says from when the journals it read are complete,
+the latest `coveredSince` among them, and how far back the earliest reaches,
+and it promises no period beyond that. A decision the console can list stands
+for the journal's acceptance or acknowledgment entry it led to, so an approval
+appears once, with who made it as admission recorded; one it cannot list
+leaves the journal's entry in place. A failed run names the migration, the
+statement's position and the SQLSTATE or error number, never the engine's
+message. The type, period and person filters live in the address. A resource
+whose operator keeps no journal is counted and named as such rather than
+shown as quiet.
 
 ## Full console: pre-flight
 

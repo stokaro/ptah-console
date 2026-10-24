@@ -9,6 +9,7 @@ import {
   type JobEvidence,
 } from "../gen/ptah/console/v1/diagnostics_pb"
 import type { Condition } from "../gen/ptah/console/v1/resources_pb"
+import { activity, whereStopped, type ActivityEntry } from "./activity"
 import { conditionTone, type ResourceView } from "./resource"
 
 /** Who left a piece of evidence: the operator's controller, a Job it ran, or the database. */
@@ -218,7 +219,15 @@ function databaseEntries(resource: ResourceView): Entry[] {
     })
   }
   const run = migration?.lastRun
-  if (run?.finishedAt) {
+  // A run the journal records is on the timeline from there, with its start.
+  const journaled = (migration?.journal?.entries ?? []).some(
+    (entry) =>
+      entry.type === "RunFinished" &&
+      run?.finishedAt &&
+      entry.at &&
+      Math.abs(timestampDate(entry.at).getTime() - timestampDate(run.finishedAt).getTime()) < 1000
+  )
+  if (run?.finishedAt && !journaled) {
     entries.push({
       lane: "database",
       at: date(run.finishedAt),
@@ -239,6 +248,34 @@ function databaseEntries(resource: ResourceView): Entry[] {
   return entries
 }
 
+/** The lane a journal event belongs on: what the controller decided, or what reached the database. */
+const journalLanes: Record<ActivityEntry["type"], Lane> = {
+  plan: "controller",
+  approval: "controller",
+  acknowledgment: "controller",
+  failure: "controller",
+  apply: "database",
+  verification: "database",
+}
+
+function seconds(ms: number) {
+  return ms < 60_000 ? `${Math.max(1, Math.round(ms / 1000))} s` : `${Math.round(ms / 60_000)} min`
+}
+
+/** The resource's journal on the lanes, each event at the time it records. */
+function journalEntries(resource: ResourceView): Entry[] {
+  return activity([resource], []).map((entry) => ({
+    lane: journalLanes[entry.type],
+    at: entry.at,
+    title: entry.title,
+    detail: [
+      ...entry.details,
+      ...(entry.durationMs !== undefined ? [`took ${seconds(entry.durationMs)}`] : []),
+    ].join(" · "),
+    tone: entry.tone,
+  }))
+}
+
 /**
  * Everything the operator and Kubernetes still keep about a resource's work,
  * on three lanes, oldest first; a time still due, such as the next read,
@@ -247,6 +284,7 @@ function databaseEntries(resource: ResourceView): Entry[] {
  */
 export function timeline(resource: ResourceView, diagnostics?: GetDiagnosticsResponse): Entry[] {
   const entries: Entry[] = [
+    ...journalEntries(resource),
     ...resource.conditions.map(conditionEntry),
     ...eventEntries("controller", resource.name, diagnostics?.events),
     ...(diagnostics?.jobs ?? []).flatMap(jobEntries),
@@ -294,7 +332,7 @@ export function originalError(resource: ResourceView, diagnostics?: GetDiagnosti
   ) {
     return {
       title: `The last run ended ${run.outcome}`,
-      text: run.message,
+      text: run.failure ? `${run.message}. Stopped at ${whereStopped(run.failure)}.` : run.message,
       at: date(run.finishedAt),
     }
   }

@@ -1,9 +1,11 @@
+import { create } from "@bufbuild/protobuf"
 import { screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { axe } from "jest-axe"
 import { describe, expect, it } from "vitest"
 
 import { Evidence } from "../../gen/ptah/console/v1/diagnostics_pb"
+import { JournalSchema } from "../../gen/ptah/console/v1/resources_pb"
 import { minutesAgo, renderConsole, syncedMigration } from "../../test/console"
 
 const failed = syncedMigration((m) => {
@@ -124,5 +126,39 @@ describe("Execution and history", () => {
       await screen.findByRole("heading", { name: /Execution and history of journal/ })
     ).toBeInTheDocument()
     expect(history.location.pathname).toBe("/console/migrations/application/journal/history")
+  })
+})
+
+describe("History, with the operator's journal", () => {
+  it("lays the journal on the lanes and says from when it is complete", async () => {
+    const journaled = syncedMigration((m) => {
+      m.journal = create(JournalSchema, {
+        coveredSince: minutesAgo(600),
+        entries: [
+          { type: "PlanPublished", at: minutesAgo(20), plan: "billing-p-1", statements: 2 },
+          {
+            type: "RunFinished",
+            at: minutesAgo(8),
+            startedAt: minutesAgo(9),
+            outcome: "Succeeded",
+            appliedVersions: 2,
+          },
+        ],
+      })
+    })
+    renderConsole("/console/migrations/application/billing/history", { migrations: [journaled] })
+
+    const table = await screen.findByRole("table", { name: /Execution and history of billing/ })
+    expect(within(table).getByText("Plan published")).toBeVisible()
+    expect(within(table).getByText("Run applied 2 versions")).toBeVisible()
+    expect(screen.getByText(/The operator's journal of billing is complete since/)).toBeVisible()
+  })
+
+  it("says no journal is kept where none is", async () => {
+    renderConsole("/console/migrations/application/billing/history", {
+      migrations: [syncedMigration()],
+    })
+
+    expect(await screen.findByText(/The operator keeps no journal of billing/)).toBeVisible()
   })
 })

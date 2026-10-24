@@ -59,6 +59,12 @@ export function Palette({ open, onOpenChange }: PaletteProps) {
       go: () => void navigate({ to: "/console/preflight" }),
     },
     {
+      value: "page:activity",
+      label: "Activity",
+      hint: "full console",
+      go: () => void navigate({ to: "/console/activity" }),
+    },
+    {
       value: "page:architecture",
       label: "Architecture & safety",
       hint: "full console",
