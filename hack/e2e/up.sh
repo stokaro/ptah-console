@@ -9,7 +9,9 @@ set -eu
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
-if [ ! -d "$OPERATOR_DIR/.git" ]; then
+if [ -d "$OPERATOR_DIR/.git" ]; then
+	"$E2E_DIR/operator.sh" --check "$OPERATOR_DIR"
+else
 	"$E2E_DIR/operator.sh" "$OPERATOR_DIR" >/dev/null
 fi
 (cd "$OPERATOR_DIR" && make demo-up)
