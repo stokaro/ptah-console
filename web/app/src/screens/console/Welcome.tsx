@@ -9,6 +9,7 @@ import { connectionName, reachable, useCluster, useConnections } from "../../api
 import { useSession } from "../../api/resources"
 import { useNamespaceScope } from "../../api/scope"
 import { Mode } from "../../gen/ptah/console/v1/info_pb"
+import { sessionSource, sourceName } from "../../model/session"
 import { themes } from "../../theme"
 import { channelTone } from "../clusters"
 import { NamespacePicker } from "./NamespacePicker"
@@ -115,8 +116,7 @@ export function Welcome({ open, onOpenChange }: WelcomeProps) {
             </ol>
             {session.data ? (
               <span className="mt-auto truncate font-mono text-xs text-mute">
-                {session.data.kubernetesUsername} ·{" "}
-                {session.data.mode === Mode.LOCAL ? "kubeconfig" : "Console account"}
+                {session.data.kubernetesUsername} · {sourceName[sessionSource(session.data)]}
               </span>
             ) : null}
           </div>

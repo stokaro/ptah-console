@@ -13,6 +13,7 @@ import { BuildFooter } from "../../BuildFooter"
 import { Mode } from "../../gen/ptah/console/v1/info_pb"
 import { punctuality } from "../../model/operator"
 import { needsAttention } from "../../model/overview"
+import { sessionSource, sourceName } from "../../model/session"
 import { ClusterBanner, ClusterSwitcher } from "../clusters"
 import { useNow } from "../common"
 import { LiveBanner, OperatorApiBanner, SessionChips, SignOut, ThemeSwitch } from "../Shell"
@@ -317,7 +318,7 @@ function Identity() {
           {identity.kubernetesUsername}
         </b>
         <span className="truncate text-[11px] text-mute">
-          {identity.mode === Mode.LOCAL ? "kubeconfig" : "Console account"} · {identity.context}
+          {sourceName[sessionSource(identity)]} · {identity.context}
         </span>
       </span>
       {identity.mode === Mode.HOSTED ? <SignOut /> : null}
