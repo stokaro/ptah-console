@@ -38,6 +38,9 @@ const (
 	maxLoginBytes       = 254
 	maxDisplayNameBytes = 128
 	maxTrustedProxies   = 64
+	// maxNamespaces is the most namespaces a console reads, api.MaxNamespaces,
+	// which this package does not import.
+	maxNamespaces = 64
 )
 
 // Config is the hosted console's configuration file.
@@ -200,6 +203,9 @@ func (c *Config) problems() []string {
 	}
 	if len(c.Namespaces) == 0 {
 		add("namespaces", "names no namespace; the console shows only the namespaces listed here")
+	}
+	if len(c.Namespaces) > maxNamespaces {
+		add("namespaces", "lists more than %d namespaces, the most the console reads", maxNamespaces)
 	}
 	seenNamespaces := make(map[string]int)
 	for i, namespace := range c.Namespaces {

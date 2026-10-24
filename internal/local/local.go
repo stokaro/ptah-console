@@ -71,6 +71,9 @@ func Run(ctx context.Context, options Options) error {
 	if options.Audit == nil {
 		options.Audit = audit.Discard()
 	}
+	if err := (api.Scope{Candidates: options.Namespaces}).Validate(); err != nil {
+		return fmt.Errorf("--namespace: %w", err)
+	}
 	resolved, err := localkube.Resolve(options.Kubeconfig, options.Context)
 	if err != nil {
 		return err

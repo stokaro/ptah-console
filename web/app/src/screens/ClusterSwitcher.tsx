@@ -1,9 +1,11 @@
 import { Menu } from "@base-ui/react/menu"
 import { StatusGlyph, type Tone } from "@ptah/console-ui"
 import { useNavigate, useRouterState } from "@tanstack/react-router"
+import { useContext } from "react"
 
 import { connectionName, useCluster, useConnections } from "../api/cluster"
 import { channelTone } from "./clusters"
+import { WelcomeControl } from "./console/welcomeControl"
 
 /** Where a page goes when the cluster changes: its list, not a resource the other cluster may lack. */
 function listOf(pathname: string) {
@@ -24,6 +26,7 @@ export function ClusterSwitcher() {
   const { uid, connection } = useCluster()
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const reopenWelcome = useContext(WelcomeControl)
   if (connections.length < 2) {
     return null
   }
@@ -81,6 +84,17 @@ export function ClusterSwitcher() {
                 </Menu.Item>
               )
             })}
+            {reopenWelcome ? (
+              <>
+                <Menu.Separator className="mx-2 my-1 h-px bg-line" />
+                <Menu.Item
+                  onClick={reopenWelcome}
+                  className="cursor-pointer rounded-[10px] px-2.5 py-2 text-sm font-medium text-fg outline-none data-highlighted:bg-hover"
+                >
+                  Change cluster &amp; namespaces…
+                </Menu.Item>
+              </>
+            ) : null}
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>

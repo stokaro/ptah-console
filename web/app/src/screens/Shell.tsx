@@ -11,7 +11,8 @@ import { useHosted, useScope, useSession } from "../api/resources"
 import { BuildFooter } from "../BuildFooter"
 import { Mode } from "../gen/ptah/console/v1/info_pb"
 import { SessionService } from "../gen/ptah/console/v1/session_pb"
-import { useTheme, type ThemeChoice } from "../theme"
+import { useTheme } from "../appearance"
+import { themes } from "../theme"
 import { ClusterBanner, ClusterSwitcher } from "./clusters"
 import { useNow } from "./common"
 
@@ -21,12 +22,6 @@ const roles = [
   { to: "/incidents", label: "On call" },
   { to: "/decisions", label: "Auditor" },
 ] as const
-
-const themes: { value: ThemeChoice; label: string }[] = [
-  { value: "system", label: "System" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-]
 
 /**
  * What every page sits in: a signed-out browser goes to sign in, and the live

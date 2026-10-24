@@ -228,7 +228,26 @@ that a GitOps controller managing the object may revert the change.
 
 ## Namespaces
 
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| The namespaces the console offers, and what the identity may do in each | `namespaces`, only when none is named; `selfsubjectaccessreviews` | list; create, one per question |
+
 The console never needs to list namespaces. In local mode the person names
-them (`--namespace`); in hosted mode the installation configures a ceiling. If
-the identity may list namespaces, those are offered as well. A namespace the
-identity cannot read is shown as "no access", never as zero resources.
+them (`--namespace`), or the context's namespace is offered; in hosted mode
+the installation configures a ceiling, and an agent's cluster has its own.
+Only when none of these names a namespace are the namespaces the identity may
+list offered. The console offers at most 64: a configuration that names more
+is refused when it is read, and a list longer than that is cut to its first 64
+names and said to be cut, with how to name the namespaces instead. A namespace
+the identity cannot read is shown as "no access", never as zero resources.
+
+In the full console the viewer chooses which of the readable namespaces the
+pages read, from the top bar or, on a first visit with more than one readable
+namespace, from "Choose where you want to work". The choice is kept in the
+browser, apart for each cluster and each identity; it filters what the
+console reads and grants nothing. Choosing every readable namespace keeps
+every one, including a namespace granted later. A choice none of whose
+namespaces is readable any more shows every readable namespace, and says so.
+The focused view reads every readable namespace whatever the full console was
+narrowed to, so nothing waiting for a person is hidden there by a choice made
+elsewhere.

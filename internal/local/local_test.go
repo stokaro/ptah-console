@@ -3,6 +3,7 @@ package local_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
+	"github.com/stokaro/ptah-console/internal/api"
 	"github.com/stokaro/ptah-console/internal/local"
 	"github.com/stokaro/ptah-console/internal/localstate"
 )
@@ -75,4 +77,22 @@ func TestACredentialPluginRunsOnlyOnceAgreedTo(t *testing.T) {
 			c.Assert(len(saved.TrustedExecPlugins) == 1, qt.Equals, test.trusted)
 		})
 	}
+}
+
+// Namespaces the console could not read in one request are refused before
+// the kubeconfig is read or a port is taken, so nothing is cut short later.
+func TestNamespacesPastTheBoundAreRefusedAtStart(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	names := make([]string, api.MaxNamespaces+1)
+	for i := range names {
+		names[i] = fmt.Sprintf("team-%02d", i)
+	}
+
+	err := local.Run(t.Context(), local.Options{
+		Kubeconfig: filepath.Join(t.TempDir(), "absent"),
+		Namespaces: names,
+	})
+
+	c.Assert(err, qt.ErrorMatches, fmt.Sprintf("--namespace: %d namespaces named; the console reads at most %d", api.MaxNamespaces+1, api.MaxNamespaces))
 }

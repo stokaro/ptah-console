@@ -70,23 +70,30 @@ func answer(a kube.Answer) consolev1.Answer {
 
 // ListNamespaces returns the candidate namespaces, or the namespaces the
 // identity may list when there are none, with what the identity may do in
-// each. Listing namespaces is never required.
+// each. Listing namespaces is never required. A list longer than
+// MaxNamespaces is cut to its first names and said to be cut.
 func (s *ScopeService) ListNamespaces(ctx context.Context, _ *consolev1.ListNamespacesRequest) (*consolev1.ListNamespacesResponse, error) {
 	c, _, err := actor(ctx, s.factory)
 	if err != nil {
 		return nil, err
 	}
-	names := append([]string(nil), s.scope.Candidates...)
+	names := slices.Clone(s.scope.Candidates)
+	truncated := false
 	if len(names) == 0 {
-		names = listable(ctx, c, s.scope)
+		names, truncated = listable(ctx, c, s.scope)
 	}
 	slices.Sort(names)
 	names = slices.Compact(names)
-	if len(names) > maxNamespaces {
-		names = names[:maxNamespaces]
+	if len(names) > MaxNamespaces {
+		names = names[:MaxNamespaces]
+		truncated = true
 	}
 
-	out := &consolev1.ListNamespacesResponse{OperatorApi: operatorAPI(c.Config)}
+	out := &consolev1.ListNamespacesResponse{
+		OperatorApi:   operatorAPI(c.Config),
+		Truncated:     truncated,
+		MaxNamespaces: MaxNamespaces,
+	}
 	for _, name := range names {
 		hints := kube.Can(ctx, c, capabilityChecks(name)...)
 		caps := capabilities(hints)
@@ -106,13 +113,14 @@ func (s *ScopeService) ListNamespaces(ctx context.Context, _ *consolev1.ListName
 	return out, nil
 }
 
-// listable returns the namespaces the identity may list, inside the ceiling
-// when one is set. An identity that may not list namespaces gets none, and
-// names its namespaces itself.
-func listable(ctx context.Context, c client.Client, scope Scope) []string {
+// listable returns the first namespaces the identity may list, inside the
+// ceiling when one is set, and whether the list goes on past them. An
+// identity that may not list namespaces gets none, and names its namespaces
+// itself.
+func listable(ctx context.Context, c client.Client, scope Scope) ([]string, bool) {
 	list := &corev1.NamespaceList{}
-	if err := c.List(ctx, list, client.Limit(maxNamespaces)); err != nil {
-		return nil
+	if err := c.List(ctx, list, client.Limit(MaxNamespaces)); err != nil {
+		return nil, false
 	}
 	names := make([]string, 0, len(list.Items))
 	for _, namespace := range list.Items {
@@ -120,5 +128,5 @@ func listable(ctx context.Context, c client.Client, scope Scope) []string {
 			names = append(names, namespace.Name)
 		}
 	}
-	return names
+	return names, list.Continue != ""
 }
