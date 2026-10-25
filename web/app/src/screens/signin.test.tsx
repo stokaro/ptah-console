@@ -59,6 +59,32 @@ describe("Signing in to a hosted console", () => {
     expect(attempts).toEqual([{ login: "alex@example.com", password: "alex-secret" }])
   })
 
+  it("leaves a person on the page they chose while the console still reads what they may do", async () => {
+    const { hosted } = hostedConsole()
+    let answer = () => {}
+    const namespacesAnswered = new Promise<void>((resolve) => (answer = resolve))
+    const { history } = renderConsole("/login", {
+      hosted,
+      schemas: [waitingSchema()],
+      namespacesAnswered,
+    })
+    await signIn("alex@example.com", "alex-secret")
+
+    // Signed in, and the namespaces with what alex may do in each are not
+    // read yet: alex goes to the releases before they are.
+    expect(await screen.findByText("ptah-console:prod:alex")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("link", { name: "Developer" }))
+    await waitFor(() => expect(history.location.pathname).toBe("/releases"))
+    answer()
+
+    // Alex may approve, so the home page would have sent them to approve.
+    expect(
+      await screen.findByRole("heading", { level: 1, name: /release to follow/ })
+    ).toBeVisible()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(history.location.pathname).toBe("/releases")
+  })
+
   it("says a refusal without saying which half was wrong, and clears the password", async () => {
     const { hosted } = hostedConsole()
     renderConsole("/login", { hosted })

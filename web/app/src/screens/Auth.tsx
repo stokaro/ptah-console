@@ -2,7 +2,7 @@ import { Code, ConnectError } from "@connectrpc/connect"
 import { useMutation } from "@connectrpc/connect-query"
 import { Button, EmptyState } from "@ptah/console-ui"
 import { useQueryClient } from "@tanstack/react-query"
-import { Navigate, useNavigate } from "@tanstack/react-router"
+import { Navigate } from "@tanstack/react-router"
 import { useState, type FormEvent } from "react"
 
 import { canAnywhere, useHosted, useInfo, useScope, useSession } from "../api/resources"
@@ -150,12 +150,13 @@ function SignInForm() {
   const [login, setLogin] = useState("")
   const [password, setPassword] = useState("")
   const queryClient = useQueryClient()
-  const navigate = useNavigate()
   const signIn = useMutation(SessionService.method.login, {
+    // The reset reads the session again, and the sign-in page goes home as
+    // soon as it is there. Nothing navigates once every other read is done:
+    // the person may have gone to another page by then.
     onSuccess: async () => {
       setPassword("")
       await queryClient.resetQueries()
-      await navigate({ to: "/", replace: true })
     },
     onError: () => setPassword(""),
   })
