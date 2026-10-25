@@ -83,7 +83,7 @@ operator released as `ptah-operator`.
 ## 4. Install
 
 ```sh
-helm install console oci://ghcr.io/stokaro/charts/ptah-console --version 0.1.0 \
+helm install console oci://ghcr.io/stokaro/charts/ptah-console --version 0.2.0 \
   --namespace ptah-console --values values.yaml
 kubectl -n ptah-console rollout status deployment/console-ptah-console
 ```

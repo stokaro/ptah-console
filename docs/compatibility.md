@@ -9,6 +9,7 @@ a release refuses to build unless its row names a released operator that
 
 | Console | Operator | Kubernetes |
 | --- | --- | --- |
+| 0.2.0 | v0.2.8 | 1.35, 1.36, 1.37 |
 | 0.1.0 | v0.2.5 | 1.35, 1.36, 1.37 |
 
 Before `v1` neither the operator's API nor the console promises compatibility
