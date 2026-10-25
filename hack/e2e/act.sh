@@ -19,6 +19,9 @@
 #   act.sh outage start|stop          freeze or release the API server's
 #                                     load balancer
 #   act.sh hosted ...                 the hosted console; see hosted.sh
+#   act.sh oidc ...                   OpenID Connect sign-in; see oidc.sh
+#   act.sh catalog v2                 put catalog v2 in its ConfigMap, and
+#                                     print the plan that waits for approval
 #   act.sh external ...               the second cluster; see external.sh
 #   act.sh insync <schema>            wait for a schema to be InSync
 #   act.sh ready <migration>          wait for a migration to be Ready
@@ -37,6 +40,20 @@ shift
 case "$action" in
 hosted)
 	exec "$E2E_DIR/hosted.sh" "$@"
+	;;
+oidc)
+	exec "$E2E_DIR/oidc.sh" "$@"
+	;;
+catalog)
+	[ "${1:-}" = v2 ] || fail 'catalog v2'
+	# The plan to approve is any plan other than the one catalog last applied,
+	# so a row run again on the same lab finds the v2 plan an earlier run left
+	# waiting rather than waiting for one that never comes.
+	previous=$(admin -n "$NAMESPACE" get ptahschema/catalog -o jsonpath='{.status.applied.planRef.name}')
+	admin -n "$NAMESPACE" create configmap catalog-schema \
+		--from-file=schema.sql="$E2E_DIR/schemas/catalog-v2.sql" \
+		--dry-run=client -o yaml | admin apply -f - >/dev/null
+	wait_plan ptahschema catalog "$previous"
 	;;
 external)
 	exec "$E2E_DIR/external.sh" "$@"

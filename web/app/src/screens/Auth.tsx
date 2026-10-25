@@ -92,7 +92,7 @@ function refusalText(refused: ProviderRefusal, provider: string) {
     case "token":
       return `${provider}'s answer did not check out, so nobody was signed in.`
     case "refused":
-      return `The API server does not accept ${provider}'s token for this console. It has to trust the issuer, with the console's client ID as an audience; ask the cluster's administrator.`
+      return `The API server does not accept ${provider}'s token for this console. It has to trust the issuer, with the console's client ID as an audience, and the token has to carry the claim it takes the username from, which may need a scope in oidc.extraScopes; ask the cluster's administrator.`
     case "unavailable":
       return "The API server did not answer, so the console could not learn who you are. Try again."
     case "full":

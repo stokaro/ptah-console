@@ -34,7 +34,11 @@ jwt:
 ```
 
 A cluster that trusts no issuer, or another audience, refuses every token the
-console sends, and the sign-in page says so: no session is opened.
+console sends, and the sign-in page says so: no session is opened. So does a
+token without the claims the mapping reads. The console asks for `openid`
+alone unless `oidc.extraScopes` names more, and many providers put `email`
+and `groups` into the ID token only when their scopes are asked for: with the
+mapping above, ask for `email` and `groups`.
 
 ## The provider
 
@@ -60,7 +64,7 @@ oidc:
   issuerURL: https://login.example.com/realms/ops
   clientID: ptah-console
   displayName: Example SSO
-  extraScopes: [groups, offline_access]
+  extraScopes: [email, groups, offline_access]
   # Leave secretName empty for a public client.
   clientSecret:
     secretName: ptah-console-oidc

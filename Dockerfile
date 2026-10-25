@@ -16,6 +16,9 @@ LABEL org.opencontainers.image.title="Ptah Console" \
       org.opencontainers.image.revision="$REVISION" \
       org.opencontainers.image.source="$SOURCE" \
       org.opencontainers.image.licenses="MIT"
-COPY $TARGETPLATFORM/ptah-console /ptah-console
+# The mode is set here rather than taken from the context, which carries the
+# umask of whoever built the binary: a binary only its owner may run is one
+# the non-root user cannot start.
+COPY --chmod=0555 $TARGETPLATFORM/ptah-console /ptah-console
 USER 65532:65532
 ENTRYPOINT ["/ptah-console"]

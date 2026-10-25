@@ -234,8 +234,27 @@ describe("The Admin role", () => {
       within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Lift" })
     )
 
-    expect(await screen.findByText(/shown this once/)).toHaveTextContent("with generation 2")
+    expect(await screen.findByText(/shown this once/)).toHaveTextContent("with generation 4")
     expect(screen.getByText(/--from-literal=credential=shown-once-credential/)).toBeInTheDocument()
+    // The page reads the connection again, at the generation the credential
+    // moved it to; the agent still runs at 3 until someone sets 4, so the
+    // instruction to set it stays.
+    expect(await screen.findByText(/· generation 4/)).toBeInTheDocument()
+    expect(screen.getByText(/shown this once/)).toHaveTextContent("with generation 4")
+    expect(screen.getByText(/--set connection.generation=4/)).toBeInTheDocument()
+  })
+
+  it("rotates a credential at the generation the agent already runs", async () => {
+    const user = userEvent.setup()
+    renderConsole("/connections/edge-lab", hosted(registry()))
+
+    await user.click(await screen.findByRole("button", { name: "Issue a new credential…" }))
+    await user.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Issue" })
+    )
+
+    expect(await screen.findByText(/shown this once/)).not.toHaveTextContent("generation")
+    expect(screen.queryByText(/--set connection.generation=/)).not.toBeInTheDocument()
   })
 
   it("adds a cluster: the enrollment file, then the fingerprint the helper printed", async () => {
