@@ -43,6 +43,27 @@ describe("A schema's page at a glance", () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 
+  it.each([
+    [{}, "✓DriftNone0 findings at the read 5 min ago"],
+    // Drift the report lists under no category is drift, not none.
+    [{ highestDriftSeverity: "safe" }, "!DriftsafeIn no category at the read 5 min ago"],
+    [
+      { highestDriftSeverity: "safe", driftFindingCount: 1 },
+      "!Driftsafe1 finding at the read 5 min ago",
+    ],
+  ])("reads the drift %j", async (drift, tile) => {
+    renderConsole("/console/schemas/application/storefront", {
+      schemas: [
+        waitingSchema((s) => {
+          s.target = create(TargetSchema, { lastObservedAt: minutesAgo(5), ...drift })
+        }),
+      ],
+    })
+
+    await screen.findByRole("list", { name: "At a glance" })
+    expect(tiles()[1]).toBe(tile)
+  })
+
   it("says the database is not read yet rather than that nothing drifted", async () => {
     renderConsole("/console/schemas/application/storefront", { schemas: [waitingSchema()] })
 

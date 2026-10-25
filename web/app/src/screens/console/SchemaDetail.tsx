@@ -6,6 +6,7 @@ import { say, steps } from "../../model/resource"
 import { Loading, ReadError, useNow } from "../common"
 import { Sentence } from "../Releases"
 import { GlanceTiles } from "./glance"
+import { InventoryCards } from "./inventory"
 import { GitOpsNote, RecentObservations, schemaTiles, VerificationCard } from "./schemaGlance"
 import {
   ArtifactCard,
@@ -90,6 +91,7 @@ export function SchemaDetail({ namespace, name }: SchemaDetailProps) {
         <GitOpsNote resource={resource} />
       </Card>
       <AttentionCard resource={resource} />
+      <InventoryCards target={schema.target} name={resource.name} />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Current plan">
           {plan ? (

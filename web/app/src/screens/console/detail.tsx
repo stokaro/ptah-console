@@ -25,6 +25,7 @@ import {
   ResourceKind,
 } from "../../gen/ptah/console/v1/decisions_pb"
 import { ago } from "../../model/connection"
+import { driftPhrase, driftReading } from "../../model/drift"
 import { readState } from "../../model/readrequest"
 import { useNow } from "../common"
 import {
@@ -384,6 +385,7 @@ function SourcePolicyFact({ policy }: { policy?: SourcePolicy }) {
  */
 export function TargetCard({ target, now }: { target?: Target; now: Date }) {
   const findings = target?.driftFindings ?? []
+  const reading = driftReading(target)
   return (
     <Card title="Target">
       <Facts
@@ -404,49 +406,45 @@ export function TargetCard({ target, now }: { target?: Target; now: Date }) {
           ["Last read", <When key="o" at={target?.lastObservedAt} now={now} />],
         ]}
       />
-      {target && target.driftFindingCount > 0 ? (
+      {reading.state === "unread" ? null : (
         <div className="flex flex-col gap-2">
-          <span className="text-sm">
-            The last read found {target.driftFindingCount}{" "}
-            {target.driftFindingCount === 1 ? "difference" : "differences"} from the artifact
-            {target.highestDriftSeverity ? `, the most severe ${target.highestDriftSeverity}` : ""}.
+          <span className={reading.state === "none" ? "text-sm text-fg2" : "text-sm"}>
+            The last read found {driftPhrase(reading)}.
           </span>
-          <table className="w-full border-collapse text-left text-[13px]">
-            <caption className="sr-only">Drift by category</caption>
-            <thead>
-              <tr className="border-b border-line font-mono text-[10.5px] tracking-[0.14em] text-mute uppercase">
-                <th scope="col" className="py-1.5 pr-3 font-medium">
-                  Category
-                </th>
-                <th scope="col" className="px-3 py-1.5 font-medium">
-                  Severity
-                </th>
-                <th scope="col" className="py-1.5 pl-3 text-right font-medium">
-                  Count
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {findings.map((finding) => (
-                <tr
-                  key={`${finding.category}/${finding.severity}`}
-                  className="border-b border-line last:border-b-0"
-                >
-                  <th scope="row" className="py-1.5 pr-3 text-left font-mono font-medium">
-                    {finding.category}
+          {findings.length > 0 ? (
+            <table className="w-full border-collapse text-left text-[13px]">
+              <caption className="sr-only">Drift by category</caption>
+              <thead>
+                <tr className="border-b border-line font-mono text-[10.5px] tracking-[0.14em] text-mute uppercase">
+                  <th scope="col" className="py-1.5 pr-3 font-medium">
+                    Category
                   </th>
-                  <td className="px-3 py-1.5">{finding.severity}</td>
-                  <td className="py-1.5 pl-3 text-right font-mono">{finding.count}</td>
+                  <th scope="col" className="px-3 py-1.5 font-medium">
+                    Severity
+                  </th>
+                  <th scope="col" className="py-1.5 pl-3 text-right font-medium">
+                    Count
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {findings.map((finding) => (
+                  <tr
+                    key={`${finding.category}/${finding.severity}`}
+                    className="border-b border-line last:border-b-0"
+                  >
+                    <th scope="row" className="py-1.5 pr-3 text-left font-mono font-medium">
+                      {finding.category}
+                    </th>
+                    <td className="px-3 py-1.5">{finding.severity}</td>
+                    <td className="py-1.5 pl-3 text-right font-mono">{finding.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : null}
         </div>
-      ) : target?.lastObservedAt ? (
-        <span className="text-sm text-fg2">
-          The last read found no difference from the artifact.
-        </span>
-      ) : null}
+      )}
     </Card>
   )
 }

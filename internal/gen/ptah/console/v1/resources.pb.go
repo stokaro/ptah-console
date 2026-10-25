@@ -1604,8 +1604,12 @@ type Target struct {
 	HighestDriftSeverity string                 `protobuf:"bytes,6,opt,name=highest_drift_severity,json=highestDriftSeverity,proto3" json:"highest_drift_severity,omitempty"`
 	DriftFindingCount    int32                  `protobuf:"varint,7,opt,name=drift_finding_count,json=driftFindingCount,proto3" json:"drift_finding_count,omitempty"`
 	DriftFindings        []*DriftFinding        `protobuf:"bytes,8,rep,name=drift_findings,json=driftFindings,proto3" json:"drift_findings,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Each kind of object the last observation compared, with how many the
+	// desired schema declares and the database holds. An operator before 0.2.8,
+	// or an executor that does not count, publishes none.
+	Inventory     []*ObjectCount `protobuf:"bytes,9,rep,name=inventory,proto3" json:"inventory,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Target) Reset() {
@@ -1694,6 +1698,76 @@ func (x *Target) GetDriftFindings() []*DriftFinding {
 	return nil
 }
 
+func (x *Target) GetInventory() []*ObjectCount {
+	if x != nil {
+		return x.Inventory
+	}
+	return nil
+}
+
+// ObjectCount counts one kind of object on both sides of an observation. The
+// kind is the stem of its drift categories: tables for tables_added and
+// tables_removed.
+type ObjectCount struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Desired       int32                  `protobuf:"varint,2,opt,name=desired,proto3" json:"desired,omitempty"`
+	Observed      int32                  `protobuf:"varint,3,opt,name=observed,proto3" json:"observed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ObjectCount) Reset() {
+	*x = ObjectCount{}
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ObjectCount) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ObjectCount) ProtoMessage() {}
+
+func (x *ObjectCount) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ObjectCount.ProtoReflect.Descriptor instead.
+func (*ObjectCount) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ObjectCount) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *ObjectCount) GetDesired() int32 {
+	if x != nil {
+		return x.Desired
+	}
+	return 0
+}
+
+func (x *ObjectCount) GetObserved() int32 {
+	if x != nil {
+		return x.Observed
+	}
+	return 0
+}
+
 type Operation struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
@@ -1708,7 +1782,7 @@ type Operation struct {
 
 func (x *Operation) Reset() {
 	*x = Operation{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[16]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1720,7 +1794,7 @@ func (x *Operation) String() string {
 func (*Operation) ProtoMessage() {}
 
 func (x *Operation) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[16]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1733,7 +1807,7 @@ func (x *Operation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Operation.ProtoReflect.Descriptor instead.
 func (*Operation) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{16}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *Operation) GetType() string {
@@ -1790,7 +1864,7 @@ type ConsumedApproval struct {
 
 func (x *ConsumedApproval) Reset() {
 	*x = ConsumedApproval{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[17]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1802,7 +1876,7 @@ func (x *ConsumedApproval) String() string {
 func (*ConsumedApproval) ProtoMessage() {}
 
 func (x *ConsumedApproval) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[17]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1815,7 +1889,7 @@ func (x *ConsumedApproval) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConsumedApproval.ProtoReflect.Descriptor instead.
 func (*ConsumedApproval) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{17}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ConsumedApproval) GetName() string {
@@ -1863,7 +1937,7 @@ type SchemaPlanSummary struct {
 
 func (x *SchemaPlanSummary) Reset() {
 	*x = SchemaPlanSummary{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[18]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1875,7 +1949,7 @@ func (x *SchemaPlanSummary) String() string {
 func (*SchemaPlanSummary) ProtoMessage() {}
 
 func (x *SchemaPlanSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[18]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1888,7 +1962,7 @@ func (x *SchemaPlanSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SchemaPlanSummary.ProtoReflect.Descriptor instead.
 func (*SchemaPlanSummary) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{18}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *SchemaPlanSummary) GetName() string {
@@ -1967,7 +2041,7 @@ type SchemaApplied struct {
 
 func (x *SchemaApplied) Reset() {
 	*x = SchemaApplied{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[19]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1979,7 +2053,7 @@ func (x *SchemaApplied) String() string {
 func (*SchemaApplied) ProtoMessage() {}
 
 func (x *SchemaApplied) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[19]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1992,7 +2066,7 @@ func (x *SchemaApplied) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SchemaApplied.ProtoReflect.Descriptor instead.
 func (*SchemaApplied) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{19}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SchemaApplied) GetPlanName() string {
@@ -2042,7 +2116,7 @@ type PendingObservation struct {
 
 func (x *PendingObservation) Reset() {
 	*x = PendingObservation{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[20]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2054,7 +2128,7 @@ func (x *PendingObservation) String() string {
 func (*PendingObservation) ProtoMessage() {}
 
 func (x *PendingObservation) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[20]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2067,7 +2141,7 @@ func (x *PendingObservation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PendingObservation.ProtoReflect.Descriptor instead.
 func (*PendingObservation) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{20}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *PendingObservation) GetOutcome() string {
@@ -2140,7 +2214,7 @@ type Schema struct {
 
 func (x *Schema) Reset() {
 	*x = Schema{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[21]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2152,7 +2226,7 @@ func (x *Schema) String() string {
 func (*Schema) ProtoMessage() {}
 
 func (x *Schema) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[21]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2165,7 +2239,7 @@ func (x *Schema) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Schema.ProtoReflect.Descriptor instead.
 func (*Schema) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{21}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *Schema) GetRef() *ObjectRef {
@@ -2344,7 +2418,7 @@ type Journal struct {
 
 func (x *Journal) Reset() {
 	*x = Journal{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[22]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2356,7 +2430,7 @@ func (x *Journal) String() string {
 func (*Journal) ProtoMessage() {}
 
 func (x *Journal) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[22]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2369,7 +2443,7 @@ func (x *Journal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Journal.ProtoReflect.Descriptor instead.
 func (*Journal) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{22}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *Journal) GetCoveredSince() *timestamppb.Timestamp {
@@ -2422,7 +2496,7 @@ type JournalEntry struct {
 
 func (x *JournalEntry) Reset() {
 	*x = JournalEntry{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[23]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2434,7 +2508,7 @@ func (x *JournalEntry) String() string {
 func (*JournalEntry) ProtoMessage() {}
 
 func (x *JournalEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[23]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2447,7 +2521,7 @@ func (x *JournalEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JournalEntry.ProtoReflect.Descriptor instead.
 func (*JournalEntry) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{23}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *JournalEntry) GetType() string {
@@ -2585,7 +2659,7 @@ type RunFailure struct {
 
 func (x *RunFailure) Reset() {
 	*x = RunFailure{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[24]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2597,7 +2671,7 @@ func (x *RunFailure) String() string {
 func (*RunFailure) ProtoMessage() {}
 
 func (x *RunFailure) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[24]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2610,7 +2684,7 @@ func (x *RunFailure) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunFailure.ProtoReflect.Descriptor instead.
 func (*RunFailure) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{24}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *RunFailure) GetVersion() int64 {
@@ -2657,7 +2731,7 @@ type ListSchemasRequest struct {
 
 func (x *ListSchemasRequest) Reset() {
 	*x = ListSchemasRequest{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[25]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2669,7 +2743,7 @@ func (x *ListSchemasRequest) String() string {
 func (*ListSchemasRequest) ProtoMessage() {}
 
 func (x *ListSchemasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[25]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2682,7 +2756,7 @@ func (x *ListSchemasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSchemasRequest.ProtoReflect.Descriptor instead.
 func (*ListSchemasRequest) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{25}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ListSchemasRequest) GetNamespaces() []string {
@@ -2702,7 +2776,7 @@ type ListSchemasResponse struct {
 
 func (x *ListSchemasResponse) Reset() {
 	*x = ListSchemasResponse{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[26]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2714,7 +2788,7 @@ func (x *ListSchemasResponse) String() string {
 func (*ListSchemasResponse) ProtoMessage() {}
 
 func (x *ListSchemasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[26]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2727,7 +2801,7 @@ func (x *ListSchemasResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSchemasResponse.ProtoReflect.Descriptor instead.
 func (*ListSchemasResponse) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{26}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListSchemasResponse) GetSchemas() []*Schema {
@@ -2754,7 +2828,7 @@ type GetSchemaRequest struct {
 
 func (x *GetSchemaRequest) Reset() {
 	*x = GetSchemaRequest{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[27]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2766,7 +2840,7 @@ func (x *GetSchemaRequest) String() string {
 func (*GetSchemaRequest) ProtoMessage() {}
 
 func (x *GetSchemaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[27]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2779,7 +2853,7 @@ func (x *GetSchemaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSchemaRequest.ProtoReflect.Descriptor instead.
 func (*GetSchemaRequest) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{27}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetSchemaRequest) GetNamespace() string {
@@ -2805,7 +2879,7 @@ type GetSchemaResponse struct {
 
 func (x *GetSchemaResponse) Reset() {
 	*x = GetSchemaResponse{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[28]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2817,7 +2891,7 @@ func (x *GetSchemaResponse) String() string {
 func (*GetSchemaResponse) ProtoMessage() {}
 
 func (x *GetSchemaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[28]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2830,7 +2904,7 @@ func (x *GetSchemaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSchemaResponse.ProtoReflect.Descriptor instead.
 func (*GetSchemaResponse) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{28}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GetSchemaResponse) GetSchema() *Schema {
@@ -2852,7 +2926,7 @@ type Statement struct {
 
 func (x *Statement) Reset() {
 	*x = Statement{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[29]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2864,7 +2938,7 @@ func (x *Statement) String() string {
 func (*Statement) ProtoMessage() {}
 
 func (x *Statement) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[29]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2877,7 +2951,7 @@ func (x *Statement) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Statement.ProtoReflect.Descriptor instead.
 func (*Statement) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{29}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *Statement) GetIndex() int32 {
@@ -2920,7 +2994,7 @@ type PlanChunk struct {
 
 func (x *PlanChunk) Reset() {
 	*x = PlanChunk{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[30]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2932,7 +3006,7 @@ func (x *PlanChunk) String() string {
 func (*PlanChunk) ProtoMessage() {}
 
 func (x *PlanChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[30]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2945,7 +3019,7 @@ func (x *PlanChunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlanChunk.ProtoReflect.Descriptor instead.
 func (*PlanChunk) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{30}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *PlanChunk) GetName() string {
@@ -3010,7 +3084,7 @@ type SchemaPlan struct {
 
 func (x *SchemaPlan) Reset() {
 	*x = SchemaPlan{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[31]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3022,7 +3096,7 @@ func (x *SchemaPlan) String() string {
 func (*SchemaPlan) ProtoMessage() {}
 
 func (x *SchemaPlan) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[31]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3035,7 +3109,7 @@ func (x *SchemaPlan) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SchemaPlan.ProtoReflect.Descriptor instead.
 func (*SchemaPlan) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{31}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *SchemaPlan) GetNamespace() string {
@@ -3231,7 +3305,7 @@ type GetSchemaPlanRequest struct {
 
 func (x *GetSchemaPlanRequest) Reset() {
 	*x = GetSchemaPlanRequest{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[32]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3243,7 +3317,7 @@ func (x *GetSchemaPlanRequest) String() string {
 func (*GetSchemaPlanRequest) ProtoMessage() {}
 
 func (x *GetSchemaPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[32]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3256,7 +3330,7 @@ func (x *GetSchemaPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSchemaPlanRequest.ProtoReflect.Descriptor instead.
 func (*GetSchemaPlanRequest) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{32}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *GetSchemaPlanRequest) GetNamespace() string {
@@ -3289,7 +3363,7 @@ type GetSchemaPlanResponse struct {
 
 func (x *GetSchemaPlanResponse) Reset() {
 	*x = GetSchemaPlanResponse{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[33]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3301,7 +3375,7 @@ func (x *GetSchemaPlanResponse) String() string {
 func (*GetSchemaPlanResponse) ProtoMessage() {}
 
 func (x *GetSchemaPlanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[33]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3314,7 +3388,7 @@ func (x *GetSchemaPlanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSchemaPlanResponse.ProtoReflect.Descriptor instead.
 func (*GetSchemaPlanResponse) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{33}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *GetSchemaPlanResponse) GetPlan() *SchemaPlan {
@@ -3343,7 +3417,7 @@ type MigrationHistory struct {
 
 func (x *MigrationHistory) Reset() {
 	*x = MigrationHistory{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[34]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3355,7 +3429,7 @@ func (x *MigrationHistory) String() string {
 func (*MigrationHistory) ProtoMessage() {}
 
 func (x *MigrationHistory) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[34]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3368,7 +3442,7 @@ func (x *MigrationHistory) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MigrationHistory.ProtoReflect.Descriptor instead.
 func (*MigrationHistory) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{34}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *MigrationHistory) GetObservedAt() *timestamppb.Timestamp {
@@ -3455,7 +3529,7 @@ type MigrationRevision struct {
 
 func (x *MigrationRevision) Reset() {
 	*x = MigrationRevision{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[35]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3467,7 +3541,7 @@ func (x *MigrationRevision) String() string {
 func (*MigrationRevision) ProtoMessage() {}
 
 func (x *MigrationRevision) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[35]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3480,7 +3554,7 @@ func (x *MigrationRevision) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MigrationRevision.ProtoReflect.Descriptor instead.
 func (*MigrationRevision) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{35}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *MigrationRevision) GetVersion() int64 {
@@ -3542,7 +3616,7 @@ type MigrationRun struct {
 
 func (x *MigrationRun) Reset() {
 	*x = MigrationRun{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[36]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3554,7 +3628,7 @@ func (x *MigrationRun) String() string {
 func (*MigrationRun) ProtoMessage() {}
 
 func (x *MigrationRun) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[36]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3567,7 +3641,7 @@ func (x *MigrationRun) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MigrationRun.ProtoReflect.Descriptor instead.
 func (*MigrationRun) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{36}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *MigrationRun) GetOutcome() string {
@@ -3641,7 +3715,7 @@ type UnresolvedRun struct {
 
 func (x *UnresolvedRun) Reset() {
 	*x = UnresolvedRun{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[37]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3653,7 +3727,7 @@ func (x *UnresolvedRun) String() string {
 func (*UnresolvedRun) ProtoMessage() {}
 
 func (x *UnresolvedRun) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[37]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3666,7 +3740,7 @@ func (x *UnresolvedRun) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnresolvedRun.ProtoReflect.Descriptor instead.
 func (*UnresolvedRun) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{37}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *UnresolvedRun) GetOutcome() string {
@@ -3731,7 +3805,7 @@ type ResolvedRun struct {
 
 func (x *ResolvedRun) Reset() {
 	*x = ResolvedRun{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[38]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3743,7 +3817,7 @@ func (x *ResolvedRun) String() string {
 func (*ResolvedRun) ProtoMessage() {}
 
 func (x *ResolvedRun) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[38]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3756,7 +3830,7 @@ func (x *ResolvedRun) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolvedRun.ProtoReflect.Descriptor instead.
 func (*ResolvedRun) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{38}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ResolvedRun) GetOperationId() string {
@@ -3832,7 +3906,7 @@ type Migration struct {
 
 func (x *Migration) Reset() {
 	*x = Migration{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[39]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3844,7 +3918,7 @@ func (x *Migration) String() string {
 func (*Migration) ProtoMessage() {}
 
 func (x *Migration) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[39]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3857,7 +3931,7 @@ func (x *Migration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Migration.ProtoReflect.Descriptor instead.
 func (*Migration) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{39}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *Migration) GetRef() *ObjectRef {
@@ -4030,7 +4104,7 @@ type ListMigrationsRequest struct {
 
 func (x *ListMigrationsRequest) Reset() {
 	*x = ListMigrationsRequest{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[40]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4042,7 +4116,7 @@ func (x *ListMigrationsRequest) String() string {
 func (*ListMigrationsRequest) ProtoMessage() {}
 
 func (x *ListMigrationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[40]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4055,7 +4129,7 @@ func (x *ListMigrationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMigrationsRequest.ProtoReflect.Descriptor instead.
 func (*ListMigrationsRequest) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{40}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *ListMigrationsRequest) GetNamespaces() []string {
@@ -4075,7 +4149,7 @@ type ListMigrationsResponse struct {
 
 func (x *ListMigrationsResponse) Reset() {
 	*x = ListMigrationsResponse{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[41]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4087,7 +4161,7 @@ func (x *ListMigrationsResponse) String() string {
 func (*ListMigrationsResponse) ProtoMessage() {}
 
 func (x *ListMigrationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[41]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4100,7 +4174,7 @@ func (x *ListMigrationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMigrationsResponse.ProtoReflect.Descriptor instead.
 func (*ListMigrationsResponse) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{41}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *ListMigrationsResponse) GetMigrations() []*Migration {
@@ -4127,7 +4201,7 @@ type GetMigrationRequest struct {
 
 func (x *GetMigrationRequest) Reset() {
 	*x = GetMigrationRequest{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[42]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4139,7 +4213,7 @@ func (x *GetMigrationRequest) String() string {
 func (*GetMigrationRequest) ProtoMessage() {}
 
 func (x *GetMigrationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[42]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4152,7 +4226,7 @@ func (x *GetMigrationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMigrationRequest.ProtoReflect.Descriptor instead.
 func (*GetMigrationRequest) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{42}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *GetMigrationRequest) GetNamespace() string {
@@ -4178,7 +4252,7 @@ type GetMigrationResponse struct {
 
 func (x *GetMigrationResponse) Reset() {
 	*x = GetMigrationResponse{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[43]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4190,7 +4264,7 @@ func (x *GetMigrationResponse) String() string {
 func (*GetMigrationResponse) ProtoMessage() {}
 
 func (x *GetMigrationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[43]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4203,7 +4277,7 @@ func (x *GetMigrationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMigrationResponse.ProtoReflect.Descriptor instead.
 func (*GetMigrationResponse) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{43}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *GetMigrationResponse) GetMigration() *Migration {
@@ -4227,7 +4301,7 @@ type PlannedMigration struct {
 
 func (x *PlannedMigration) Reset() {
 	*x = PlannedMigration{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[44]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4239,7 +4313,7 @@ func (x *PlannedMigration) String() string {
 func (*PlannedMigration) ProtoMessage() {}
 
 func (x *PlannedMigration) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[44]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4252,7 +4326,7 @@ func (x *PlannedMigration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlannedMigration.ProtoReflect.Descriptor instead.
 func (*PlannedMigration) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{44}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *PlannedMigration) GetVersion() int64 {
@@ -4319,7 +4393,7 @@ type MigrationPlan struct {
 
 func (x *MigrationPlan) Reset() {
 	*x = MigrationPlan{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[45]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4331,7 +4405,7 @@ func (x *MigrationPlan) String() string {
 func (*MigrationPlan) ProtoMessage() {}
 
 func (x *MigrationPlan) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[45]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4344,7 +4418,7 @@ func (x *MigrationPlan) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MigrationPlan.ProtoReflect.Descriptor instead.
 func (*MigrationPlan) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{45}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *MigrationPlan) GetNamespace() string {
@@ -4455,7 +4529,7 @@ type GetMigrationPlanRequest struct {
 
 func (x *GetMigrationPlanRequest) Reset() {
 	*x = GetMigrationPlanRequest{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[46]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4467,7 +4541,7 @@ func (x *GetMigrationPlanRequest) String() string {
 func (*GetMigrationPlanRequest) ProtoMessage() {}
 
 func (x *GetMigrationPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[46]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4480,7 +4554,7 @@ func (x *GetMigrationPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMigrationPlanRequest.ProtoReflect.Descriptor instead.
 func (*GetMigrationPlanRequest) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{46}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *GetMigrationPlanRequest) GetNamespace() string {
@@ -4506,7 +4580,7 @@ type GetMigrationPlanResponse struct {
 
 func (x *GetMigrationPlanResponse) Reset() {
 	*x = GetMigrationPlanResponse{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[47]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4518,7 +4592,7 @@ func (x *GetMigrationPlanResponse) String() string {
 func (*GetMigrationPlanResponse) ProtoMessage() {}
 
 func (x *GetMigrationPlanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[47]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4531,7 +4605,7 @@ func (x *GetMigrationPlanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMigrationPlanResponse.ProtoReflect.Descriptor instead.
 func (*GetMigrationPlanResponse) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{47}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *GetMigrationPlanResponse) GetPlan() *MigrationPlan {
@@ -4557,7 +4631,7 @@ type ReadRequest struct {
 
 func (x *ReadRequest) Reset() {
 	*x = ReadRequest{}
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[48]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4569,7 +4643,7 @@ func (x *ReadRequest) String() string {
 func (*ReadRequest) ProtoMessage() {}
 
 func (x *ReadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ptah_console_v1_resources_proto_msgTypes[48]
+	mi := &file_ptah_console_v1_resources_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4582,7 +4656,7 @@ func (x *ReadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadRequest.ProtoReflect.Descriptor instead.
 func (*ReadRequest) Descriptor() ([]byte, []int) {
-	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{48}
+	return file_ptah_console_v1_resources_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ReadRequest) GetRequested() string {
@@ -4707,7 +4781,7 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\fDriftFinding\x12\x1a\n" +
 	"\bcategory\x18\x01 \x01(\tR\bcategory\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x05R\x05count\x12\x1a\n" +
-	"\bseverity\x18\x03 \x01(\tR\bseverity\"\xe8\x02\n" +
+	"\bseverity\x18\x03 \x01(\tR\bseverity\"\xa4\x03\n" +
 	"\x06Target\x12\x16\n" +
 	"\x06engine\x18\x01 \x01(\tR\x06engine\x12\x1f\n" +
 	"\vsecret_name\x18\x02 \x01(\tR\n" +
@@ -4718,7 +4792,12 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\x10last_observed_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x0elastObservedAt\x124\n" +
 	"\x16highest_drift_severity\x18\x06 \x01(\tR\x14highestDriftSeverity\x12.\n" +
 	"\x13drift_finding_count\x18\a \x01(\x05R\x11driftFindingCount\x12D\n" +
-	"\x0edrift_findings\x18\b \x03(\v2\x1d.ptah.console.v1.DriftFindingR\rdriftFindings\"\xb8\x01\n" +
+	"\x0edrift_findings\x18\b \x03(\v2\x1d.ptah.console.v1.DriftFindingR\rdriftFindings\x12:\n" +
+	"\tinventory\x18\t \x03(\v2\x1c.ptah.console.v1.ObjectCountR\tinventory\"W\n" +
+	"\vObjectCount\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x18\n" +
+	"\adesired\x18\x02 \x01(\x05R\adesired\x12\x1a\n" +
+	"\bobserved\x18\x03 \x01(\x05R\bobserved\"\xb8\x01\n" +
 	"\tOperation\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x19\n" +
@@ -5079,7 +5158,7 @@ func file_ptah_console_v1_resources_proto_rawDescGZIP() []byte {
 }
 
 var file_ptah_console_v1_resources_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_ptah_console_v1_resources_proto_msgTypes = make([]protoimpl.MessageInfo, 49)
+var file_ptah_console_v1_resources_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
 var file_ptah_console_v1_resources_proto_goTypes = []any{
 	(Access)(0),                      // 0: ptah.console.v1.Access
 	(Answer)(0),                      // 1: ptah.console.v1.Answer
@@ -5104,44 +5183,45 @@ var file_ptah_console_v1_resources_proto_goTypes = []any{
 	(*PlanSource)(nil),               // 20: ptah.console.v1.PlanSource
 	(*DriftFinding)(nil),             // 21: ptah.console.v1.DriftFinding
 	(*Target)(nil),                   // 22: ptah.console.v1.Target
-	(*Operation)(nil),                // 23: ptah.console.v1.Operation
-	(*ConsumedApproval)(nil),         // 24: ptah.console.v1.ConsumedApproval
-	(*SchemaPlanSummary)(nil),        // 25: ptah.console.v1.SchemaPlanSummary
-	(*SchemaApplied)(nil),            // 26: ptah.console.v1.SchemaApplied
-	(*PendingObservation)(nil),       // 27: ptah.console.v1.PendingObservation
-	(*Schema)(nil),                   // 28: ptah.console.v1.Schema
-	(*Journal)(nil),                  // 29: ptah.console.v1.Journal
-	(*JournalEntry)(nil),             // 30: ptah.console.v1.JournalEntry
-	(*RunFailure)(nil),               // 31: ptah.console.v1.RunFailure
-	(*ListSchemasRequest)(nil),       // 32: ptah.console.v1.ListSchemasRequest
-	(*ListSchemasResponse)(nil),      // 33: ptah.console.v1.ListSchemasResponse
-	(*GetSchemaRequest)(nil),         // 34: ptah.console.v1.GetSchemaRequest
-	(*GetSchemaResponse)(nil),        // 35: ptah.console.v1.GetSchemaResponse
-	(*Statement)(nil),                // 36: ptah.console.v1.Statement
-	(*PlanChunk)(nil),                // 37: ptah.console.v1.PlanChunk
-	(*SchemaPlan)(nil),               // 38: ptah.console.v1.SchemaPlan
-	(*GetSchemaPlanRequest)(nil),     // 39: ptah.console.v1.GetSchemaPlanRequest
-	(*GetSchemaPlanResponse)(nil),    // 40: ptah.console.v1.GetSchemaPlanResponse
-	(*MigrationHistory)(nil),         // 41: ptah.console.v1.MigrationHistory
-	(*MigrationRevision)(nil),        // 42: ptah.console.v1.MigrationRevision
-	(*MigrationRun)(nil),             // 43: ptah.console.v1.MigrationRun
-	(*UnresolvedRun)(nil),            // 44: ptah.console.v1.UnresolvedRun
-	(*ResolvedRun)(nil),              // 45: ptah.console.v1.ResolvedRun
-	(*Migration)(nil),                // 46: ptah.console.v1.Migration
-	(*ListMigrationsRequest)(nil),    // 47: ptah.console.v1.ListMigrationsRequest
-	(*ListMigrationsResponse)(nil),   // 48: ptah.console.v1.ListMigrationsResponse
-	(*GetMigrationRequest)(nil),      // 49: ptah.console.v1.GetMigrationRequest
-	(*GetMigrationResponse)(nil),     // 50: ptah.console.v1.GetMigrationResponse
-	(*PlannedMigration)(nil),         // 51: ptah.console.v1.PlannedMigration
-	(*MigrationPlan)(nil),            // 52: ptah.console.v1.MigrationPlan
-	(*GetMigrationPlanRequest)(nil),  // 53: ptah.console.v1.GetMigrationPlanRequest
-	(*GetMigrationPlanResponse)(nil), // 54: ptah.console.v1.GetMigrationPlanResponse
-	(*ReadRequest)(nil),              // 55: ptah.console.v1.ReadRequest
-	(*timestamppb.Timestamp)(nil),    // 56: google.protobuf.Timestamp
+	(*ObjectCount)(nil),              // 23: ptah.console.v1.ObjectCount
+	(*Operation)(nil),                // 24: ptah.console.v1.Operation
+	(*ConsumedApproval)(nil),         // 25: ptah.console.v1.ConsumedApproval
+	(*SchemaPlanSummary)(nil),        // 26: ptah.console.v1.SchemaPlanSummary
+	(*SchemaApplied)(nil),            // 27: ptah.console.v1.SchemaApplied
+	(*PendingObservation)(nil),       // 28: ptah.console.v1.PendingObservation
+	(*Schema)(nil),                   // 29: ptah.console.v1.Schema
+	(*Journal)(nil),                  // 30: ptah.console.v1.Journal
+	(*JournalEntry)(nil),             // 31: ptah.console.v1.JournalEntry
+	(*RunFailure)(nil),               // 32: ptah.console.v1.RunFailure
+	(*ListSchemasRequest)(nil),       // 33: ptah.console.v1.ListSchemasRequest
+	(*ListSchemasResponse)(nil),      // 34: ptah.console.v1.ListSchemasResponse
+	(*GetSchemaRequest)(nil),         // 35: ptah.console.v1.GetSchemaRequest
+	(*GetSchemaResponse)(nil),        // 36: ptah.console.v1.GetSchemaResponse
+	(*Statement)(nil),                // 37: ptah.console.v1.Statement
+	(*PlanChunk)(nil),                // 38: ptah.console.v1.PlanChunk
+	(*SchemaPlan)(nil),               // 39: ptah.console.v1.SchemaPlan
+	(*GetSchemaPlanRequest)(nil),     // 40: ptah.console.v1.GetSchemaPlanRequest
+	(*GetSchemaPlanResponse)(nil),    // 41: ptah.console.v1.GetSchemaPlanResponse
+	(*MigrationHistory)(nil),         // 42: ptah.console.v1.MigrationHistory
+	(*MigrationRevision)(nil),        // 43: ptah.console.v1.MigrationRevision
+	(*MigrationRun)(nil),             // 44: ptah.console.v1.MigrationRun
+	(*UnresolvedRun)(nil),            // 45: ptah.console.v1.UnresolvedRun
+	(*ResolvedRun)(nil),              // 46: ptah.console.v1.ResolvedRun
+	(*Migration)(nil),                // 47: ptah.console.v1.Migration
+	(*ListMigrationsRequest)(nil),    // 48: ptah.console.v1.ListMigrationsRequest
+	(*ListMigrationsResponse)(nil),   // 49: ptah.console.v1.ListMigrationsResponse
+	(*GetMigrationRequest)(nil),      // 50: ptah.console.v1.GetMigrationRequest
+	(*GetMigrationResponse)(nil),     // 51: ptah.console.v1.GetMigrationResponse
+	(*PlannedMigration)(nil),         // 52: ptah.console.v1.PlannedMigration
+	(*MigrationPlan)(nil),            // 53: ptah.console.v1.MigrationPlan
+	(*GetMigrationPlanRequest)(nil),  // 54: ptah.console.v1.GetMigrationPlanRequest
+	(*GetMigrationPlanResponse)(nil), // 55: ptah.console.v1.GetMigrationPlanResponse
+	(*ReadRequest)(nil),              // 56: ptah.console.v1.ReadRequest
+	(*timestamppb.Timestamp)(nil),    // 57: google.protobuf.Timestamp
 }
 var file_ptah_console_v1_resources_proto_depIdxs = []int32{
-	56,  // 0: ptah.console.v1.ObjectRef.created_at:type_name -> google.protobuf.Timestamp
-	56,  // 1: ptah.console.v1.Condition.last_transition:type_name -> google.protobuf.Timestamp
+	57,  // 0: ptah.console.v1.ObjectRef.created_at:type_name -> google.protobuf.Timestamp
+	57,  // 1: ptah.console.v1.Condition.last_transition:type_name -> google.protobuf.Timestamp
 	0,   // 2: ptah.console.v1.NamespaceResult.access:type_name -> ptah.console.v1.Access
 	1,   // 3: ptah.console.v1.Capabilities.list_schemas:type_name -> ptah.console.v1.Answer
 	1,   // 4: ptah.console.v1.Capabilities.list_migrations:type_name -> ptah.console.v1.Answer
@@ -5164,103 +5244,104 @@ var file_ptah_console_v1_resources_proto_depIdxs = []int32{
 	14,  // 21: ptah.console.v1.ListNamespacesResponse.operator_api:type_name -> ptah.console.v1.OperatorApi
 	2,   // 22: ptah.console.v1.Stage.state:type_name -> ptah.console.v1.StageState
 	3,   // 23: ptah.console.v1.Attention.kind:type_name -> ptah.console.v1.AttentionKind
-	56,  // 24: ptah.console.v1.Attention.since:type_name -> google.protobuf.Timestamp
-	56,  // 25: ptah.console.v1.Source.resolved_at:type_name -> google.protobuf.Timestamp
-	56,  // 26: ptah.console.v1.Source.verified_at:type_name -> google.protobuf.Timestamp
+	57,  // 24: ptah.console.v1.Attention.since:type_name -> google.protobuf.Timestamp
+	57,  // 25: ptah.console.v1.Source.resolved_at:type_name -> google.protobuf.Timestamp
+	57,  // 26: ptah.console.v1.Source.verified_at:type_name -> google.protobuf.Timestamp
 	4,   // 27: ptah.console.v1.Source.kind:type_name -> ptah.console.v1.SourceKind
 	19,  // 28: ptah.console.v1.Source.policy:type_name -> ptah.console.v1.SourcePolicy
 	4,   // 29: ptah.console.v1.PlanSource.kind:type_name -> ptah.console.v1.SourceKind
-	56,  // 30: ptah.console.v1.Target.last_observed_at:type_name -> google.protobuf.Timestamp
+	57,  // 30: ptah.console.v1.Target.last_observed_at:type_name -> google.protobuf.Timestamp
 	21,  // 31: ptah.console.v1.Target.drift_findings:type_name -> ptah.console.v1.DriftFinding
-	56,  // 32: ptah.console.v1.Operation.started_at:type_name -> google.protobuf.Timestamp
-	56,  // 33: ptah.console.v1.ConsumedApproval.approved_at:type_name -> google.protobuf.Timestamp
-	56,  // 34: ptah.console.v1.SchemaPlanSummary.created_at:type_name -> google.protobuf.Timestamp
-	24,  // 35: ptah.console.v1.SchemaPlanSummary.approval:type_name -> ptah.console.v1.ConsumedApproval
-	56,  // 36: ptah.console.v1.SchemaApplied.completed_at:type_name -> google.protobuf.Timestamp
-	56,  // 37: ptah.console.v1.PendingObservation.observe_after:type_name -> google.protobuf.Timestamp
-	7,   // 38: ptah.console.v1.Schema.ref:type_name -> ptah.console.v1.ObjectRef
-	8,   // 39: ptah.console.v1.Schema.conditions:type_name -> ptah.console.v1.Condition
-	18,  // 40: ptah.console.v1.Schema.source:type_name -> ptah.console.v1.Source
-	22,  // 41: ptah.console.v1.Schema.target:type_name -> ptah.console.v1.Target
-	25,  // 42: ptah.console.v1.Schema.current_plan:type_name -> ptah.console.v1.SchemaPlanSummary
-	26,  // 43: ptah.console.v1.Schema.applied:type_name -> ptah.console.v1.SchemaApplied
-	23,  // 44: ptah.console.v1.Schema.active_operation:type_name -> ptah.console.v1.Operation
-	27,  // 45: ptah.console.v1.Schema.pending_observation:type_name -> ptah.console.v1.PendingObservation
-	56,  // 46: ptah.console.v1.Schema.last_attempt:type_name -> google.protobuf.Timestamp
-	56,  // 47: ptah.console.v1.Schema.last_successful_reconciliation:type_name -> google.protobuf.Timestamp
-	56,  // 48: ptah.console.v1.Schema.next_reconciliation:type_name -> google.protobuf.Timestamp
-	15,  // 49: ptah.console.v1.Schema.stages:type_name -> ptah.console.v1.Stage
-	16,  // 50: ptah.console.v1.Schema.attention:type_name -> ptah.console.v1.Attention
-	17,  // 51: ptah.console.v1.Schema.gitops:type_name -> ptah.console.v1.GitOps
-	29,  // 52: ptah.console.v1.Schema.journal:type_name -> ptah.console.v1.Journal
-	55,  // 53: ptah.console.v1.Schema.read_request:type_name -> ptah.console.v1.ReadRequest
-	56,  // 54: ptah.console.v1.Journal.covered_since:type_name -> google.protobuf.Timestamp
-	30,  // 55: ptah.console.v1.Journal.entries:type_name -> ptah.console.v1.JournalEntry
-	56,  // 56: ptah.console.v1.JournalEntry.at:type_name -> google.protobuf.Timestamp
-	56,  // 57: ptah.console.v1.JournalEntry.started_at:type_name -> google.protobuf.Timestamp
-	56,  // 58: ptah.console.v1.JournalEntry.last_at:type_name -> google.protobuf.Timestamp
-	31,  // 59: ptah.console.v1.JournalEntry.failure:type_name -> ptah.console.v1.RunFailure
-	28,  // 60: ptah.console.v1.ListSchemasResponse.schemas:type_name -> ptah.console.v1.Schema
-	9,   // 61: ptah.console.v1.ListSchemasResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
-	28,  // 62: ptah.console.v1.GetSchemaResponse.schema:type_name -> ptah.console.v1.Schema
-	6,   // 63: ptah.console.v1.SchemaPlan.selection:type_name -> ptah.console.v1.PlanSelection
-	36,  // 64: ptah.console.v1.SchemaPlan.statements:type_name -> ptah.console.v1.Statement
-	37,  // 65: ptah.console.v1.SchemaPlan.chunks:type_name -> ptah.console.v1.PlanChunk
-	56,  // 66: ptah.console.v1.SchemaPlan.created_at:type_name -> google.protobuf.Timestamp
-	56,  // 67: ptah.console.v1.SchemaPlan.completed_at:type_name -> google.protobuf.Timestamp
-	5,   // 68: ptah.console.v1.SchemaPlan.sql_access:type_name -> ptah.console.v1.SqlAccess
-	20,  // 69: ptah.console.v1.SchemaPlan.source:type_name -> ptah.console.v1.PlanSource
-	6,   // 70: ptah.console.v1.GetSchemaPlanRequest.selection:type_name -> ptah.console.v1.PlanSelection
-	38,  // 71: ptah.console.v1.GetSchemaPlanResponse.plan:type_name -> ptah.console.v1.SchemaPlan
-	56,  // 72: ptah.console.v1.MigrationHistory.observed_at:type_name -> google.protobuf.Timestamp
-	42,  // 73: ptah.console.v1.MigrationHistory.revisions:type_name -> ptah.console.v1.MigrationRevision
-	56,  // 74: ptah.console.v1.MigrationRevision.applied_at:type_name -> google.protobuf.Timestamp
-	56,  // 75: ptah.console.v1.MigrationRun.started_at:type_name -> google.protobuf.Timestamp
-	56,  // 76: ptah.console.v1.MigrationRun.finished_at:type_name -> google.protobuf.Timestamp
-	31,  // 77: ptah.console.v1.MigrationRun.failure:type_name -> ptah.console.v1.RunFailure
-	56,  // 78: ptah.console.v1.UnresolvedRun.recorded_at:type_name -> google.protobuf.Timestamp
-	56,  // 79: ptah.console.v1.ResolvedRun.resolved_at:type_name -> google.protobuf.Timestamp
-	7,   // 80: ptah.console.v1.Migration.ref:type_name -> ptah.console.v1.ObjectRef
-	8,   // 81: ptah.console.v1.Migration.conditions:type_name -> ptah.console.v1.Condition
-	18,  // 82: ptah.console.v1.Migration.source:type_name -> ptah.console.v1.Source
-	22,  // 83: ptah.console.v1.Migration.target:type_name -> ptah.console.v1.Target
-	41,  // 84: ptah.console.v1.Migration.history:type_name -> ptah.console.v1.MigrationHistory
-	43,  // 85: ptah.console.v1.Migration.last_run:type_name -> ptah.console.v1.MigrationRun
-	44,  // 86: ptah.console.v1.Migration.unresolved_run:type_name -> ptah.console.v1.UnresolvedRun
-	45,  // 87: ptah.console.v1.Migration.resolved_run:type_name -> ptah.console.v1.ResolvedRun
-	23,  // 88: ptah.console.v1.Migration.active_operation:type_name -> ptah.console.v1.Operation
-	56,  // 89: ptah.console.v1.Migration.next_reconciliation:type_name -> google.protobuf.Timestamp
-	15,  // 90: ptah.console.v1.Migration.stages:type_name -> ptah.console.v1.Stage
-	16,  // 91: ptah.console.v1.Migration.attention:type_name -> ptah.console.v1.Attention
-	17,  // 92: ptah.console.v1.Migration.gitops:type_name -> ptah.console.v1.GitOps
-	29,  // 93: ptah.console.v1.Migration.journal:type_name -> ptah.console.v1.Journal
-	55,  // 94: ptah.console.v1.Migration.read_request:type_name -> ptah.console.v1.ReadRequest
-	46,  // 95: ptah.console.v1.ListMigrationsResponse.migrations:type_name -> ptah.console.v1.Migration
-	9,   // 96: ptah.console.v1.ListMigrationsResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
-	46,  // 97: ptah.console.v1.GetMigrationResponse.migration:type_name -> ptah.console.v1.Migration
-	51,  // 98: ptah.console.v1.MigrationPlan.migrations:type_name -> ptah.console.v1.PlannedMigration
-	56,  // 99: ptah.console.v1.MigrationPlan.created_at:type_name -> google.protobuf.Timestamp
-	20,  // 100: ptah.console.v1.MigrationPlan.source:type_name -> ptah.console.v1.PlanSource
-	52,  // 101: ptah.console.v1.GetMigrationPlanResponse.plan:type_name -> ptah.console.v1.MigrationPlan
-	12,  // 102: ptah.console.v1.ScopeService.ListNamespaces:input_type -> ptah.console.v1.ListNamespacesRequest
-	32,  // 103: ptah.console.v1.SchemaService.ListSchemas:input_type -> ptah.console.v1.ListSchemasRequest
-	34,  // 104: ptah.console.v1.SchemaService.GetSchema:input_type -> ptah.console.v1.GetSchemaRequest
-	39,  // 105: ptah.console.v1.SchemaService.GetSchemaPlan:input_type -> ptah.console.v1.GetSchemaPlanRequest
-	47,  // 106: ptah.console.v1.MigrationService.ListMigrations:input_type -> ptah.console.v1.ListMigrationsRequest
-	49,  // 107: ptah.console.v1.MigrationService.GetMigration:input_type -> ptah.console.v1.GetMigrationRequest
-	53,  // 108: ptah.console.v1.MigrationService.GetMigrationPlan:input_type -> ptah.console.v1.GetMigrationPlanRequest
-	13,  // 109: ptah.console.v1.ScopeService.ListNamespaces:output_type -> ptah.console.v1.ListNamespacesResponse
-	33,  // 110: ptah.console.v1.SchemaService.ListSchemas:output_type -> ptah.console.v1.ListSchemasResponse
-	35,  // 111: ptah.console.v1.SchemaService.GetSchema:output_type -> ptah.console.v1.GetSchemaResponse
-	40,  // 112: ptah.console.v1.SchemaService.GetSchemaPlan:output_type -> ptah.console.v1.GetSchemaPlanResponse
-	48,  // 113: ptah.console.v1.MigrationService.ListMigrations:output_type -> ptah.console.v1.ListMigrationsResponse
-	50,  // 114: ptah.console.v1.MigrationService.GetMigration:output_type -> ptah.console.v1.GetMigrationResponse
-	54,  // 115: ptah.console.v1.MigrationService.GetMigrationPlan:output_type -> ptah.console.v1.GetMigrationPlanResponse
-	109, // [109:116] is the sub-list for method output_type
-	102, // [102:109] is the sub-list for method input_type
-	102, // [102:102] is the sub-list for extension type_name
-	102, // [102:102] is the sub-list for extension extendee
-	0,   // [0:102] is the sub-list for field type_name
+	23,  // 32: ptah.console.v1.Target.inventory:type_name -> ptah.console.v1.ObjectCount
+	57,  // 33: ptah.console.v1.Operation.started_at:type_name -> google.protobuf.Timestamp
+	57,  // 34: ptah.console.v1.ConsumedApproval.approved_at:type_name -> google.protobuf.Timestamp
+	57,  // 35: ptah.console.v1.SchemaPlanSummary.created_at:type_name -> google.protobuf.Timestamp
+	25,  // 36: ptah.console.v1.SchemaPlanSummary.approval:type_name -> ptah.console.v1.ConsumedApproval
+	57,  // 37: ptah.console.v1.SchemaApplied.completed_at:type_name -> google.protobuf.Timestamp
+	57,  // 38: ptah.console.v1.PendingObservation.observe_after:type_name -> google.protobuf.Timestamp
+	7,   // 39: ptah.console.v1.Schema.ref:type_name -> ptah.console.v1.ObjectRef
+	8,   // 40: ptah.console.v1.Schema.conditions:type_name -> ptah.console.v1.Condition
+	18,  // 41: ptah.console.v1.Schema.source:type_name -> ptah.console.v1.Source
+	22,  // 42: ptah.console.v1.Schema.target:type_name -> ptah.console.v1.Target
+	26,  // 43: ptah.console.v1.Schema.current_plan:type_name -> ptah.console.v1.SchemaPlanSummary
+	27,  // 44: ptah.console.v1.Schema.applied:type_name -> ptah.console.v1.SchemaApplied
+	24,  // 45: ptah.console.v1.Schema.active_operation:type_name -> ptah.console.v1.Operation
+	28,  // 46: ptah.console.v1.Schema.pending_observation:type_name -> ptah.console.v1.PendingObservation
+	57,  // 47: ptah.console.v1.Schema.last_attempt:type_name -> google.protobuf.Timestamp
+	57,  // 48: ptah.console.v1.Schema.last_successful_reconciliation:type_name -> google.protobuf.Timestamp
+	57,  // 49: ptah.console.v1.Schema.next_reconciliation:type_name -> google.protobuf.Timestamp
+	15,  // 50: ptah.console.v1.Schema.stages:type_name -> ptah.console.v1.Stage
+	16,  // 51: ptah.console.v1.Schema.attention:type_name -> ptah.console.v1.Attention
+	17,  // 52: ptah.console.v1.Schema.gitops:type_name -> ptah.console.v1.GitOps
+	30,  // 53: ptah.console.v1.Schema.journal:type_name -> ptah.console.v1.Journal
+	56,  // 54: ptah.console.v1.Schema.read_request:type_name -> ptah.console.v1.ReadRequest
+	57,  // 55: ptah.console.v1.Journal.covered_since:type_name -> google.protobuf.Timestamp
+	31,  // 56: ptah.console.v1.Journal.entries:type_name -> ptah.console.v1.JournalEntry
+	57,  // 57: ptah.console.v1.JournalEntry.at:type_name -> google.protobuf.Timestamp
+	57,  // 58: ptah.console.v1.JournalEntry.started_at:type_name -> google.protobuf.Timestamp
+	57,  // 59: ptah.console.v1.JournalEntry.last_at:type_name -> google.protobuf.Timestamp
+	32,  // 60: ptah.console.v1.JournalEntry.failure:type_name -> ptah.console.v1.RunFailure
+	29,  // 61: ptah.console.v1.ListSchemasResponse.schemas:type_name -> ptah.console.v1.Schema
+	9,   // 62: ptah.console.v1.ListSchemasResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
+	29,  // 63: ptah.console.v1.GetSchemaResponse.schema:type_name -> ptah.console.v1.Schema
+	6,   // 64: ptah.console.v1.SchemaPlan.selection:type_name -> ptah.console.v1.PlanSelection
+	37,  // 65: ptah.console.v1.SchemaPlan.statements:type_name -> ptah.console.v1.Statement
+	38,  // 66: ptah.console.v1.SchemaPlan.chunks:type_name -> ptah.console.v1.PlanChunk
+	57,  // 67: ptah.console.v1.SchemaPlan.created_at:type_name -> google.protobuf.Timestamp
+	57,  // 68: ptah.console.v1.SchemaPlan.completed_at:type_name -> google.protobuf.Timestamp
+	5,   // 69: ptah.console.v1.SchemaPlan.sql_access:type_name -> ptah.console.v1.SqlAccess
+	20,  // 70: ptah.console.v1.SchemaPlan.source:type_name -> ptah.console.v1.PlanSource
+	6,   // 71: ptah.console.v1.GetSchemaPlanRequest.selection:type_name -> ptah.console.v1.PlanSelection
+	39,  // 72: ptah.console.v1.GetSchemaPlanResponse.plan:type_name -> ptah.console.v1.SchemaPlan
+	57,  // 73: ptah.console.v1.MigrationHistory.observed_at:type_name -> google.protobuf.Timestamp
+	43,  // 74: ptah.console.v1.MigrationHistory.revisions:type_name -> ptah.console.v1.MigrationRevision
+	57,  // 75: ptah.console.v1.MigrationRevision.applied_at:type_name -> google.protobuf.Timestamp
+	57,  // 76: ptah.console.v1.MigrationRun.started_at:type_name -> google.protobuf.Timestamp
+	57,  // 77: ptah.console.v1.MigrationRun.finished_at:type_name -> google.protobuf.Timestamp
+	32,  // 78: ptah.console.v1.MigrationRun.failure:type_name -> ptah.console.v1.RunFailure
+	57,  // 79: ptah.console.v1.UnresolvedRun.recorded_at:type_name -> google.protobuf.Timestamp
+	57,  // 80: ptah.console.v1.ResolvedRun.resolved_at:type_name -> google.protobuf.Timestamp
+	7,   // 81: ptah.console.v1.Migration.ref:type_name -> ptah.console.v1.ObjectRef
+	8,   // 82: ptah.console.v1.Migration.conditions:type_name -> ptah.console.v1.Condition
+	18,  // 83: ptah.console.v1.Migration.source:type_name -> ptah.console.v1.Source
+	22,  // 84: ptah.console.v1.Migration.target:type_name -> ptah.console.v1.Target
+	42,  // 85: ptah.console.v1.Migration.history:type_name -> ptah.console.v1.MigrationHistory
+	44,  // 86: ptah.console.v1.Migration.last_run:type_name -> ptah.console.v1.MigrationRun
+	45,  // 87: ptah.console.v1.Migration.unresolved_run:type_name -> ptah.console.v1.UnresolvedRun
+	46,  // 88: ptah.console.v1.Migration.resolved_run:type_name -> ptah.console.v1.ResolvedRun
+	24,  // 89: ptah.console.v1.Migration.active_operation:type_name -> ptah.console.v1.Operation
+	57,  // 90: ptah.console.v1.Migration.next_reconciliation:type_name -> google.protobuf.Timestamp
+	15,  // 91: ptah.console.v1.Migration.stages:type_name -> ptah.console.v1.Stage
+	16,  // 92: ptah.console.v1.Migration.attention:type_name -> ptah.console.v1.Attention
+	17,  // 93: ptah.console.v1.Migration.gitops:type_name -> ptah.console.v1.GitOps
+	30,  // 94: ptah.console.v1.Migration.journal:type_name -> ptah.console.v1.Journal
+	56,  // 95: ptah.console.v1.Migration.read_request:type_name -> ptah.console.v1.ReadRequest
+	47,  // 96: ptah.console.v1.ListMigrationsResponse.migrations:type_name -> ptah.console.v1.Migration
+	9,   // 97: ptah.console.v1.ListMigrationsResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
+	47,  // 98: ptah.console.v1.GetMigrationResponse.migration:type_name -> ptah.console.v1.Migration
+	52,  // 99: ptah.console.v1.MigrationPlan.migrations:type_name -> ptah.console.v1.PlannedMigration
+	57,  // 100: ptah.console.v1.MigrationPlan.created_at:type_name -> google.protobuf.Timestamp
+	20,  // 101: ptah.console.v1.MigrationPlan.source:type_name -> ptah.console.v1.PlanSource
+	53,  // 102: ptah.console.v1.GetMigrationPlanResponse.plan:type_name -> ptah.console.v1.MigrationPlan
+	12,  // 103: ptah.console.v1.ScopeService.ListNamespaces:input_type -> ptah.console.v1.ListNamespacesRequest
+	33,  // 104: ptah.console.v1.SchemaService.ListSchemas:input_type -> ptah.console.v1.ListSchemasRequest
+	35,  // 105: ptah.console.v1.SchemaService.GetSchema:input_type -> ptah.console.v1.GetSchemaRequest
+	40,  // 106: ptah.console.v1.SchemaService.GetSchemaPlan:input_type -> ptah.console.v1.GetSchemaPlanRequest
+	48,  // 107: ptah.console.v1.MigrationService.ListMigrations:input_type -> ptah.console.v1.ListMigrationsRequest
+	50,  // 108: ptah.console.v1.MigrationService.GetMigration:input_type -> ptah.console.v1.GetMigrationRequest
+	54,  // 109: ptah.console.v1.MigrationService.GetMigrationPlan:input_type -> ptah.console.v1.GetMigrationPlanRequest
+	13,  // 110: ptah.console.v1.ScopeService.ListNamespaces:output_type -> ptah.console.v1.ListNamespacesResponse
+	34,  // 111: ptah.console.v1.SchemaService.ListSchemas:output_type -> ptah.console.v1.ListSchemasResponse
+	36,  // 112: ptah.console.v1.SchemaService.GetSchema:output_type -> ptah.console.v1.GetSchemaResponse
+	41,  // 113: ptah.console.v1.SchemaService.GetSchemaPlan:output_type -> ptah.console.v1.GetSchemaPlanResponse
+	49,  // 114: ptah.console.v1.MigrationService.ListMigrations:output_type -> ptah.console.v1.ListMigrationsResponse
+	51,  // 115: ptah.console.v1.MigrationService.GetMigration:output_type -> ptah.console.v1.GetMigrationResponse
+	55,  // 116: ptah.console.v1.MigrationService.GetMigrationPlan:output_type -> ptah.console.v1.GetMigrationPlanResponse
+	110, // [110:117] is the sub-list for method output_type
+	103, // [103:110] is the sub-list for method input_type
+	103, // [103:103] is the sub-list for extension type_name
+	103, // [103:103] is the sub-list for extension extendee
+	0,   // [0:103] is the sub-list for field type_name
 }
 
 func init() { file_ptah_console_v1_resources_proto_init() }
@@ -5268,14 +5349,14 @@ func file_ptah_console_v1_resources_proto_init() {
 	if File_ptah_console_v1_resources_proto != nil {
 		return
 	}
-	file_ptah_console_v1_resources_proto_msgTypes[35].OneofWrappers = []any{}
+	file_ptah_console_v1_resources_proto_msgTypes[36].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ptah_console_v1_resources_proto_rawDesc), len(file_ptah_console_v1_resources_proto_rawDesc)),
 			NumEnums:      7,
-			NumMessages:   49,
+			NumMessages:   50,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

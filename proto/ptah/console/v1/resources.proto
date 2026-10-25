@@ -256,6 +256,19 @@ message Target {
   string highest_drift_severity = 6;
   int32 drift_finding_count = 7;
   repeated DriftFinding drift_findings = 8;
+  // Each kind of object the last observation compared, with how many the
+  // desired schema declares and the database holds. An operator before 0.2.8,
+  // or an executor that does not count, publishes none.
+  repeated ObjectCount inventory = 9;
+}
+
+// ObjectCount counts one kind of object on both sides of an observation. The
+// kind is the stem of its drift categories: tables for tables_added and
+// tables_removed.
+message ObjectCount {
+  string kind = 1;
+  int32 desired = 2;
+  int32 observed = 3;
 }
 
 message Operation {

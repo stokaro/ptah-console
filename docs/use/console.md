@@ -64,6 +64,9 @@ schema's page in the full console starts with its current plan, the drift its
 last read found, when a plan last reached the database and when the next read
 is due, then why it stands where it stands and, when a GitOps controller
 manages it, that a spec change made here is set back at the next sync.
+Under them, from an operator that publishes object counts, are what the schema
+declares and what the database holds by kind of object, the two side by side,
+what differs kind by kind, and how much of each kind the database covers.
 
 A migration's page has four panels. **History** holds the last run, what you
 may do next, and the migration timeline: the sequence newest first, searchable

@@ -11,6 +11,7 @@ import {
 } from "../gen/ptah/console/v1/diagnostics_pb"
 import type { Condition } from "../gen/ptah/console/v1/resources_pb"
 import { activity, duration, whereStopped, type ActivityEntry } from "./activity"
+import { driftPhrase, driftReading, readingTone } from "./drift"
 import { conditionTone, type ResourceView } from "./resource"
 
 /** Who left a piece of evidence: the operator's controller, a Job it ran, or the database. */
@@ -187,16 +188,15 @@ function databaseEntries(resource: ResourceView): Entry[] {
     })
   }
   const target = schema?.target ?? migration?.target
+  const reading = driftReading(target)
+  const phrase = driftPhrase(reading)
   if (target?.lastObservedAt) {
     entries.push({
       lane: "database",
       at: date(target.lastObservedAt),
       title: "Read",
-      detail:
-        target.driftFindingCount > 0
-          ? `${target.driftFindingCount} differences from the artifact${target.highestDriftSeverity ? `, the most severe ${target.highestDriftSeverity}` : ""}`
-          : "No difference from the artifact",
-      tone: target.driftFindingCount > 0 ? "warn" : "ok",
+      detail: phrase.charAt(0).toUpperCase() + phrase.slice(1),
+      tone: readingTone(reading),
     })
   }
   if (schema?.pendingObservation?.observeAfter) {

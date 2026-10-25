@@ -7,6 +7,7 @@ import {
   ConditionSchema,
   JournalSchema,
   MigrationRunSchema,
+  TargetSchema,
 } from "../gen/ptah/console/v1/resources_pb"
 import { minutesAgo, syncedMigration, waitingSchema } from "../test/console"
 import { originalError, timeline } from "./execution"
@@ -115,6 +116,37 @@ describe("timeline", () => {
       entries.find((e) => e.title === "Container fetch-artifact (init) terminated")
     ).toMatchObject({
       tone: "ok",
+    })
+  })
+
+  it.each([
+    [{}, "No drift from the desired schema", "ok"],
+    [
+      { highestDriftSeverity: "safe" },
+      "Drift from the desired schema that no category names; the plan says what it changes",
+      "warn",
+    ],
+    [
+      { highestDriftSeverity: "safe", driftFindingCount: 1 },
+      "1 drift finding, the most severe safe",
+      "warn",
+    ],
+    [
+      { highestDriftSeverity: "destructive", driftFindingCount: 3 },
+      "3 drift findings, the most severe destructive",
+      "bad",
+    ],
+  ])("reads the last observation %j as %j", (drift, detail, tone) => {
+    const schema = fromSchema(
+      waitingSchema((s) => {
+        s.target = create(TargetSchema, { lastObservedAt: minutesAgo(5), ...drift })
+      })
+    )
+
+    expect(timeline(schema).find((e) => e.title === "Read")).toMatchObject({
+      lane: "database",
+      detail,
+      tone,
     })
   })
 

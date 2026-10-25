@@ -23,6 +23,7 @@ import { StageState } from "../../gen/ptah/console/v1/resources_pb"
 import { coverage, duration } from "../../model/activity"
 import { ago } from "../../model/connection"
 import { failureCauses, lastOutcome } from "../../model/diagnosis"
+import { driftPhrase, driftReading, readingTone } from "../../model/drift"
 import { goneWord, jobRank, lastLog } from "../../model/execution"
 import {
   incident,
@@ -394,16 +395,12 @@ function DatabaseState({ resource, now }: { resource: ResourceView; now: Date })
     )
   }
   if (schema?.target?.lastObservedAt) {
-    const findings = schema.target.driftFindingCount
+    const reading = driftReading(schema.target)
     return (
       <span className="flex items-start gap-2 text-[13px]">
-        <StatusGlyph tone={findings > 0 ? "warn" : "ok"} size={20} />
+        <StatusGlyph tone={readingTone(reading)} size={20} />
         <span>
-          Read {ago(timestampDate(schema.target.lastObservedAt), now)}:{" "}
-          {findings > 0
-            ? `${findings} drift ${findings === 1 ? "finding" : "findings"}, highest ${schema.target.highestDriftSeverity || "unknown"}`
-            : "no drift from the desired schema"}
-          .
+          Read {ago(timestampDate(schema.target.lastObservedAt), now)}: {driftPhrase(reading)}.
         </span>
       </span>
     )
