@@ -20,6 +20,7 @@ import {
   MigrationRevisionSchema,
   MigrationRunSchema,
   StageState,
+  TargetSchema,
 } from "../gen/ptah/console/v1/resources_pb"
 import { consoleTransport, minutesAgo, result, syncedMigration, waitingSchema } from "./console"
 import "../index.css"
@@ -38,6 +39,28 @@ const transport = consoleTransport({
         controller: "Argo CD",
         application: "storefront",
       }
+      schema.target = create(TargetSchema, {
+        engine: "PostgreSQL",
+        secretName: "storefront-database",
+        secretKey: "url",
+        lastObservedAt: minutesAgo(3),
+        highestDriftSeverity: "destructive",
+        driftFindingCount: 4,
+        driftFindings: [
+          { category: "columns_removed", count: 1, severity: "destructive" },
+          { category: "columns_modified", count: 1, severity: "warning" },
+          { category: "indexes_added", count: 1, severity: "safe" },
+          { category: "rls_policies_added", count: 1, severity: "safe" },
+        ],
+        inventory: [
+          { kind: "schemas", desired: 1, observed: 1 },
+          { kind: "tables", desired: 14, observed: 14 },
+          { kind: "columns", desired: 96, observed: 97 },
+          { kind: "indexes", desired: 22, observed: 21 },
+          { kind: "constraints", desired: 31, observed: 31 },
+          { kind: "rls_policies", desired: 4, observed: 3 },
+        ],
+      })
       schema.journal = create(JournalSchema, {
         coveredSince: minutesAgo(900),
         entries: [

@@ -112,6 +112,11 @@ func schemaTarget(schema *operatorv1alpha1.PtahSchema) *consolev1.Target {
 			Category: finding.Category, Count: finding.Count, Severity: finding.Severity,
 		})
 	}
+	for _, kind := range target.Inventory {
+		out.Inventory = append(out.Inventory, &consolev1.ObjectCount{
+			Kind: kind.Kind, Desired: kind.Desired, Observed: kind.Observed,
+		})
+	}
 	return out
 }
 

@@ -1,22 +1,16 @@
 import { timestampDate, type Timestamp } from "@bufbuild/protobuf/wkt"
-import { Card, StatusGlyph, type Tone } from "@ptah/console-ui"
+import { Card, StatusGlyph } from "@ptah/console-ui"
 import { Link } from "@tanstack/react-router"
 
 import { StageState } from "../../gen/ptah/console/v1/resources_pb"
 import { activity } from "../../model/activity"
 import { ago } from "../../model/connection"
+import { driftReading, readingTone } from "../../model/drift"
 import { stageTone, waitingForApproval, type ResourceView } from "../../model/resource"
 import type { GlanceTile } from "./glance"
 
 function date(timestamp: Timestamp | undefined) {
   return timestamp ? timestampDate(timestamp) : undefined
-}
-
-const severityTones: Record<string, Tone> = {
-  destructive: "bad",
-  error: "bad",
-  warning: "warn",
-  safe: "ok",
 }
 
 /** In how long a moment comes, or how long ago it passed. */
@@ -37,6 +31,7 @@ export function schemaTiles(resource: ResourceView, now: Date): GlanceTile[] {
   const applied = date(schema.applied?.completedAt)
   const next = date(schema.pendingObservation?.observeAfter) ?? date(schema.nextReconciliation)
   const severity = target?.highestDriftSeverity ?? ""
+  const reading = driftReading(target)
   return [
     {
       label: "Current plan",
@@ -56,9 +51,9 @@ export function schemaTiles(resource: ResourceView, now: Date): GlanceTile[] {
       label: "Drift",
       value: observed ? severity || "None" : "–",
       sub: observed
-        ? `${target?.driftFindingCount ?? 0} ${target?.driftFindingCount === 1 ? "finding" : "findings"} at the read ${ago(observed, now)}`
+        ? `${reading.state === "uncategorized" ? "In no category" : `${target?.driftFindingCount ?? 0} ${target?.driftFindingCount === 1 ? "finding" : "findings"}`} at the read ${ago(observed, now)}`
         : "The database is not read yet",
-      tone: observed ? (severityTones[severity] ?? "ok") : "off",
+      tone: readingTone(reading),
     },
     {
       label: "Applied",

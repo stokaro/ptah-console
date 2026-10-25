@@ -713,3 +713,28 @@ func attentionOf(attention []*consolev1.Attention, kind consolev1.AttentionKind)
 	}
 	return nil
 }
+
+// The inventory reaches the console kind by kind as the operator published
+// it, and a schema the operator counted nothing for carries none.
+func TestSchemaInventoryIsCarriedAsPublished(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	schema := &operatorv1alpha1.PtahSchema{}
+	schema.Status.Target.Inventory = []operatorv1alpha1.ObjectInventoryStatus{
+		{Kind: "columns", Desired: 85, Observed: 87},
+		{Kind: "tables", Desired: 12, Observed: 0},
+	}
+
+	counted := model.Schema(schema).GetTarget().GetInventory()
+
+	c.Assert(counted, qt.HasLen, 2)
+	c.Assert(counted[0].GetKind(), qt.Equals, "columns")
+	c.Assert(counted[0].GetDesired(), qt.Equals, int32(85))
+	c.Assert(counted[0].GetObserved(), qt.Equals, int32(87))
+	c.Assert(counted[1].GetKind(), qt.Equals, "tables")
+	c.Assert(counted[1].GetDesired(), qt.Equals, int32(12))
+	c.Assert(counted[1].GetObserved(), qt.Equals, int32(0))
+
+	schema.Status.Target.Inventory = nil
+	c.Assert(model.Schema(schema).GetTarget().GetInventory(), qt.IsNil)
+}

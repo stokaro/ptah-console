@@ -33,6 +33,7 @@ const applying = () =>
       highestDriftSeverity: "",
       driftFindingCount: 0,
       driftFindings: [],
+      inventory: [],
     }
   })
 
@@ -89,7 +90,7 @@ describe("Execution and diagnosis", () => {
     expect(jobs).toHaveTextContent("storefront-apply-8f2c")
     expect(jobs).toHaveTextContent("Running")
     expect(screen.getByText("applying statement 2 of 3")).toBeVisible()
-    expect(screen.getByText(/Read 30 min ago: no drift from the desired schema/)).toBeVisible()
+    expect(screen.getByText("Read 30 min ago: no drift from the desired schema.")).toBeVisible()
     expect(screen.getByText("ApplyStarted")).toBeVisible()
     expect(screen.getByText("key dsn; the console never reads it")).toBeVisible()
     expect(screen.getByText(/No blind retry, no automatic rollback/)).toBeVisible()
@@ -119,6 +120,34 @@ describe("Execution and diagnosis", () => {
     expect(await screen.findByRole("list", { name: "Jobs the status names" })).toBeVisible()
     expect(sent).toEqual([false])
     expect(screen.queryByText("applying statement 2 of 3")).not.toBeInTheDocument()
+  })
+
+  it.each([
+    [
+      // The report found drift it lists under no category: a severity with no
+      // finding, which is not the same as no drift.
+      "drift in no category",
+      { highestDriftSeverity: "safe", driftFindingCount: 0 },
+      "!",
+      "Read 30 min ago: drift from the desired schema that no category names; the plan says what it changes.",
+    ],
+    [
+      "findings",
+      { highestDriftSeverity: "destructive", driftFindingCount: 2 },
+      "×",
+      "Read 30 min ago: 2 drift findings, the most severe destructive.",
+    ],
+  ])("says what the last read found: %s", async (_, drift, glyph, sentence) => {
+    const schema = applying()
+    Object.assign(schema.target!, drift)
+    renderConsole("/console/schemas/application/storefront/execution", {
+      schemas: [schema],
+      migrations: [],
+      diagnostics: { jobs: [applyJob] },
+    })
+
+    const read = await screen.findByText(sentence)
+    expect(read.parentElement).toHaveTextContent(`${glyph}${sentence}`)
   })
 
   it("says why a Job is not shown rather than leaving it out", async () => {

@@ -181,8 +181,13 @@ names its Secret and key, never their content. "Copy as patch" copies a
 `kubectl patch --type merge` command that sets the spec to what the page
 shows, for the person to run where they choose: the console sends no patch.
 The drift shown is the operator's own record of its last read, by category
-and severity; the operator publishes no per-object counts, so the page draws
-none.
+and severity. Desired state, Observed state, Schema comparison, Object drift
+and Schema profile read `status.target.inventory`, the counts per kind the
+same read made, joined to
+the drift findings by the kind's stem: `tables` to `tables_added` and
+`tables_removed`. What both sides hold is the desired count less the
+additions, which equals the observed count less the removals; where the two
+disagree the page leaves it unknown.
 
 ## Full console: migration
 

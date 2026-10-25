@@ -207,6 +207,22 @@ test("an approver reviews the new plans in the full console, approves them, and 
     "Approved as the approver, from the full console, and followed on its own page: applied, and verified by a fresh read.",
     4500
   )
+  // The read that verified catalog counted its objects on both sides: the
+  // one table and its three columns, declared and held.
+  for (const side of ["Objects declared in the schema", "Objects found in the database"]) {
+    await expect(page.getByRole("list", { name: side }).getByRole("listitem")).toHaveText([
+      "Columns3",
+      "Tables1",
+    ])
+  }
+  await expect(
+    page.getByText("No object differs between the schema and the database.")
+  ).toBeVisible()
+  await lab.audit("a schema's desired and observed state")
+  await lab.caption(
+    "The same read counted catalog's objects on both sides: what the schema declares, what the database holds, and nothing that differs.",
+    4500
+  )
 
   await page.getByRole("link", { name: "Execution and history" }).click()
   const history = page.getByRole("table", { name: /Execution and history of catalog/ })

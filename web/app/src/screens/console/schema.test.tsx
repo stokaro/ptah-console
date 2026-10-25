@@ -62,12 +62,44 @@ describe("Schema detail", () => {
     )
     const target = screen.getByRole("region", { name: "Target" })
     expect(target).toHaveTextContent("Secret storefront-database, key url")
+    expect(target).toHaveTextContent(
+      "The last read found 3 drift findings, the most severe Destructive."
+    )
     expect(within(target).getByRole("row", { name: /Column/ })).toHaveTextContent("2")
     expect(screen.getByRole("region", { name: "Artifact" })).toHaveTextContent("Yes, 13 min ago")
     expect(screen.getByRole("region", { name: "Reconciliation" })).toHaveTextContent(
       /Next read\s*in 9 min|Next read\s*in 10 min/
     )
     expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it.each([
+    [{}, "The last read found no drift from the desired schema."],
+    [
+      // Drift the report lists under no category: a severity, no finding.
+      { highestDriftSeverity: "safe" },
+      "The last read found drift from the desired schema that no category names; the plan says what it changes.",
+    ],
+  ])("says what the last read found without a finding: %j", async (drift, sentence) => {
+    renderConsole("/console/schemas/application/storefront", {
+      schemas: [
+        waitingSchema((s) => {
+          s.target = create(TargetSchema, { lastObservedAt: minutesAgo(5), ...drift })
+        }),
+      ],
+    })
+
+    const target = await screen.findByRole("region", { name: "Target" })
+    expect(target).toHaveTextContent(sentence)
+    expect(within(target).queryByRole("table")).toBeNull()
+  })
+
+  it("says nothing about drift before the first read", async () => {
+    renderConsole("/console/schemas/application/storefront", { schemas: [waitingSchema()] })
+
+    const target = await screen.findByRole("region", { name: "Target" })
+    // "Last read" is a row of the card; no sentence says what a read found.
+    expect(target).not.toHaveTextContent(/The last read found|drift/)
   })
 
   it("shows the spec read-only and copies it as a patch the person runs", async () => {
