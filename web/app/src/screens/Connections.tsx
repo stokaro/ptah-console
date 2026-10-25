@@ -354,7 +354,14 @@ function ConnectionActions({
   const refresh = useRegistryRefresh()
   const [action, setAction] = useState<Action | null>(null)
   const [reason, setReason] = useState("")
-  const [credential, setCredential] = useState<{ value: string; generation: bigint } | null>(null)
+  // moved is whether the credential is at another generation than the one
+  // the agent ran with when it was issued. The connection's own generation
+  // is no measure afterwards: the page reads it again, at the new one.
+  const [credential, setCredential] = useState<{
+    value: string
+    generation: bigint
+    moved: boolean
+  } | null>(null)
   const done = () => {
     setAction(null)
     setReason("")
@@ -377,10 +384,7 @@ function ConnectionActions({
   })
   const issue = useMutation(ConnectionService.method.issueChannelCredential, {
     transport,
-    onSuccess: (response) => {
-      done()
-      setCredential({ value: response.credential, generation: response.generation })
-    },
+    onSuccess: done,
   })
   const busy = enable.isPending || quarantine.isPending || remove.isPending || issue.isPending
   const failure = [enable, quarantine, remove, issue].find((mutation) => mutation.error)?.error
@@ -419,9 +423,21 @@ function ConnectionActions({
       case "remove":
         remove.mutate({ clusterName: name, reason })
         break
-      case "credential":
-        issue.mutate({ clusterName: name })
+      case "credential": {
+        const running = connection.generation
+        issue.mutate(
+          { clusterName: name },
+          {
+            onSuccess: (response) =>
+              setCredential({
+                value: response.credential,
+                generation: response.generation,
+                moved: response.generation !== running,
+              }),
+          }
+        )
         break
+      }
     }
   }
   return (
@@ -449,17 +465,14 @@ function ConnectionActions({
         <div className="mt-3 flex flex-col gap-2">
           <p className="m-0 text-sm text-fg">
             The new credential, shown this once. Write it into the agent&apos;s Secret on the target
-            {credential.generation !== connection.generation
-              ? `, with generation ${credential.generation}`
-              : ""}
-            :
+            {credential.moved ? `, with generation ${credential.generation}` : ""}:
           </p>
           <CommandBlock
             label="On the target"
             command={[
               `kubectl --namespace ptah-console-agent create secret generic ptah-console-agent-credential \\`,
               `  --from-literal=credential=${credential.value} --dry-run=client --output yaml | kubectl apply --filename -`,
-              ...(credential.generation !== connection.generation
+              ...(credential.moved
                 ? [
                     `helm upgrade ptah-console-agent oci://ghcr.io/stokaro/charts/ptah-console-agent --namespace ptah-console-agent --reuse-values \\`,
                     `  --set connection.generation=${credential.generation}`,

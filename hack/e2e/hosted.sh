@@ -89,8 +89,12 @@ passwords() {
 
 # new_password records a fresh password for an account.
 new_password() {
-	umask 077
-	openssl rand -base64 18 | tr -d '\n' >"$OUT_DIR/hosted-$1.password"
+	# Only the password file is private; a umask left behind would make every
+	# file the script writes after it private too, the image's binary included.
+	(
+		umask 077
+		openssl rand -base64 18 | tr -d '\n' >"$OUT_DIR/hosted-$1.password"
+	)
 	fact "HOSTED_$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')_PASSWORD" "$(cat "$OUT_DIR/hosted-$1.password")"
 }
 

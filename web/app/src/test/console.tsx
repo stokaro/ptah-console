@@ -34,6 +34,7 @@ import {
   type ResourceDraft,
 } from "../gen/ptah/console/v1/authoring_pb"
 import {
+  ChannelState,
   ConnectionService,
   type ConnectionSchema,
   type CreateEnrollmentResponseSchema,
@@ -446,7 +447,13 @@ export function consoleTransport(fixture: Fixture) {
         },
         issueChannelCredential: (request) => {
           record("issueChannelCredential", request)
-          return { credential: "shown-once-credential", generation: 2n }
+          // As the server does: lifting a quarantine moves the connection to
+          // a new generation, which the registry then reads back.
+          const connection = registry.connections.find((c) => c.name === request.clusterName)
+          if (connection && connection.channel === ChannelState.QUARANTINED) {
+            connection.generation = (connection.generation ?? 0n) + 1n
+          }
+          return { credential: "shown-once-credential", generation: connection?.generation ?? 1n }
         },
       })
     }

@@ -96,8 +96,14 @@ plan review, Execution & diagnosis, Activity. The rows in
 `web/e2e/hosted.spec.ts` follow them: `hack/e2e/hosted.sh` builds the
 console's image on the lab's Docker context, loads it into kind, installs
 `charts/ptah-console` with an author and an approver account, and serves it
-on this machine through a port-forward. `hack/e2e/verify.sh` checks what
-the rows decided against the cluster rather than the page. The lab runs kind
+on this machine through a port-forward. `web/e2e/oidc.spec.ts` comes next:
+`hack/e2e/oidc.sh` starts a Dex in the lab, makes each API server trust it
+through an AuthenticationConfiguration, installs the chart again with
+`oidc` on, and a person signs in at Dex and approves with their own ID token.
+The row restarts the lab's API servers one at a time; they go on accepting
+every other identity as before, so no other row depends on where it runs. `hack/e2e/verify.sh` checks what the rows decided against the
+cluster rather than the page, one part per row file, for the files
+`E2E_ROWS` names or all of them. The lab runs kind
 on a Docker context (`remote-dev-container` unless `DOCKER_CONTEXT` names
 another) and never on a local daemon; the Acceptance workflow runs it on a
 GitHub runner, which is where cluster work belongs.

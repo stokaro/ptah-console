@@ -112,8 +112,10 @@ oidc:
   # The CA, in PEM, the console trusts for the issuer; empty trusts the
   # image's roots.
   issuerCA: ""
-  # Scopes asked for beside openid, such as the one a provider puts groups
-  # under, or offline_access for a refresh token.
+  # Scopes asked for beside openid: the one that carries the claim the API
+  # server takes usernames from, such as email, the one a provider puts groups
+  # under, or offline_access for a refresh token. A token without the claim the
+  # API server maps is refused.
   extraScopes: []
   # An existing Secret with the console's client secret under key. Empty, the
   # console is a public client, which PKCE protects.

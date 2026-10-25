@@ -17,6 +17,8 @@
 #     approver, and reached its database, and catalog ends resumed and in sync
 #   - inventory's read on request was answered: the operator recorded the
 #     value the console wrote, under the console's field manager
+#   - catalog v2 was approved once, by the username the API server maps the
+#     OpenID Connect user's token to, and its database has the new column
 #   - inventory v2 was approved once, by the hosted approver's mapped
 #     username, and applied after the console was uninstalled
 #   - on the second cluster, inventory was approved twice, both times by the
@@ -35,16 +37,18 @@ ns() {
 }
 
 # deciders prints who admission recorded on each stored decision of a kind,
-# apart from the hosted rows' approval of inventory.
+# apart from the hosted rows' approval of inventory and the OpenID Connect
+# row's, which their own parts check.
 deciders() {
 	ns get "$1" -o json | jq -r --arg field "$2" \
-		'[.items[] | select(.spec.schemaRef.name != "inventory") | .spec[$field].username] | unique | join(",")'
+		'[.items[] | select(.spec.schemaRef.name != "inventory") | .spec[$field].username
+		  | select(startswith("oidc:") | not)] | unique | join(",")'
 }
 # E2E_ROWS names the row files that ran, as it does for make e2e-rows, and
 # empty means all of them. Each part below checks what one file's rows did, so
 # a run of some rows is checked as well as a run of all of them, and a file no
 # part checks is refused rather than passed over.
-known="acceptance.spec.ts console.spec.ts hosted.spec.ts two-clusters.spec.ts"
+known="acceptance.spec.ts console.spec.ts hosted.spec.ts oidc.spec.ts two-clusters.spec.ts"
 for file in ${E2E_ROWS:-}; do
 	case " $known " in
 	*" $file "*) ;;
@@ -141,8 +145,10 @@ if ran console.spec.ts; then
 	done
 	wait_condition ptahschema catalog InSync
 	[ "$(ns get ptahschema catalog -o jsonpath='{.spec.suspend}')" != true ] || fail 'catalog is still suspended'
+	# The OpenID Connect row approves catalog v2 later; its part checks that.
 	catalog=$(ns get ptahschemaapprovals -o json |
-		jq -r '[.items[] | select(.spec.schemaRef.name == "catalog") | .spec.approver.username] | join(",")')
+		jq -r '[.items[] | select(.spec.schemaRef.name == "catalog") | .spec.approver.username
+		  | select(startswith("oidc:") | not)] | join(",")')
 	[ "$catalog" = "$APPROVER" ] || fail "catalog's approvals read '$catalog', not one by $APPROVER"
 	products=$(postgres -d catalog -c \
 		"SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'products'")
@@ -191,6 +197,23 @@ if ran hosted.spec.ts; then
 		[ -z "$(admin -n ptah-console get deployments -o name)" ] || fail 'the hosted console is still installed'
 	fi
 	checked="$checked hosted.spec.ts"
+fi
+
+if ran oidc.spec.ts; then
+	# The OpenID Connect row: admission recorded the username the API server
+	# mapped the person's ID token to, once, for catalog v2, after the
+	# approver's approval of the plan the author's form produced, and the
+	# database has the column v2 adds.
+	oidc=$(ns get ptahschemaapprovals -o json |
+		jq -r '[.items[] | select(.spec.schemaRef.name == "catalog")] | sort_by(.metadata.creationTimestamp)
+		  | [.[].spec.approver.username] | join(",")')
+	[ "$oidc" = "$APPROVER,$OIDC_USERNAME" ] ||
+		fail "catalog's approvals read '$oidc', not one by $APPROVER and then one by $OIDC_USERNAME"
+	wait_condition ptahschema catalog InSync
+	sku=$(postgres -d catalog -c \
+		"SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'sku'")
+	[ "$sku" = 1 ] || fail 'catalog v2, which the OpenID Connect user approved, did not add products.sku'
+	checked="$checked oidc.spec.ts"
 fi
 
 if ran two-clusters.spec.ts; then
