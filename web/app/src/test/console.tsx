@@ -282,6 +282,8 @@ export interface Fixture {
   sessionAnswered?: Promise<void>
   /** Called each time the console lists its namespaces. */
   onListNamespaces?: () => void
+  /** A signed-in session's namespaces are answered only once this settles. */
+  namespacesAnswered?: Promise<void>
   /** The cluster's version as discovery says it; v1.36.4 by default. */
   kubernetesVersion?: string
   /** The minors this console release was tested on; 1.35 to 1.37 by default. */
@@ -458,9 +460,10 @@ export function consoleTransport(fixture: Fixture) {
       })
     }
     service(ScopeService, {
-      listNamespaces: (_request, context) => {
+      listNamespaces: async (_request, context) => {
         requireSession()
         fixture.onListNamespaces?.()
+        await fixture.namespacesAnswered
         const answer = registry?.clusters?.[cluster(context.requestHeader)]
         if (answer && answer !== "unavailable") {
           return answer
