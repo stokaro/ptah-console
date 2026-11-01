@@ -150,6 +150,12 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+      # A kind node holds inotify instances against the runner's per-user
+      # limit, which ubuntu-26.04 sets to 128; past it kube-proxy stops with
+      # "too many open files" and the lab never comes up. The operator's lab
+      # driver raises the same limits from stokaro/ptah-operator#751 on.
+      - name: Raise the runner's inotify limits for kind
+        run: sudo sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288
       - name: Bring the acceptance environment up
         env:
           OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
