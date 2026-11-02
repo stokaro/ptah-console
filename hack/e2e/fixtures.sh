@@ -97,7 +97,7 @@ APPLY=Always "$LAB" manifest storefront "$(digest storefront-v2)" | admin apply 
 say 'billing migrations 1 to 13, applied without an approval'
 APPLY=Always render billing "$(digest billing-release-1)" | admin apply -f - >/dev/null
 say 'deliveries release 1 on MySQL, applied without an approval'
-APPLY=Always "$LAB" manifest deliveries "$(digest deliveries-release-1)" | admin apply -f - >/dev/null
+APPLY=Always render deliveries "$(digest deliveries-release-1)" | admin apply -f - >/dev/null
 
 wait_condition ptahschema inventory InSync
 wait_condition ptahschema storefront InSync
@@ -114,7 +114,7 @@ WRITER=$(admin -n "$NAMESPACE" get ptahschema storefront -o json |
 say 'billing migrations 14 to 17, waiting for an approval'
 APPLY=OnApproval render billing "$(digest billing-release-2)" | admin apply -f - >/dev/null
 say 'deliveries release 2, waiting for an approval'
-APPLY=OnApproval "$LAB" manifest deliveries "$(digest deliveries-release-2)" | admin apply -f - >/dev/null
+APPLY=OnApproval render deliveries "$(digest deliveries-release-2)" | admin apply -f - >/dev/null
 
 STOREFRONT_PLAN=$(wait_plan ptahschema storefront)
 admin -n "$NAMESPACE" wait --for=condition=Ready --timeout=120s "ptahschemaplan/$STOREFRONT_PLAN" >/dev/null ||
