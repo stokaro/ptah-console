@@ -17,6 +17,9 @@
 #     approver, and reached its database, and catalog ends resumed and in sync
 #   - inventory's read on request was answered: the operator recorded the
 #     value the console wrote, under the console's field manager
+#   - pricing names the artifact the author set through the console, under
+#     the console's field manager alone, with its verification policy kept,
+#     the author recorded as its writer, and a plan from that artifact
 #   - catalog v2 was approved once, by the username the API server maps the
 #     OpenID Connect user's token to, and its database has the new column
 #   - inventory v2 was approved once, by the hosted approver's mapped
@@ -176,6 +179,24 @@ if ran console.spec.ts; then
 		elif $owned != ["f:metadata.f:annotations.f:operator.ptah.run/read-requested-at"] then "the console owns \($owned)"
 		else "answered" end')
 	[ "$read" = answered ] || fail "inventory's read on request: $read"
+
+	# pricing, whose source the author changed through the console: the spec
+	# names the reference the push printed, the console's field manager wrote
+	# that one field of the spec, the verification policy stayed, admission
+	# recorded the author as the writer, and the plan that waits was computed
+	# from the new artifact.
+	pricing=$(ns get ptahschema pricing -o json --show-managed-fields | jq -r --arg ref "${PRICING_V2_REFERENCE:?the row recorded no pricing reference}" '
+		(.metadata.managedFields // error("no managedFields")) as $managed
+		| [$managed[] | select(.manager == "ptah-console") | .fieldsV1["f:spec"] | select(. != null)] as $spec
+		| [$managed[] | select(.manager != "ptah-console") | select(.fieldsV1["f:spec"]["f:desired"]["f:ociRef"] != null)
+			| .manager] as $others
+		| if .spec.desired.ociRef != $ref then "names \(.spec.desired.ociRef)"
+		elif $spec != [{"f:desired": {"f:ociRef": {}}}] then "the console wrote \($spec)"
+		elif $others != [] then "\($others) still own spec.desired.ociRef"
+		elif .spec.desired.verificationPolicyFrom.name != "demo-verification-policy" then "lost its verification policy"
+		elif (.status.plan.artifactDigest // "") != ($ref | sub("^[^@]*@"; "")) then "plans from \(.status.plan.artifactDigest // "nothing")"
+		else .metadata.annotations["operator.ptah.run/last-spec-writer-username"] // "" end')
+	[ "$pricing" = "$AUTHOR" ] || fail "pricing after its change of source: $pricing"
 	checked="$checked console.spec.ts"
 fi
 

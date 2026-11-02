@@ -136,6 +136,62 @@ Only `spec.suspend` changes, but a spec change retires the current plan and
 any approval of it, and the dialog says so. **Resume…** lets the operator read
 the database again and plan before it applies anything.
 
+## Change the source
+
+A new revision of a schema or a migration sequence reaches the cluster as a
+new artifact: publish it, then point the resource at it. **Change source…**
+in the **Actions** menu of a schema's or a migration's page is the second
+step, the console's `kubectl ptah set-source`. It is offered where RBAC lets
+you patch the resource and its source is an OCI artifact.
+
+Publish with Ptah v0.17.0 or later, whose push prints the reference to paste:
+
+```sh
+ptah schema push oci://registry.example/acme/storefront:1.5.0 \
+  --schema-file schema.sql --dialect postgres --format reference
+```
+
+`ptah migrations push` takes the same `--format reference`. The dialog takes
+`oci://HOST/REPOSITORY@sha256:<64 hex>` and nothing looser, and says inline
+why it refuses anything else: a tag, a tag beside a digest, a scheme or
+another reference where the repository path belongs, or any value the
+operator's own parser refuses. It resolves no tag; `ptah oci resolve` prints
+the reference a tag names now.
+
+The change sets `spec.desired.ociRef` of a schema or `spec.artifact.ociRef` of
+a migration and nothing else. The verification policy, the registry
+credential, the transport and the apply policy stay as they are, and the new
+artifact is held to them. **Check with the API server** sends the change as a
+server-side dry run: the CRD and the operator's admission judge it, nothing is
+stored, and the dialog shows the source as the API server would store it. Only
+the reference that check accepted can be sent, as you.
+
+What follows is the operator's ordinary cycle, and the dialog says it before
+you confirm. Once the operator observes the new generation it resolves the
+reference, verifies the artifact, reads the database or the migration
+history, and plans. A plan or an approval from the previous artifact does not
+carry over, and an artifact that asks for nothing the database lacks leads to
+no plan. The apply policy decides the rest:
+
+| `spec.policy.apply` | The new plan |
+| --- | --- |
+| `OnApproval` | waits for an approval |
+| `Always` | is applied without a person; a schema plan that is destructive or changes privileges still waits for an approval |
+| `Never` | is recorded, and nothing applies it |
+
+A schema plan that is destructive while `spec.policy.allowDestructive` is
+false is held, and no approval is asked for. A suspended resource starts no
+Job, so nothing happens until it is resumed. The change is a spec change: with
+the operator's `approvals.requireDistinctApprover` on, you become the
+resource's last spec writer and cannot approve the plan that follows.
+
+The console sends nothing, and says why, for a ConfigMap or Git source (moving
+to an artifact also names the verification policy it is held to, which is an
+edit of the resource), and while an Apply whose Job may already exist runs: a
+spec change then leaves an outcome nobody established. Wait for the Apply to
+end. A reference another writer changed since you opened the page is
+reported, never replaced.
+
 ## See what you may do
 
 **Pre-flight** asks the API server what your identity may do in each

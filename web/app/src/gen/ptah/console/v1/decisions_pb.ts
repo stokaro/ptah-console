@@ -14,7 +14,7 @@ import type { Message, UnknownEnum } from "@bufbuild/protobuf";
  * Describes the file ptah/console/v1/decisions.proto.
  */
 export const file_ptah_console_v1_decisions: GenFile = /*@__PURE__*/
-  fileDesc("Ch9wdGFoL2NvbnNvbGUvdjEvZGVjaXNpb25zLnByb3RvEg9wdGFoLmNvbnNvbGUudjEi6AMKCERlY2lzaW9uEisKBGtpbmQYASABKA4yHS5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25LaW5kEicKA3JlZhgCIAEoCzIaLnB0YWguY29uc29sZS52MS5PYmplY3RSZWYSEgoKb3duZXJfbmFtZRgDIAEoCRIRCglvd25lcl91aWQYBCABKAkSEQoJcGxhbl9uYW1lGAUgASgJEhAKCHBsYW5fdWlkGAYgASgJEhgKEHBsYW5fZmluZ2VycHJpbnQYByABKAkSFAoMb3BlcmF0aW9uX2lkGAggASgJEhIKCmRlY2lkZWRfYnkYCSABKAkSGQoRZGVjaWRlZF9ieV9ncm91cHMYCiADKAkSLgoKZGVjaWRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoFc3RhdGUYDCABKA4yHi5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25TdGF0ZRIUCgxzdGF0ZV9yZWFzb24YDSABKAkSLgoKY29uZGl0aW9ucxgOIAMoCzIaLnB0YWguY29uc29sZS52MS5Db25kaXRpb24SNgoOcGxhbl9yZXRlbnRpb24YDyABKA4yHi5wdGFoLmNvbnNvbGUudjEuUGxhblJldGVudGlvbiIqChRMaXN0RGVjaXNpb25zUmVxdWVzdBISCgpuYW1lc3BhY2VzGAEgAygJInsKFUxpc3REZWNpc2lvbnNSZXNwb25zZRIsCglkZWNpc2lvbnMYASADKAsyGS5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb24SNAoKbmFtZXNwYWNlcxgCIAMoCzIgLnB0YWguY29uc29sZS52MS5OYW1lc3BhY2VSZXN1bHQiYgoSR2V0RGVjaXNpb25SZXF1ZXN0EisKBGtpbmQYASABKA4yHS5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25LaW5kEhEKCW5hbWVzcGFjZRgCIAEoCRIMCgRuYW1lGAMgASgJIkIKE0dldERlY2lzaW9uUmVzcG9uc2USKwoIZGVjaXNpb24YASABKAsyGS5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb24irwEKGEFwcHJvdmVTY2hlbWFQbGFuUmVxdWVzdBIRCgluYW1lc3BhY2UYASABKAkSEwoLc2NoZW1hX25hbWUYAiABKAkSEgoKc2NoZW1hX3VpZBgDIAEoCRIRCglwbGFuX25hbWUYBCABKAkSEAoIcGxhbl91aWQYBSABKAkSGAoQcGxhbl9maW5nZXJwcmludBgGIAEoCRIYChBjb250cmFjdF92ZXJzaW9uGAcgASgFIp4BChtBcHByb3ZlTWlncmF0aW9uUGxhblJlcXVlc3QSEQoJbmFtZXNwYWNlGAEgASgJEhYKDm1pZ3JhdGlvbl9uYW1lGAIgASgJEhUKDW1pZ3JhdGlvbl91aWQYAyABKAkSEQoJcGxhbl9uYW1lGAQgASgJEhAKCHBsYW5fdWlkGAUgASgJEhgKEHBsYW5fZmluZ2VycHJpbnQYBiABKAkieAoeQWNrbm93bGVkZ2VNaWdyYXRpb25SdW5SZXF1ZXN0EhEKCW5hbWVzcGFjZRgBIAEoCRIWCg5taWdyYXRpb25fbmFtZRgCIAEoCRIVCg1taWdyYXRpb25fdWlkGAMgASgJEhQKDG9wZXJhdGlvbl9pZBgEIAEoCSKjAQoORGVjaXNpb25SZXN1bHQSMQoHb3V0Y29tZRgBIAEoDjIgLnB0YWguY29uc29sZS52MS5EZWNpc2lvbk91dGNvbWUSDwoHbWVzc2FnZRgCIAEoCRIMCgRuYW1lGAMgASgJEhIKCnJlcXVlc3RfaWQYBCABKAkSKwoIZGVjaXNpb24YBSABKAsyGS5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb24iTAoZQXBwcm92ZVNjaGVtYVBsYW5SZXNwb25zZRIvCgZyZXN1bHQYASABKAsyHy5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25SZXN1bHQiTwocQXBwcm92ZU1pZ3JhdGlvblBsYW5SZXNwb25zZRIvCgZyZXN1bHQYASABKAsyHy5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25SZXN1bHQiUgofQWNrbm93bGVkZ2VNaWdyYXRpb25SdW5SZXNwb25zZRIvCgZyZXN1bHQYASABKAsyHy5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25SZXN1bHQinQEKE1NldFN1c3BlbmRlZFJlcXVlc3QSKwoEa2luZBgBIAEoDjIdLnB0YWguY29uc29sZS52MS5SZXNvdXJjZUtpbmQSEQoJbmFtZXNwYWNlGAIgASgJEgwKBG5hbWUYAyABKAkSCwoDdWlkGAQgASgJEhgKEHJlc291cmNlX3ZlcnNpb24YBSABKAkSEQoJc3VzcGVuZGVkGAYgASgIInQKFFNldFN1c3BlbmRlZFJlc3BvbnNlEjEKB291dGNvbWUYASABKA4yIC5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25PdXRjb21lEg8KB21lc3NhZ2UYAiABKAkSGAoQcmVzb3VyY2VfdmVyc2lvbhgDIAEoCSJvChJSZXF1ZXN0UmVhZFJlcXVlc3QSKwoEa2luZBgBIAEoDjIdLnB0YWguY29uc29sZS52MS5SZXNvdXJjZUtpbmQSEQoJbmFtZXNwYWNlGAIgASgJEgwKBG5hbWUYAyABKAkSCwoDdWlkGAQgASgJImwKE1JlcXVlc3RSZWFkUmVzcG9uc2USMQoHb3V0Y29tZRgBIAEoDjIgLnB0YWguY29uc29sZS52MS5EZWNpc2lvbk91dGNvbWUSDwoHbWVzc2FnZRgCIAEoCRIRCglyZXF1ZXN0ZWQYAyABKAkqnAEKDERlY2lzaW9uS2luZBIdChlERUNJU0lPTl9LSU5EX1VOU1BFQ0lGSUVEEAASIQodREVDSVNJT05fS0lORF9TQ0hFTUFfQVBQUk9WQUwQARIkCiBERUNJU0lPTl9LSU5EX01JR1JBVElPTl9BUFBST1ZBTBACEiQKIERFQ0lTSU9OX0tJTkRfUlVOX0FDS05PV0xFREdNRU5UEAMquwEKDURlY2lzaW9uU3RhdGUSHgoaREVDSVNJT05fU1RBVEVfVU5TUEVDSUZJRUQQABIaChZERUNJU0lPTl9TVEFURV9QRU5ESU5HEAESGwoXREVDSVNJT05fU1RBVEVfQUNDRVBURUQQAhIbChdERUNJU0lPTl9TVEFURV9DT05TVU1FRBADEhgKFERFQ0lTSU9OX1NUQVRFX1NUQUxFEAQSGgoWREVDSVNJT05fU1RBVEVfUkVGVVNFRBAFKqkBCg1QbGFuUmV0ZW50aW9uEh4KGlBMQU5fUkVURU5USU9OX1VOU1BFQ0lGSUVEEAASGwoXUExBTl9SRVRFTlRJT05fUkVUQUlORUQQARIfChtQTEFOX1JFVEVOVElPTl9OT1RfUkVUQUlORUQQAhIeChpQTEFOX1JFVEVOVElPTl9OT1RfR1JBTlRFRBADEhoKFlBMQU5fUkVURU5USU9OX1VOS05PV04QBCrMAQoPRGVjaXNpb25PdXRjb21lEiAKHERFQ0lTSU9OX09VVENPTUVfVU5TUEVDSUZJRUQQABIdChlERUNJU0lPTl9PVVRDT01FX0FETUlUVEVEEAESHAoYREVDSVNJT05fT1VUQ09NRV9DSEFOR0VEEAISHgoaREVDSVNJT05fT1VUQ09NRV9GT1JCSURERU4QAxIcChhERUNJU0lPTl9PVVRDT01FX1JFRlVTRUQQBBIcChhERUNJU0lPTl9PVVRDT01FX1VOS05PV04QBSpkCgxSZXNvdXJjZUtpbmQSHQoZUkVTT1VSQ0VfS0lORF9VTlNQRUNJRklFRBAAEhgKFFJFU09VUkNFX0tJTkRfU0NIRU1BEAESGwoXUkVTT1VSQ0VfS0lORF9NSUdSQVRJT04QAjLrBQoPRGVjaXNpb25TZXJ2aWNlEmMKDUxpc3REZWNpc2lvbnMSJS5wdGFoLmNvbnNvbGUudjEuTGlzdERlY2lzaW9uc1JlcXVlc3QaJi5wdGFoLmNvbnNvbGUudjEuTGlzdERlY2lzaW9uc1Jlc3BvbnNlIgOQAgESXQoLR2V0RGVjaXNpb24SIy5wdGFoLmNvbnNvbGUudjEuR2V0RGVjaXNpb25SZXF1ZXN0GiQucHRhaC5jb25zb2xlLnYxLkdldERlY2lzaW9uUmVzcG9uc2UiA5ACARJqChFBcHByb3ZlU2NoZW1hUGxhbhIpLnB0YWguY29uc29sZS52MS5BcHByb3ZlU2NoZW1hUGxhblJlcXVlc3QaKi5wdGFoLmNvbnNvbGUudjEuQXBwcm92ZVNjaGVtYVBsYW5SZXNwb25zZRJzChRBcHByb3ZlTWlncmF0aW9uUGxhbhIsLnB0YWguY29uc29sZS52MS5BcHByb3ZlTWlncmF0aW9uUGxhblJlcXVlc3QaLS5wdGFoLmNvbnNvbGUudjEuQXBwcm92ZU1pZ3JhdGlvblBsYW5SZXNwb25zZRJ8ChdBY2tub3dsZWRnZU1pZ3JhdGlvblJ1bhIvLnB0YWguY29uc29sZS52MS5BY2tub3dsZWRnZU1pZ3JhdGlvblJ1blJlcXVlc3QaMC5wdGFoLmNvbnNvbGUudjEuQWNrbm93bGVkZ2VNaWdyYXRpb25SdW5SZXNwb25zZRJbCgxTZXRTdXNwZW5kZWQSJC5wdGFoLmNvbnNvbGUudjEuU2V0U3VzcGVuZGVkUmVxdWVzdBolLnB0YWguY29uc29sZS52MS5TZXRTdXNwZW5kZWRSZXNwb25zZRJYCgtSZXF1ZXN0UmVhZBIjLnB0YWguY29uc29sZS52MS5SZXF1ZXN0UmVhZFJlcXVlc3QaJC5wdGFoLmNvbnNvbGUudjEuUmVxdWVzdFJlYWRSZXNwb25zZUJIWkZnaXRodWIuY29tL3N0b2thcm8vcHRhaC1jb25zb2xlL2ludGVybmFsL2dlbi9wdGFoL2NvbnNvbGUvdjE7Y29uc29sZXYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_ptah_console_v1_resources]);
+  fileDesc("Ch9wdGFoL2NvbnNvbGUvdjEvZGVjaXNpb25zLnByb3RvEg9wdGFoLmNvbnNvbGUudjEi6AMKCERlY2lzaW9uEisKBGtpbmQYASABKA4yHS5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25LaW5kEicKA3JlZhgCIAEoCzIaLnB0YWguY29uc29sZS52MS5PYmplY3RSZWYSEgoKb3duZXJfbmFtZRgDIAEoCRIRCglvd25lcl91aWQYBCABKAkSEQoJcGxhbl9uYW1lGAUgASgJEhAKCHBsYW5fdWlkGAYgASgJEhgKEHBsYW5fZmluZ2VycHJpbnQYByABKAkSFAoMb3BlcmF0aW9uX2lkGAggASgJEhIKCmRlY2lkZWRfYnkYCSABKAkSGQoRZGVjaWRlZF9ieV9ncm91cHMYCiADKAkSLgoKZGVjaWRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoFc3RhdGUYDCABKA4yHi5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25TdGF0ZRIUCgxzdGF0ZV9yZWFzb24YDSABKAkSLgoKY29uZGl0aW9ucxgOIAMoCzIaLnB0YWguY29uc29sZS52MS5Db25kaXRpb24SNgoOcGxhbl9yZXRlbnRpb24YDyABKA4yHi5wdGFoLmNvbnNvbGUudjEuUGxhblJldGVudGlvbiIqChRMaXN0RGVjaXNpb25zUmVxdWVzdBISCgpuYW1lc3BhY2VzGAEgAygJInsKFUxpc3REZWNpc2lvbnNSZXNwb25zZRIsCglkZWNpc2lvbnMYASADKAsyGS5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb24SNAoKbmFtZXNwYWNlcxgCIAMoCzIgLnB0YWguY29uc29sZS52MS5OYW1lc3BhY2VSZXN1bHQiYgoSR2V0RGVjaXNpb25SZXF1ZXN0EisKBGtpbmQYASABKA4yHS5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25LaW5kEhEKCW5hbWVzcGFjZRgCIAEoCRIMCgRuYW1lGAMgASgJIkIKE0dldERlY2lzaW9uUmVzcG9uc2USKwoIZGVjaXNpb24YASABKAsyGS5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb24irwEKGEFwcHJvdmVTY2hlbWFQbGFuUmVxdWVzdBIRCgluYW1lc3BhY2UYASABKAkSEwoLc2NoZW1hX25hbWUYAiABKAkSEgoKc2NoZW1hX3VpZBgDIAEoCRIRCglwbGFuX25hbWUYBCABKAkSEAoIcGxhbl91aWQYBSABKAkSGAoQcGxhbl9maW5nZXJwcmludBgGIAEoCRIYChBjb250cmFjdF92ZXJzaW9uGAcgASgFIp4BChtBcHByb3ZlTWlncmF0aW9uUGxhblJlcXVlc3QSEQoJbmFtZXNwYWNlGAEgASgJEhYKDm1pZ3JhdGlvbl9uYW1lGAIgASgJEhUKDW1pZ3JhdGlvbl91aWQYAyABKAkSEQoJcGxhbl9uYW1lGAQgASgJEhAKCHBsYW5fdWlkGAUgASgJEhgKEHBsYW5fZmluZ2VycHJpbnQYBiABKAkieAoeQWNrbm93bGVkZ2VNaWdyYXRpb25SdW5SZXF1ZXN0EhEKCW5hbWVzcGFjZRgBIAEoCRIWCg5taWdyYXRpb25fbmFtZRgCIAEoCRIVCg1taWdyYXRpb25fdWlkGAMgASgJEhQKDG9wZXJhdGlvbl9pZBgEIAEoCSKjAQoORGVjaXNpb25SZXN1bHQSMQoHb3V0Y29tZRgBIAEoDjIgLnB0YWguY29uc29sZS52MS5EZWNpc2lvbk91dGNvbWUSDwoHbWVzc2FnZRgCIAEoCRIMCgRuYW1lGAMgASgJEhIKCnJlcXVlc3RfaWQYBCABKAkSKwoIZGVjaXNpb24YBSABKAsyGS5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb24iTAoZQXBwcm92ZVNjaGVtYVBsYW5SZXNwb25zZRIvCgZyZXN1bHQYASABKAsyHy5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25SZXN1bHQiTwocQXBwcm92ZU1pZ3JhdGlvblBsYW5SZXNwb25zZRIvCgZyZXN1bHQYASABKAsyHy5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25SZXN1bHQiUgofQWNrbm93bGVkZ2VNaWdyYXRpb25SdW5SZXNwb25zZRIvCgZyZXN1bHQYASABKAsyHy5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25SZXN1bHQinQEKE1NldFN1c3BlbmRlZFJlcXVlc3QSKwoEa2luZBgBIAEoDjIdLnB0YWguY29uc29sZS52MS5SZXNvdXJjZUtpbmQSEQoJbmFtZXNwYWNlGAIgASgJEgwKBG5hbWUYAyABKAkSCwoDdWlkGAQgASgJEhgKEHJlc291cmNlX3ZlcnNpb24YBSABKAkSEQoJc3VzcGVuZGVkGAYgASgIInQKFFNldFN1c3BlbmRlZFJlc3BvbnNlEjEKB291dGNvbWUYASABKA4yIC5wdGFoLmNvbnNvbGUudjEuRGVjaXNpb25PdXRjb21lEg8KB21lc3NhZ2UYAiABKAkSGAoQcmVzb3VyY2VfdmVyc2lvbhgDIAEoCSJvChJSZXF1ZXN0UmVhZFJlcXVlc3QSKwoEa2luZBgBIAEoDjIdLnB0YWguY29uc29sZS52MS5SZXNvdXJjZUtpbmQSEQoJbmFtZXNwYWNlGAIgASgJEgwKBG5hbWUYAyABKAkSCwoDdWlkGAQgASgJImwKE1JlcXVlc3RSZWFkUmVzcG9uc2USMQoHb3V0Y29tZRgBIAEoDjIgLnB0YWguY29uc29sZS52MS5EZWNpc2lvbk91dGNvbWUSDwoHbWVzc2FnZRgCIAEoCRIRCglyZXF1ZXN0ZWQYAyABKAkiqQEKEFNldFNvdXJjZVJlcXVlc3QSKwoEa2luZBgBIAEoDjIdLnB0YWguY29uc29sZS52MS5SZXNvdXJjZUtpbmQSEQoJbmFtZXNwYWNlGAIgASgJEgwKBG5hbWUYAyABKAkSCwoDdWlkGAQgASgJEhYKDmZyb21fcmVmZXJlbmNlGAUgASgJEhEKCXJlZmVyZW5jZRgGIAEoCRIPCgdkcnlfcnVuGAcgASgIIo0CChFTZXRTb3VyY2VSZXNwb25zZRIxCgdvdXRjb21lGAEgASgOMiAucHRhaC5jb25zb2xlLnYxLkRlY2lzaW9uT3V0Y29tZRIPCgdtZXNzYWdlGAIgASgJEg8KB2RyeV9ydW4YAyABKAgSDwoHY2hhbmdlZBgEIAEoCBINCgVmaWVsZBgFIAEoCRIQCghwcmV2aW91cxgGIAEoCRISCgpnZW5lcmF0aW9uGAcgASgDEhsKE29ic2VydmVkX2dlbmVyYXRpb24YCCABKAMSGAoQcmVzb3VyY2VfdmVyc2lvbhgJIAEoCRIRCglzdXNwZW5kZWQYCiABKAgSEwoLc291cmNlX3lhbWwYCyABKAkqnAEKDERlY2lzaW9uS2luZBIdChlERUNJU0lPTl9LSU5EX1VOU1BFQ0lGSUVEEAASIQodREVDSVNJT05fS0lORF9TQ0hFTUFfQVBQUk9WQUwQARIkCiBERUNJU0lPTl9LSU5EX01JR1JBVElPTl9BUFBST1ZBTBACEiQKIERFQ0lTSU9OX0tJTkRfUlVOX0FDS05PV0xFREdNRU5UEAMquwEKDURlY2lzaW9uU3RhdGUSHgoaREVDSVNJT05fU1RBVEVfVU5TUEVDSUZJRUQQABIaChZERUNJU0lPTl9TVEFURV9QRU5ESU5HEAESGwoXREVDSVNJT05fU1RBVEVfQUNDRVBURUQQAhIbChdERUNJU0lPTl9TVEFURV9DT05TVU1FRBADEhgKFERFQ0lTSU9OX1NUQVRFX1NUQUxFEAQSGgoWREVDSVNJT05fU1RBVEVfUkVGVVNFRBAFKqkBCg1QbGFuUmV0ZW50aW9uEh4KGlBMQU5fUkVURU5USU9OX1VOU1BFQ0lGSUVEEAASGwoXUExBTl9SRVRFTlRJT05fUkVUQUlORUQQARIfChtQTEFOX1JFVEVOVElPTl9OT1RfUkVUQUlORUQQAhIeChpQTEFOX1JFVEVOVElPTl9OT1RfR1JBTlRFRBADEhoKFlBMQU5fUkVURU5USU9OX1VOS05PV04QBCrMAQoPRGVjaXNpb25PdXRjb21lEiAKHERFQ0lTSU9OX09VVENPTUVfVU5TUEVDSUZJRUQQABIdChlERUNJU0lPTl9PVVRDT01FX0FETUlUVEVEEAESHAoYREVDSVNJT05fT1VUQ09NRV9DSEFOR0VEEAISHgoaREVDSVNJT05fT1VUQ09NRV9GT1JCSURERU4QAxIcChhERUNJU0lPTl9PVVRDT01FX1JFRlVTRUQQBBIcChhERUNJU0lPTl9PVVRDT01FX1VOS05PV04QBSpkCgxSZXNvdXJjZUtpbmQSHQoZUkVTT1VSQ0VfS0lORF9VTlNQRUNJRklFRBAAEhgKFFJFU09VUkNFX0tJTkRfU0NIRU1BEAESGwoXUkVTT1VSQ0VfS0lORF9NSUdSQVRJT04QAjK/BgoPRGVjaXNpb25TZXJ2aWNlEmMKDUxpc3REZWNpc2lvbnMSJS5wdGFoLmNvbnNvbGUudjEuTGlzdERlY2lzaW9uc1JlcXVlc3QaJi5wdGFoLmNvbnNvbGUudjEuTGlzdERlY2lzaW9uc1Jlc3BvbnNlIgOQAgESXQoLR2V0RGVjaXNpb24SIy5wdGFoLmNvbnNvbGUudjEuR2V0RGVjaXNpb25SZXF1ZXN0GiQucHRhaC5jb25zb2xlLnYxLkdldERlY2lzaW9uUmVzcG9uc2UiA5ACARJqChFBcHByb3ZlU2NoZW1hUGxhbhIpLnB0YWguY29uc29sZS52MS5BcHByb3ZlU2NoZW1hUGxhblJlcXVlc3QaKi5wdGFoLmNvbnNvbGUudjEuQXBwcm92ZVNjaGVtYVBsYW5SZXNwb25zZRJzChRBcHByb3ZlTWlncmF0aW9uUGxhbhIsLnB0YWguY29uc29sZS52MS5BcHByb3ZlTWlncmF0aW9uUGxhblJlcXVlc3QaLS5wdGFoLmNvbnNvbGUudjEuQXBwcm92ZU1pZ3JhdGlvblBsYW5SZXNwb25zZRJ8ChdBY2tub3dsZWRnZU1pZ3JhdGlvblJ1bhIvLnB0YWguY29uc29sZS52MS5BY2tub3dsZWRnZU1pZ3JhdGlvblJ1blJlcXVlc3QaMC5wdGFoLmNvbnNvbGUudjEuQWNrbm93bGVkZ2VNaWdyYXRpb25SdW5SZXNwb25zZRJbCgxTZXRTdXNwZW5kZWQSJC5wdGFoLmNvbnNvbGUudjEuU2V0U3VzcGVuZGVkUmVxdWVzdBolLnB0YWguY29uc29sZS52MS5TZXRTdXNwZW5kZWRSZXNwb25zZRJYCgtSZXF1ZXN0UmVhZBIjLnB0YWguY29uc29sZS52MS5SZXF1ZXN0UmVhZFJlcXVlc3QaJC5wdGFoLmNvbnNvbGUudjEuUmVxdWVzdFJlYWRSZXNwb25zZRJSCglTZXRTb3VyY2USIS5wdGFoLmNvbnNvbGUudjEuU2V0U291cmNlUmVxdWVzdBoiLnB0YWguY29uc29sZS52MS5TZXRTb3VyY2VSZXNwb25zZUJIWkZnaXRodWIuY29tL3N0b2thcm8vcHRhaC1jb25zb2xlL2ludGVybmFsL2dlbi9wdGFoL2NvbnNvbGUvdjE7Y29uc29sZXYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_ptah_console_v1_resources]);
 
 /**
  * @generated from message ptah.console.v1.Decision
@@ -540,6 +540,154 @@ export const RequestReadResponseSchema: GenMessage<RequestReadResponse> = /*@__P
   messageDesc(file_ptah_console_v1_decisions, 15);
 
 /**
+ * @generated from message ptah.console.v1.SetSourceRequest
+ */
+export type SetSourceRequest = Message<"ptah.console.v1.SetSourceRequest"> & {
+  /**
+   * @generated from field: ptah.console.v1.ResourceKind kind = 1;
+   */
+  kind: ResourceKind;
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace: string;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name: string;
+
+  /**
+   * The object the person saw, and the reference its spec named then. The
+   * change applies only to that object, and only while its spec still names
+   * that reference: another writer's reference is reported, never replaced.
+   * No resource version comes from the page, because the operator writes
+   * status between any two looks; the patch holds the resource version of
+   * the console's own read, made just before it is sent.
+   *
+   * @generated from field: string uid = 4;
+   */
+  uid: string;
+
+  /**
+   * @generated from field: string from_reference = 5;
+   */
+  fromReference: string;
+
+  /**
+   * The reference to set, pinned by a SHA-256 digest, as
+   * oci://HOST/REPOSITORY@sha256:<64 hex>. The console refuses anything
+   * looser before it reads the cluster.
+   *
+   * @generated from field: string reference = 6;
+   */
+  reference: string;
+
+  /**
+   * Ask the API server to judge the change and store nothing.
+   *
+   * @generated from field: bool dry_run = 7;
+   */
+  dryRun: boolean;
+};
+
+/**
+ * Describes the message ptah.console.v1.SetSourceRequest.
+ * Use `create(SetSourceRequestSchema)` to create a new message.
+ */
+export const SetSourceRequestSchema: GenMessage<SetSourceRequest> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_decisions, 16);
+
+/**
+ * @generated from message ptah.console.v1.SetSourceResponse
+ */
+export type SetSourceResponse = Message<"ptah.console.v1.SetSourceResponse"> & {
+  /**
+   * ADMITTED for a dry run means accepted and not stored.
+   *
+   * @generated from field: ptah.console.v1.DecisionOutcome outcome = 1;
+   */
+  outcome: DecisionOutcome;
+
+  /**
+   * The API server's or admission's own words, or the console's for CHANGED
+   * and for a change that was not needed.
+   *
+   * @generated from field: string message = 2;
+   */
+  message: string;
+
+  /**
+   * @generated from field: bool dry_run = 3;
+   */
+  dryRun: boolean;
+
+  /**
+   * The spec names the reference because of this request. False with
+   * ADMITTED when it named it already, and nothing was sent.
+   *
+   * @generated from field: bool changed = 4;
+   */
+  changed: boolean;
+
+  /**
+   * The field set: spec.desired.ociRef or spec.artifact.ociRef.
+   *
+   * @generated from field: string field = 5;
+   */
+  field: string;
+
+  /**
+   * The reference the change replaced; empty when nothing was sent.
+   *
+   * @generated from field: string previous = 6;
+   */
+  previous: string;
+
+  /**
+   * The generation the change made, which the operator has to observe, and
+   * the one it had observed when the answer was written.
+   *
+   * @generated from field: int64 generation = 7;
+   */
+  generation: bigint;
+
+  /**
+   * @generated from field: int64 observed_generation = 8;
+   */
+  observedGeneration: bigint;
+
+  /**
+   * @generated from field: string resource_version = 9;
+   */
+  resourceVersion: string;
+
+  /**
+   * spec.suspend: a suspended resource starts no Job, so nothing resolves
+   * the new reference until it is resumed.
+   *
+   * @generated from field: bool suspended = 10;
+   */
+  suspended: boolean;
+
+  /**
+   * The source as the API server stored it, or would store it for a dry
+   * run, as YAML: the reference and the settings kept beside it.
+   *
+   * @generated from field: string source_yaml = 11;
+   */
+  sourceYaml: string;
+};
+
+/**
+ * Describes the message ptah.console.v1.SetSourceResponse.
+ * Use `create(SetSourceResponseSchema)` to create a new message.
+ */
+export const SetSourceResponseSchema: GenMessage<SetSourceResponse> = /*@__PURE__*/
+  messageDesc(file_ptah_console_v1_decisions, 17);
+
+/**
  * @generated from enum ptah.console.v1.DecisionKind
  */
 export const DecisionKind = {
@@ -856,6 +1004,23 @@ export const DecisionService: GenService<{
     methodKind: "unary";
     input: typeof RequestReadRequestSchema;
     output: typeof RequestReadResponseSchema;
+  },
+  /**
+   * SetSource points exactly the object the person saw at another OCI
+   * artifact, given as a reference pinned by digest, as kubectl ptah
+   * set-source does. It sets spec.desired.ociRef of a schema or
+   * spec.artifact.ociRef of a migration and changes nothing else: the
+   * verification policy, the registry credential, the transport and the
+   * apply policy stay as they are, and the new artifact is held to them. It
+   * refuses a ConfigMap or Git source and a resource whose Apply may already
+   * have its Job.
+   *
+   * @generated from rpc ptah.console.v1.DecisionService.SetSource
+   */
+  setSource: {
+    methodKind: "unary";
+    input: typeof SetSourceRequestSchema;
+    output: typeof SetSourceResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_ptah_console_v1_decisions, 0);

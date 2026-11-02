@@ -38,6 +38,15 @@ service DecisionService {
   // now, by setting its read-requested-at annotation to the current instant.
   // It changes nothing else: not the spec, not the generation, not the plan.
   rpc RequestRead(RequestReadRequest) returns (RequestReadResponse) {}
+  // SetSource points exactly the object the person saw at another OCI
+  // artifact, given as a reference pinned by digest, as kubectl ptah
+  // set-source does. It sets spec.desired.ociRef of a schema or
+  // spec.artifact.ociRef of a migration and changes nothing else: the
+  // verification policy, the registry credential, the transport and the
+  // apply policy stay as they are, and the new artifact is held to them. It
+  // refuses a ConfigMap or Git source and a resource whose Apply may already
+  // have its Job.
+  rpc SetSource(SetSourceRequest) returns (SetSourceResponse) {}
 }
 
 enum DecisionKind {
@@ -213,4 +222,51 @@ message RequestReadResponse {
   string message = 2;
   // The value the annotation was set to.
   string requested = 3;
+}
+
+message SetSourceRequest {
+  ResourceKind kind = 1;
+  string namespace = 2;
+  string name = 3;
+  // The object the person saw, and the reference its spec named then. The
+  // change applies only to that object, and only while its spec still names
+  // that reference: another writer's reference is reported, never replaced.
+  // No resource version comes from the page, because the operator writes
+  // status between any two looks; the patch holds the resource version of
+  // the console's own read, made just before it is sent.
+  string uid = 4;
+  string from_reference = 5;
+  // The reference to set, pinned by a SHA-256 digest, as
+  // oci://HOST/REPOSITORY@sha256:<64 hex>. The console refuses anything
+  // looser before it reads the cluster.
+  string reference = 6;
+  // Ask the API server to judge the change and store nothing.
+  bool dry_run = 7;
+}
+
+message SetSourceResponse {
+  // ADMITTED for a dry run means accepted and not stored.
+  DecisionOutcome outcome = 1;
+  // The API server's or admission's own words, or the console's for CHANGED
+  // and for a change that was not needed.
+  string message = 2;
+  bool dry_run = 3;
+  // The spec names the reference because of this request. False with
+  // ADMITTED when it named it already, and nothing was sent.
+  bool changed = 4;
+  // The field set: spec.desired.ociRef or spec.artifact.ociRef.
+  string field = 5;
+  // The reference the change replaced; empty when nothing was sent.
+  string previous = 6;
+  // The generation the change made, which the operator has to observe, and
+  // the one it had observed when the answer was written.
+  int64 generation = 7;
+  int64 observed_generation = 8;
+  string resource_version = 9;
+  // spec.suspend: a suspended resource starts no Job, so nothing resolves
+  // the new reference until it is resumed.
+  bool suspended = 10;
+  // The source as the API server stored it, or would store it for a dry
+  // run, as YAML: the reference and the settings kept beside it.
+  string source_yaml = 11;
 }

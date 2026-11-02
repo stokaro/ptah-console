@@ -5,6 +5,8 @@
 # API server going away.
 #
 #   act.sh publish storefront v4|v5   point storefront at another version
+#   act.sh push pricing v2            publish pricing v2 and print the reference
+#                                     pinned by digest that the cluster reads
 #   act.sh wait-plan <kind> <name> [<other plan>]
 #                                     wait for a plan to approve, print it
 #   act.sh plan <kind> <name>         print the plan a resource waits on
@@ -124,6 +126,24 @@ read-done)
 		sleep 3
 	done
 	fail "ptahschema/$schema never completed the read it was asked for"
+	;;
+push)
+	[ "${1:-}" = pricing ] && [ "${2:-}" = v2 ] || fail 'push pricing v2'
+	read_publisher
+	# --format reference (Ptah v0.17.0) prints the reference of the manifest
+	# the push wrote, pinned by its digest, as a publishing client names the
+	# registry. The cluster reaches the same registry under its Service name,
+	# so the reference the row sets names that one, as the operator's own
+	# set-source scenarios do.
+	pushed=$(ptah schema push "oci://$PTAH_OCI_REGISTRY/schemas/pricing:v2-$$" \
+		--schema-file "$E2E_DIR/schemas/pricing-v2.sql" --dialect postgres --plain-http --format reference)
+	case "$pushed" in
+	"oci://$PTAH_OCI_REGISTRY/schemas/pricing@sha256:"*) ;;
+	*) fail "ptah schema push printed '$pushed', not a reference pinned by digest" ;;
+	esac
+	reference="oci://$E2E_REGISTRY_HOST/${pushed#"oci://$PTAH_OCI_REGISTRY/"}"
+	fact PRICING_V2_REFERENCE "$reference"
+	printf '%s\n' "$reference"
 	;;
 publish)
 	[ "${1:-}" = storefront ] || fail 'only storefront is published again'

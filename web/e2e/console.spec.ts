@@ -7,8 +7,9 @@ import { act, expect, fact, test } from "./lab"
 // before the hosted rows: the author creates catalog and ledger through the
 // console's form, asks inventory to read its database now, and suspends and
 // resumes catalog; the approver approves both new plans from the full
-// console's plan review; on call reads journal through Execution & diagnosis
-// and Activity. hack/e2e/verify.sh then checks the cluster's account of them.
+// console's plan review; the author points pricing at a new artifact; on call
+// reads journal through Execution & diagnosis and Activity.
+// hack/e2e/verify.sh then checks the cluster's account of them.
 
 const namespace = fact("NAMESPACE")
 // How long the operator may take to apply a plan and verify it.
@@ -321,6 +322,88 @@ test("an author suspends catalog and resumes it, and the operator follows both",
   await expect(suspended).toContainText("False", { timeout: planTimeout })
   await lab.skip(() => act("insync", "catalog"))
   await lab.caption("Resumed. The operator read the database again and found it in sync.", 4000)
+})
+
+test("an author points pricing at a new artifact revision, and the operator plans from it", async ({
+  page,
+  lab,
+}) => {
+  // A viewer reads pricing and may not patch it: its page offers no change
+  // of source.
+  await lab.signIn("viewer")
+  await fullConsole(page)
+  await open(page, "PtahSchema", "pricing")
+  await page.getByRole("button", { name: "Actions" }).click()
+  const menu = page.getByRole("menu")
+  await expect(menu.getByRole("menuitem", { name: "Copy link" })).toBeVisible()
+  await expect(menu.getByRole("menuitem", { name: "Change source…" })).toHaveCount(0)
+  await page.keyboard.press("Escape")
+
+  // Another team publishes pricing v2; the push prints the reference pinned
+  // by digest.
+  const reference = await act("push", "pricing", "v2")
+  const digest = reference.slice(reference.indexOf("@") + 1)
+
+  await lab.signIn("author")
+  await fullConsole(page)
+  // catalog reads a ConfigMap. The author may patch it, and is offered no
+  // change of source: an artifact also needs a verification policy, which
+  // only an edit of the resource can name.
+  await open(page, "PtahSchema", "catalog")
+  await page.getByRole("button", { name: "Actions" }).click()
+  await expect(menu.getByRole("menuitem", { name: /^(Suspend|Resume)…$/ })).toBeVisible()
+  await expect(menu.getByRole("menuitem", { name: "Change source…" })).toHaveCount(0)
+  await page.keyboard.press("Escape")
+
+  await open(page, "PtahSchema", "pricing")
+  await page.getByRole("button", { name: "Actions" }).click()
+  await page.getByRole("menuitem", { name: "Change source…" }).click()
+  const dialog = page.getByRole("alertdialog")
+  const field = dialog.getByLabel("New reference")
+  // The tag the push wrote is refused before anything is sent.
+  await field.fill(reference.replace(/@sha256:[0-9a-f]+$/, ":v2"))
+  await expect(dialog.getByText(/names tag v2, not a digest/)).toBeVisible()
+  await field.fill(reference)
+  await expect(dialog.getByRole("region", { name: "What happens next" })).toContainText(
+    "Under spec.policy.apply OnApproval that plan waits for an approval."
+  )
+  await lab.audit("the change of source dialog")
+  await lab.caption(
+    "pricing v2 was published. The author pastes the reference the push printed, pinned by digest; a tag would be refused before anything is sent.",
+    5500
+  )
+
+  await dialog.getByRole("button", { name: "Check with the API server" }).click()
+  await expect(dialog.getByText("The API server accepts this change")).toBeVisible({
+    timeout: 30_000,
+  })
+  await expect(dialog.getByLabel("The source as it would be stored")).toContainText(
+    "verificationPolicyFrom"
+  )
+  await lab.caption(
+    "A server-side dry run: the API server and the operator's admission judge the change, and the verification policy, credential and transport stay as they are.",
+    5000
+  )
+  await dialog.getByRole("button", { name: "Change source" }).click()
+  await expect(dialog.getByText("Source changed")).toBeVisible({ timeout: 30_000 })
+  await dialog.getByRole("button", { name: "Close" }).click()
+
+  // The operator resolves the new reference and plans from it; the plan
+  // waits for a person, as the apply policy says.
+  await lab.skip(() =>
+    expect(page.getByRole("region", { name: "Artifact", exact: true })).toContainText(digest, {
+      timeout: planTimeout,
+    })
+  )
+  await lab.skip(() =>
+    expect(page.getByRole("link", { name: "Review plan" })).toBeVisible({ timeout: planTimeout })
+  )
+  await expect(page.getByRole("region", { name: "Current plan" })).toContainText("Not approved")
+  await lab.audit("a schema planned from the artifact the console set")
+  await lab.caption(
+    "The console changed spec.desired.ociRef alone, as the author. The operator resolved the new artifact, verified it, and its plan waits for an approver.",
+    5000
+  )
 })
 
 test("on call reads journal's runs, its execution and diagnosis, and the Events in Activity", async ({

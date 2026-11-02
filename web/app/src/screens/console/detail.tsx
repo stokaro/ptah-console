@@ -41,7 +41,9 @@ import {
   conditionTone,
   type ResourceView,
 } from "../../model/resource"
+import { sourceChange } from "../../model/sourcechange"
 import { SuspendDialog } from "../ReleaseDetail"
+import { ChangeSourceDialog } from "./ChangeSourceDialog"
 
 /** Facts about a resource, as a list of names and values. */
 export function Facts({ rows }: { rows: [string, ReactNode][] }) {
@@ -108,19 +110,23 @@ export interface DetailHeaderProps {
 
 /**
  * The top of a resource's page: where it is, what it is, and the actions the
- * console offers. Suspend is offered only where RBAC says the request can
- * pass; the server decides either way.
+ * console offers. Suspend, a read on request and a change of source are
+ * offered only where RBAC says the request can pass, and a change of source
+ * only for an OCI source; the server decides either way.
  */
 export function DetailHeader({ resource, kind, chips, actions }: DetailHeaderProps) {
   const session = useSession()
   const offer = useOffer()
   const [suspending, setSuspending] = useState(false)
+  const [changingSource, setChangingSource] = useState(false)
   const [state, copy] = useCopy()
   const maySuspend =
     offer(
       resource.namespace,
       resource.kind === "schema" ? "suspendSchemas" : "suspendMigrations"
     ) === "allowed"
+  // The same verbs as suspend: get and patch on the resource.
+  const mayChangeSource = maySuspend && sourceChange(resource) !== undefined
   const command = `kubectl ptah ${resource.kind} ${resource.name} -n ${resource.namespace}`
   const queryClient = useQueryClient()
   const ask = useMutation(DecisionService.method.requestRead, {
@@ -182,9 +188,11 @@ export function DetailHeader({ resource, kind, chips, actions }: DetailHeaderPro
         <ActionsMenu
           resource={resource}
           maySuspend={maySuspend}
+          mayChangeSource={mayChangeSource}
           reading={ask.isPending}
           command={command}
           onSuspend={() => setSuspending(true)}
+          onChangeSource={() => setChangingSource(true)}
           onRead={() =>
             ask.mutate({
               kind: resource.kind === "schema" ? ResourceKind.SCHEMA : ResourceKind.MIGRATION,
@@ -210,6 +218,13 @@ export function DetailHeader({ resource, kind, chips, actions }: DetailHeaderPro
           resource={resource}
           context={session.data?.context}
           onClose={() => setSuspending(false)}
+        />
+      ) : null}
+      {changingSource ? (
+        <ChangeSourceDialog
+          resource={resource}
+          context={session.data?.context}
+          onClose={() => setChangingSource(false)}
         />
       ) : null}
     </section>
@@ -490,29 +505,30 @@ YAML`
 }
 
 /**
- * Asks the resource to read its database now, through the operator's
- * read-requested-at annotation, rather than at its next interval. It changes
+ * What a person may do to the resource from its page: suspend or resume it,
+ * ask for a read and change an OCI source where RBAC lets this identity patch
+ * it, and copy its link or the kubectl command that shows the same state. A
+ * read on request sets the operator's read-requested-at annotation and
  * nothing else; the operator answers once no operation is running.
- */
-/**
- * What a person may do to the resource from its page: suspend or resume it
- * and ask for a read where RBAC lets this identity patch it, and copy its
- * link or the kubectl command that shows the same state.
  */
 function ActionsMenu({
   resource,
   maySuspend,
+  mayChangeSource,
   reading,
   command,
   onSuspend,
+  onChangeSource,
   onRead,
   onCopy,
 }: {
   resource: ResourceView
   maySuspend: boolean
+  mayChangeSource: boolean
   reading: boolean
   command: string
   onSuspend: () => void
+  onChangeSource: () => void
   onRead: () => void
   onCopy: (text: string) => void
 }) {
@@ -537,6 +553,11 @@ function ActionsMenu({
             {maySuspend ? (
               <Menu.Item onClick={onRead} disabled={reading} className={item}>
                 Read again now
+              </Menu.Item>
+            ) : null}
+            {mayChangeSource ? (
+              <Menu.Item onClick={onChangeSource} className={item}>
+                Change source…
               </Menu.Item>
             ) : null}
             <Menu.Item onClick={() => onCopy(window.location.href)} className={item}>

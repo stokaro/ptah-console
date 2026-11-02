@@ -1282,6 +1282,10 @@ type Source struct {
 	Path          string                 `protobuf:"bytes,9,opt,name=path,proto3" json:"path,omitempty"`
 	ContentDigest string                 `protobuf:"bytes,10,opt,name=content_digest,json=contentDigest,proto3" json:"content_digest,omitempty"`
 	Policy        *SourcePolicy          `protobuf:"bytes,11,opt,name=policy,proto3" json:"policy,omitempty"`
+	// For an OCI source, the reference the spec names now, which a change of
+	// source replaces. A schema's requested is the reference the operator last
+	// resolved, until it observes a change.
+	SpecReference string `protobuf:"bytes,12,opt,name=spec_reference,json=specReference,proto3" json:"spec_reference,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1391,6 +1395,13 @@ func (x *Source) GetPolicy() *SourcePolicy {
 		return x.Policy
 	}
 	return nil
+}
+
+func (x *Source) GetSpecReference() string {
+	if x != nil {
+		return x.SpecReference
+	}
+	return ""
 }
 
 // SourcePolicy is the source policy a ConfigMap or Git source names, and the
@@ -1769,13 +1780,17 @@ func (x *ObjectCount) GetObserved() int32 {
 }
 
 type Operation struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	JobName       string                 `protobuf:"bytes,3,opt,name=job_name,json=jobName,proto3" json:"job_name,omitempty"`
-	JobUid        string                 `protobuf:"bytes,4,opt,name=job_uid,json=jobUid,proto3" json:"job_uid,omitempty"`
-	StartedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
-	Attempt       int32                  `protobuf:"varint,6,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Type      string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Id        string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	JobName   string                 `protobuf:"bytes,3,opt,name=job_name,json=jobName,proto3" json:"job_name,omitempty"`
+	JobUid    string                 `protobuf:"bytes,4,opt,name=job_uid,json=jobUid,proto3" json:"job_uid,omitempty"`
+	StartedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	Attempt   int32                  `protobuf:"varint,6,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	// The operation's Job may exist: its dispatch began, or its Job's UID is
+	// recorded. A spec change under an Apply whose Job may exist leaves an
+	// outcome nobody established.
+	Dispatched    bool `protobuf:"varint,7,opt,name=dispatched,proto3" json:"dispatched,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1850,6 +1865,13 @@ func (x *Operation) GetAttempt() int32 {
 		return x.Attempt
 	}
 	return 0
+}
+
+func (x *Operation) GetDispatched() bool {
+	if x != nil {
+		return x.Dispatched
+	}
+	return false
 }
 
 type ConsumedApproval struct {
@@ -4750,7 +4772,7 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\n" +
 	"controller\x18\x01 \x01(\tR\n" +
 	"controller\x12 \n" +
-	"\vapplication\x18\x02 \x01(\tR\vapplication\"\xa5\x03\n" +
+	"\vapplication\x18\x02 \x01(\tR\vapplication\"\xcc\x03\n" +
 	"\x06Source\x12\x1c\n" +
 	"\trequested\x18\x01 \x01(\tR\trequested\x12\x1a\n" +
 	"\bresolved\x18\x02 \x01(\tR\bresolved\x12\x16\n" +
@@ -4765,7 +4787,8 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\x04path\x18\t \x01(\tR\x04path\x12%\n" +
 	"\x0econtent_digest\x18\n" +
 	" \x01(\tR\rcontentDigest\x125\n" +
-	"\x06policy\x18\v \x01(\v2\x1d.ptah.console.v1.SourcePolicyR\x06policy\"L\n" +
+	"\x06policy\x18\v \x01(\v2\x1d.ptah.console.v1.SourcePolicyR\x06policy\x12%\n" +
+	"\x0espec_reference\x18\f \x01(\tR\rspecReference\"L\n" +
 	"\fSourcePolicy\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
 	"\x03uid\x18\x02 \x01(\tR\x03uid\x12\x16\n" +
@@ -4797,7 +4820,7 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\vObjectCount\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x18\n" +
 	"\adesired\x18\x02 \x01(\x05R\adesired\x12\x1a\n" +
-	"\bobserved\x18\x03 \x01(\x05R\bobserved\"\xb8\x01\n" +
+	"\bobserved\x18\x03 \x01(\x05R\bobserved\"\xd8\x01\n" +
 	"\tOperation\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x19\n" +
@@ -4805,7 +4828,10 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\ajob_uid\x18\x04 \x01(\tR\x06jobUid\x129\n" +
 	"\n" +
 	"started_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x12\x18\n" +
-	"\aattempt\x18\x06 \x01(\x05R\aattempt\"\x91\x01\n" +
+	"\aattempt\x18\x06 \x01(\x05R\aattempt\x12\x1e\n" +
+	"\n" +
+	"dispatched\x18\a \x01(\bR\n" +
+	"dispatched\"\x91\x01\n" +
 	"\x10ConsumedApproval\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
 	"\x03uid\x18\x02 \x01(\tR\x03uid\x12\x1a\n" +

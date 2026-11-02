@@ -220,6 +220,10 @@ message Source {
   string path = 9;
   string content_digest = 10;
   SourcePolicy policy = 11;
+  // For an OCI source, the reference the spec names now, which a change of
+  // source replaces. A schema's requested is the reference the operator last
+  // resolved, until it observes a change.
+  string spec_reference = 12;
 }
 
 // SourcePolicy is the source policy a ConfigMap or Git source names, and the
@@ -278,6 +282,10 @@ message Operation {
   string job_uid = 4;
   google.protobuf.Timestamp started_at = 5;
   int32 attempt = 6;
+  // The operation's Job may exist: its dispatch began, or its Job's UID is
+  // recorded. A spec change under an Apply whose Job may exist leaves an
+  // outcome nobody established.
+  bool dispatched = 7;
 }
 
 // ---- Schemas ----

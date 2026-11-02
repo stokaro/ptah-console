@@ -71,6 +71,9 @@ func Schema(schema *operatorv1alpha1.PtahSchema) *consolev1.Schema {
 		out.ActiveOperation = &consolev1.Operation{
 			Type: string(operation.Type), Id: operation.ID, JobName: operation.JobName,
 			JobUid: string(operation.JobUID), StartedAt: timestamp(&operation.StartedAt), Attempt: operation.Attempt,
+			// The controller's own rule (mutationlifecycle.MayHaveDispatched):
+			// a claim that began its dispatch or recorded a Job UID may have a Job.
+			Dispatched: operation.DispatchStarted || operation.JobUID != "",
 		}
 	}
 	if pending := status.PendingObservation; pending != nil {

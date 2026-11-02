@@ -1,6 +1,7 @@
 package model_test
 
 import (
+	"strings"
 	"testing"
 
 	qt "github.com/frankban/quicktest"
@@ -8,6 +9,7 @@ import (
 	"google.golang.org/protobuf/testing/protocmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
 	"github.com/stokaro/ptah-console/internal/model"
@@ -241,8 +243,39 @@ func TestAnOCISourceIsReadAsBefore(t *testing.T) {
 	c.Assert(out.GetSource(), qt.CmpEquals(protocmp.Transform()), &consolev1.Source{
 		Kind: consolev1.SourceKind_SOURCE_KIND_OCI, Requested: "oci://registry.example/team/schema:stable",
 		Resolved: "oci://registry.example/team/schema@" + ociDigest, Digest: ociDigest, Verified: true,
+		SpecReference: "oci://registry.example/team/schema:stable",
 	})
 	c.Assert(out.GetStages()[0].GetState(), qt.Equals, done)
+}
+
+// After a change of source and before the operator observes it, a schema's
+// status still names the reference it resolved. What a further change
+// replaces is the spec's reference, so the source carries both.
+func TestAChangedSourceNamesTheSpecsReferenceBesideTheResolvedOne(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	next := "oci://registry.example/team/schema@sha256:" + strings.Repeat("4", 64)
+	schema := schemaWith(condition("ArtifactResolved", metav1.ConditionTrue, "DigestPinned"))
+	schema.Spec.Desired = operatorv1alpha1.SourceSpec{OCIRef: next}
+	schema.Status.Source = operatorv1alpha1.SchemaSourceStatus{
+		RequestedReference: "oci://registry.example/team/schema@" + ociDigest,
+		ResolvedReference:  "oci://registry.example/team/schema@" + ociDigest, Digest: ociDigest,
+	}
+	migration := &operatorv1alpha1.PtahMigration{Spec: operatorv1alpha1.PtahMigrationSpec{
+		Artifact: operatorv1alpha1.SourceSpec{OCIRef: next},
+	}}
+	migration.Status.Artifact = &operatorv1alpha1.SourceAccessBinding{
+		ResolvedReference: "oci://registry.example/team/schema@" + ociDigest, Digest: ociDigest,
+	}
+
+	fromSchema := model.Schema(schema).GetSource()
+	fromMigration := model.Migration(migration).GetSource()
+
+	c.Assert(fromSchema.GetRequested(), qt.Equals, "oci://registry.example/team/schema@"+ociDigest)
+	c.Assert(fromSchema.GetSpecReference(), qt.Equals, next)
+	c.Assert(fromMigration.GetRequested(), qt.Equals, next)
+	c.Assert(fromMigration.GetSpecReference(), qt.Equals, next)
+	c.Assert(fromMigration.GetResolved(), qt.Equals, "oci://registry.example/team/schema@"+ociDigest)
 }
 
 // A plan computed from a ConfigMap or Git source is bound to the revision,
@@ -287,6 +320,40 @@ func TestAPlanBoundToASourceSaysWhatItIsBoundTo(t *testing.T) {
 			c.Assert(out.GetContractSupported(), qt.Equals, test.supported)
 			migration := model.MigrationPlan(&operatorv1alpha1.PtahMigrationPlan{Spec: operatorv1alpha1.PtahMigrationPlanSpec{Source: test.source}})
 			c.Assert(migration.GetSource(), qt.CmpEquals(protocmp.Transform()), test.want)
+		})
+	}
+}
+
+// Whether an operation's Job may exist follows the controller's own rule: a
+// claim that began its dispatch, or that recorded a Job UID, may have one,
+// whatever the phase says. A change of source refuses an Apply that may.
+func TestAnOperationMayHaveItsJobOnceItsDispatchBegan(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		started    bool
+		jobUID     string
+		dispatched bool
+	}{
+		{name: "a claim with no dispatch yet"},
+		{name: "a dispatch that began", started: true, dispatched: true},
+		{name: "a Job recorded", started: true, jobUID: "uid-job", dispatched: true},
+		{name: "a Job UID alone", jobUID: "uid-job", dispatched: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			schema := schemaWith()
+			schema.Status.ActiveOperation = &operatorv1alpha1.ActiveOperationStatus{
+				Type: operatorv1alpha1.OperationApply, ID: "apply-1", DispatchStarted: test.started, JobUID: types.UID(test.jobUID),
+			}
+			migration := migrationWith(operatorv1alpha1.PtahMigrationStatus{ActiveOperation: &operatorv1alpha1.MigrationOperationStatus{
+				Type: operatorv1alpha1.MigrationOperationApply, ID: "apply-1", DispatchStarted: test.started, JobUID: types.UID(test.jobUID),
+			}})
+
+			c.Assert(model.Schema(schema).GetActiveOperation().GetDispatched(), qt.Equals, test.dispatched)
+			c.Assert(model.Migration(migration).GetActiveOperation().GetDispatched(), qt.Equals, test.dispatched)
 		})
 	}
 }

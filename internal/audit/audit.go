@@ -44,6 +44,11 @@ type Event struct {
 	PlanUID         string
 	PlanFingerprint string
 
+	// Reference is the OCI reference a change of source set, recorded only
+	// once it parsed as a reference pinned by digest: it carries no
+	// credential, query or whitespace.
+	Reference string
+
 	// RequestID is the console's own identifier for the action.
 	RequestID string
 	// AuditID is what the API server returned in its Audit-Id header.
@@ -84,6 +89,7 @@ func (l *Logger) Record(ctx context.Context, event Event) {
 		slog.String("plan", event.PlanName),
 		slog.String("planUID", event.PlanUID),
 		slog.String("planFingerprint", event.PlanFingerprint),
+		slog.String("reference", event.Reference),
 		slog.String("requestID", event.RequestID),
 		slog.String("auditID", event.AuditID),
 		slog.String("reason", event.Reason),
