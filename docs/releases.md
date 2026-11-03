@@ -30,7 +30,7 @@ not itself a release.
 ## Verify before you install
 
 ```sh
-version=0.2.0
+version=0.3.0
 repository=stokaro/ptah-console
 workflow="$repository/.github/workflows/release.yml"
 
@@ -60,21 +60,26 @@ Install the image by the digest you verified rather than by its tag.
    `make release-check` refuses a pseudo-version:
 
    ```sh
-   go get github.com/stokaro/ptah-operator@v0.2.8
+   go get github.com/stokaro/ptah-operator@v0.2.9
    go mod tidy
    make generate
    ```
 
    `make generate` copies the operator's example roles into both charts
    again; only their header line changes when the operator's examples did
-   not.
+   not. `make check` runs `make release-check`, which requires the top row
+   of `support/compatibility.json` to name the operator `go.mod` requires
+   and the charts' version. After a release, the change that moves the
+   operator therefore adds the next version's row and sets both charts to
+   it, and keeps the released row as it was.
 2. Set the version: `version` and `appVersion` in
    `charts/ptah-console/Chart.yaml` and `charts/ptah-console-agent/Chart.yaml`,
    a row at the top of `support/compatibility.json` naming the operator
    `go.mod` requires, the same row in [compatibility](compatibility.md), and
-   the version the install guides and this page download. `make release-check`
-   holds the charts and the record to each other; nothing checks the guides,
-   so search them for the previous version.
+   the version the install guides and this page download, where step 1 did
+   not set them already. `make release-check` holds the charts and the record
+   to each other; nothing checks the guides, so search them for the previous
+   version.
 3. Run every acceptance row on the release branch. The workflow runs on a pull
    request only for the paths it lists, and a change to the web app is not
    among them:
