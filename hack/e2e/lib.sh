@@ -187,6 +187,9 @@ postgres_server() {
 	              containers: [{
 	                name: "postgres", image: $image, imagePullPolicy: "IfNotPresent",
 	                env: [{name: "POSTGRES_PASSWORD", valueFrom: {secretKeyRef: {name: "e2e-postgres", key: "password"}}}],
+	                # Every connection in the server log, so a client that timed
+	                # out can be told from one that never arrived.
+	                args: ["postgres", "-c", "log_connections=on", "-c", "log_disconnections=on"],
 	                ports: [{name: "postgresql", containerPort: 5432}],
 	                readinessProbe: {exec: {command: ["pg_isready", "-h", "127.0.0.1", "-U", "postgres"]}, periodSeconds: 3}
 	              }]
@@ -202,6 +205,37 @@ postgres_server() {
 	    ]
 	  }' | "$server_kubectl" apply -f - >/dev/null
 	"$server_kubectl" -n "$NAMESPACE" rollout status deployment/e2e-postgres --timeout=180s >/dev/null
+}
+
+# probe_server starts a Pod that asks, once a second, for the acceptance
+# database server's name and whether it accepts connections, from inside the
+# cluster as the operation Pods do, and logs how long each took. An operation
+# that timed out connecting can then be read against what the network and the
+# server did at that second; hack/e2e/diagnostics.sh keeps the log.
+probe_server() {
+	jq -n --arg namespace "$NAMESPACE" --arg image "$E2E_POSTGRES_IMAGE" '
+	  def labels: {"app.kubernetes.io/name": "e2e-probe"};
+	  {
+	    apiVersion: "apps/v1", kind: "Deployment",
+	    metadata: {namespace: $namespace, name: "e2e-probe"},
+	    spec: {
+	      replicas: 1,
+	      selector: {matchLabels: labels},
+	      template: {
+	        metadata: {labels: labels},
+	        spec: {
+	          automountServiceAccountToken: false,
+	          containers: [{
+	            name: "probe", image: $image, imagePullPolicy: "IfNotPresent",
+	            command: ["sh", "-c", "host=e2e-postgres.$(NAMESPACE).svc.cluster.local\nwhile true; do\n  at=$(date -u +%H:%M:%S); start=$(date +%s)\n  busybox timeout 10 nslookup \"$host\" >/dev/null 2>&1; dns=$?; looked=$(date +%s)\n  pg_isready -h \"$host\" -p 5432 -t 10 >/dev/null 2>&1; pg=$?; done_at=$(date +%s)\n  echo \"$at dns=$dns dns_s=$((looked - start)) pg=$pg pg_s=$((done_at - looked))\"\n  sleep 1\ndone"],
+	            env: [{name: "NAMESPACE", value: $namespace}],
+	            resources: {requests: {cpu: "10m", memory: "16Mi"}}
+	          }]
+	        }
+	      }
+	    }
+	  }' | admin apply -f - >/dev/null
+	admin -n "$NAMESPACE" rollout status deployment/e2e-probe --timeout=180s >/dev/null
 }
 
 # postgres runs psql as the superuser of the acceptance database server.
