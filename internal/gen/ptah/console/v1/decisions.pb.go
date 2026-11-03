@@ -1399,6 +1399,245 @@ func (x *RequestReadResponse) GetRequested() string {
 	return ""
 }
 
+type SetSourceRequest struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Kind      ResourceKind           `protobuf:"varint,1,opt,name=kind,proto3,enum=ptah.console.v1.ResourceKind" json:"kind,omitempty"`
+	Namespace string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Name      string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// The object the person saw, and the reference its spec named then. The
+	// change applies only to that object, and only while its spec still names
+	// that reference: another writer's reference is reported, never replaced.
+	// No resource version comes from the page, because the operator writes
+	// status between any two looks; the patch holds the resource version of
+	// the console's own read, made just before it is sent.
+	Uid           string `protobuf:"bytes,4,opt,name=uid,proto3" json:"uid,omitempty"`
+	FromReference string `protobuf:"bytes,5,opt,name=from_reference,json=fromReference,proto3" json:"from_reference,omitempty"`
+	// The reference to set, pinned by a SHA-256 digest, as
+	// oci://HOST/REPOSITORY@sha256:<64 hex>. The console refuses anything
+	// looser before it reads the cluster.
+	Reference string `protobuf:"bytes,6,opt,name=reference,proto3" json:"reference,omitempty"`
+	// Ask the API server to judge the change and store nothing.
+	DryRun        bool `protobuf:"varint,7,opt,name=dry_run,json=dryRun,proto3" json:"dry_run,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetSourceRequest) Reset() {
+	*x = SetSourceRequest{}
+	mi := &file_ptah_console_v1_decisions_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetSourceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetSourceRequest) ProtoMessage() {}
+
+func (x *SetSourceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_decisions_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetSourceRequest.ProtoReflect.Descriptor instead.
+func (*SetSourceRequest) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_decisions_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *SetSourceRequest) GetKind() ResourceKind {
+	if x != nil {
+		return x.Kind
+	}
+	return ResourceKind_RESOURCE_KIND_UNSPECIFIED
+}
+
+func (x *SetSourceRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *SetSourceRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *SetSourceRequest) GetUid() string {
+	if x != nil {
+		return x.Uid
+	}
+	return ""
+}
+
+func (x *SetSourceRequest) GetFromReference() string {
+	if x != nil {
+		return x.FromReference
+	}
+	return ""
+}
+
+func (x *SetSourceRequest) GetReference() string {
+	if x != nil {
+		return x.Reference
+	}
+	return ""
+}
+
+func (x *SetSourceRequest) GetDryRun() bool {
+	if x != nil {
+		return x.DryRun
+	}
+	return false
+}
+
+type SetSourceResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ADMITTED for a dry run means accepted and not stored.
+	Outcome DecisionOutcome `protobuf:"varint,1,opt,name=outcome,proto3,enum=ptah.console.v1.DecisionOutcome" json:"outcome,omitempty"`
+	// The API server's or admission's own words, or the console's for CHANGED
+	// and for a change that was not needed.
+	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	DryRun  bool   `protobuf:"varint,3,opt,name=dry_run,json=dryRun,proto3" json:"dry_run,omitempty"`
+	// The spec names the reference because of this request. False with
+	// ADMITTED when it named it already, and nothing was sent.
+	Changed bool `protobuf:"varint,4,opt,name=changed,proto3" json:"changed,omitempty"`
+	// The field set: spec.desired.ociRef or spec.artifact.ociRef.
+	Field string `protobuf:"bytes,5,opt,name=field,proto3" json:"field,omitempty"`
+	// The reference the change replaced; empty when nothing was sent.
+	Previous string `protobuf:"bytes,6,opt,name=previous,proto3" json:"previous,omitempty"`
+	// The generation the change made, which the operator has to observe, and
+	// the one it had observed when the answer was written.
+	Generation         int64  `protobuf:"varint,7,opt,name=generation,proto3" json:"generation,omitempty"`
+	ObservedGeneration int64  `protobuf:"varint,8,opt,name=observed_generation,json=observedGeneration,proto3" json:"observed_generation,omitempty"`
+	ResourceVersion    string `protobuf:"bytes,9,opt,name=resource_version,json=resourceVersion,proto3" json:"resource_version,omitempty"`
+	// spec.suspend: a suspended resource starts no Job, so nothing resolves
+	// the new reference until it is resumed.
+	Suspended bool `protobuf:"varint,10,opt,name=suspended,proto3" json:"suspended,omitempty"`
+	// The source as the API server stored it, or would store it for a dry
+	// run, as YAML: the reference and the settings kept beside it.
+	SourceYaml    string `protobuf:"bytes,11,opt,name=source_yaml,json=sourceYaml,proto3" json:"source_yaml,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetSourceResponse) Reset() {
+	*x = SetSourceResponse{}
+	mi := &file_ptah_console_v1_decisions_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetSourceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetSourceResponse) ProtoMessage() {}
+
+func (x *SetSourceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ptah_console_v1_decisions_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetSourceResponse.ProtoReflect.Descriptor instead.
+func (*SetSourceResponse) Descriptor() ([]byte, []int) {
+	return file_ptah_console_v1_decisions_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *SetSourceResponse) GetOutcome() DecisionOutcome {
+	if x != nil {
+		return x.Outcome
+	}
+	return DecisionOutcome_DECISION_OUTCOME_UNSPECIFIED
+}
+
+func (x *SetSourceResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *SetSourceResponse) GetDryRun() bool {
+	if x != nil {
+		return x.DryRun
+	}
+	return false
+}
+
+func (x *SetSourceResponse) GetChanged() bool {
+	if x != nil {
+		return x.Changed
+	}
+	return false
+}
+
+func (x *SetSourceResponse) GetField() string {
+	if x != nil {
+		return x.Field
+	}
+	return ""
+}
+
+func (x *SetSourceResponse) GetPrevious() string {
+	if x != nil {
+		return x.Previous
+	}
+	return ""
+}
+
+func (x *SetSourceResponse) GetGeneration() int64 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+func (x *SetSourceResponse) GetObservedGeneration() int64 {
+	if x != nil {
+		return x.ObservedGeneration
+	}
+	return 0
+}
+
+func (x *SetSourceResponse) GetResourceVersion() string {
+	if x != nil {
+		return x.ResourceVersion
+	}
+	return ""
+}
+
+func (x *SetSourceResponse) GetSuspended() bool {
+	if x != nil {
+		return x.Suspended
+	}
+	return false
+}
+
+func (x *SetSourceResponse) GetSourceYaml() string {
+	if x != nil {
+		return x.SourceYaml
+	}
+	return ""
+}
+
 var File_ptah_console_v1_decisions_proto protoreflect.FileDescriptor
 
 const file_ptah_console_v1_decisions_proto_rawDesc = "" +
@@ -1495,7 +1734,31 @@ const file_ptah_console_v1_decisions_proto_rawDesc = "" +
 	"\x13RequestReadResponse\x12:\n" +
 	"\aoutcome\x18\x01 \x01(\x0e2 .ptah.console.v1.DecisionOutcomeR\aoutcome\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1c\n" +
-	"\trequested\x18\x03 \x01(\tR\trequested*\x9c\x01\n" +
+	"\trequested\x18\x03 \x01(\tR\trequested\"\xe7\x01\n" +
+	"\x10SetSourceRequest\x121\n" +
+	"\x04kind\x18\x01 \x01(\x0e2\x1d.ptah.console.v1.ResourceKindR\x04kind\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x10\n" +
+	"\x03uid\x18\x04 \x01(\tR\x03uid\x12%\n" +
+	"\x0efrom_reference\x18\x05 \x01(\tR\rfromReference\x12\x1c\n" +
+	"\treference\x18\x06 \x01(\tR\treference\x12\x17\n" +
+	"\adry_run\x18\a \x01(\bR\x06dryRun\"\x89\x03\n" +
+	"\x11SetSourceResponse\x12:\n" +
+	"\aoutcome\x18\x01 \x01(\x0e2 .ptah.console.v1.DecisionOutcomeR\aoutcome\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x17\n" +
+	"\adry_run\x18\x03 \x01(\bR\x06dryRun\x12\x18\n" +
+	"\achanged\x18\x04 \x01(\bR\achanged\x12\x14\n" +
+	"\x05field\x18\x05 \x01(\tR\x05field\x12\x1a\n" +
+	"\bprevious\x18\x06 \x01(\tR\bprevious\x12\x1e\n" +
+	"\n" +
+	"generation\x18\a \x01(\x03R\n" +
+	"generation\x12/\n" +
+	"\x13observed_generation\x18\b \x01(\x03R\x12observedGeneration\x12)\n" +
+	"\x10resource_version\x18\t \x01(\tR\x0fresourceVersion\x12\x1c\n" +
+	"\tsuspended\x18\n" +
+	" \x01(\bR\tsuspended\x12\x1f\n" +
+	"\vsource_yaml\x18\v \x01(\tR\n" +
+	"sourceYaml*\x9c\x01\n" +
 	"\fDecisionKind\x12\x1d\n" +
 	"\x19DECISION_KIND_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dDECISION_KIND_SCHEMA_APPROVAL\x10\x01\x12$\n" +
@@ -1524,7 +1787,7 @@ const file_ptah_console_v1_decisions_proto_rawDesc = "" +
 	"\fResourceKind\x12\x1d\n" +
 	"\x19RESOURCE_KIND_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14RESOURCE_KIND_SCHEMA\x10\x01\x12\x1b\n" +
-	"\x17RESOURCE_KIND_MIGRATION\x10\x022\xf5\x05\n" +
+	"\x17RESOURCE_KIND_MIGRATION\x10\x022\xcb\x06\n" +
 	"\x0fDecisionService\x12c\n" +
 	"\rListDecisions\x12%.ptah.console.v1.ListDecisionsRequest\x1a&.ptah.console.v1.ListDecisionsResponse\"\x03\x90\x02\x01\x12]\n" +
 	"\vGetDecision\x12#.ptah.console.v1.GetDecisionRequest\x1a$.ptah.console.v1.GetDecisionResponse\"\x03\x90\x02\x01\x12l\n" +
@@ -1532,7 +1795,8 @@ const file_ptah_console_v1_decisions_proto_rawDesc = "" +
 	"\x14ApproveMigrationPlan\x12,.ptah.console.v1.ApproveMigrationPlanRequest\x1a-.ptah.console.v1.ApproveMigrationPlanResponse\"\x00\x12~\n" +
 	"\x17AcknowledgeMigrationRun\x12/.ptah.console.v1.AcknowledgeMigrationRunRequest\x1a0.ptah.console.v1.AcknowledgeMigrationRunResponse\"\x00\x12]\n" +
 	"\fSetSuspended\x12$.ptah.console.v1.SetSuspendedRequest\x1a%.ptah.console.v1.SetSuspendedResponse\"\x00\x12Z\n" +
-	"\vRequestRead\x12#.ptah.console.v1.RequestReadRequest\x1a$.ptah.console.v1.RequestReadResponse\"\x00BHZFgithub.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1b\x06proto3"
+	"\vRequestRead\x12#.ptah.console.v1.RequestReadRequest\x1a$.ptah.console.v1.RequestReadResponse\"\x00\x12T\n" +
+	"\tSetSource\x12!.ptah.console.v1.SetSourceRequest\x1a\".ptah.console.v1.SetSourceResponse\"\x00BHZFgithub.com/stokaro/ptah-console/internal/gen/ptah/console/v1;consolev1b\x06proto3"
 
 var (
 	file_ptah_console_v1_decisions_proto_rawDescOnce sync.Once
@@ -1547,7 +1811,7 @@ func file_ptah_console_v1_decisions_proto_rawDescGZIP() []byte {
 }
 
 var file_ptah_console_v1_decisions_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_ptah_console_v1_decisions_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_ptah_console_v1_decisions_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_ptah_console_v1_decisions_proto_goTypes = []any{
 	(DecisionKind)(0),                       // 0: ptah.console.v1.DecisionKind
 	(DecisionState)(0),                      // 1: ptah.console.v1.DecisionState
@@ -1570,20 +1834,22 @@ var file_ptah_console_v1_decisions_proto_goTypes = []any{
 	(*SetSuspendedResponse)(nil),            // 18: ptah.console.v1.SetSuspendedResponse
 	(*RequestReadRequest)(nil),              // 19: ptah.console.v1.RequestReadRequest
 	(*RequestReadResponse)(nil),             // 20: ptah.console.v1.RequestReadResponse
-	(*ObjectRef)(nil),                       // 21: ptah.console.v1.ObjectRef
-	(*timestamppb.Timestamp)(nil),           // 22: google.protobuf.Timestamp
-	(*Condition)(nil),                       // 23: ptah.console.v1.Condition
-	(*NamespaceResult)(nil),                 // 24: ptah.console.v1.NamespaceResult
+	(*SetSourceRequest)(nil),                // 21: ptah.console.v1.SetSourceRequest
+	(*SetSourceResponse)(nil),               // 22: ptah.console.v1.SetSourceResponse
+	(*ObjectRef)(nil),                       // 23: ptah.console.v1.ObjectRef
+	(*timestamppb.Timestamp)(nil),           // 24: google.protobuf.Timestamp
+	(*Condition)(nil),                       // 25: ptah.console.v1.Condition
+	(*NamespaceResult)(nil),                 // 26: ptah.console.v1.NamespaceResult
 }
 var file_ptah_console_v1_decisions_proto_depIdxs = []int32{
 	0,  // 0: ptah.console.v1.Decision.kind:type_name -> ptah.console.v1.DecisionKind
-	21, // 1: ptah.console.v1.Decision.ref:type_name -> ptah.console.v1.ObjectRef
-	22, // 2: ptah.console.v1.Decision.decided_at:type_name -> google.protobuf.Timestamp
+	23, // 1: ptah.console.v1.Decision.ref:type_name -> ptah.console.v1.ObjectRef
+	24, // 2: ptah.console.v1.Decision.decided_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: ptah.console.v1.Decision.state:type_name -> ptah.console.v1.DecisionState
-	23, // 4: ptah.console.v1.Decision.conditions:type_name -> ptah.console.v1.Condition
+	25, // 4: ptah.console.v1.Decision.conditions:type_name -> ptah.console.v1.Condition
 	2,  // 5: ptah.console.v1.Decision.plan_retention:type_name -> ptah.console.v1.PlanRetention
 	5,  // 6: ptah.console.v1.ListDecisionsResponse.decisions:type_name -> ptah.console.v1.Decision
-	24, // 7: ptah.console.v1.ListDecisionsResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
+	26, // 7: ptah.console.v1.ListDecisionsResponse.namespaces:type_name -> ptah.console.v1.NamespaceResult
 	0,  // 8: ptah.console.v1.GetDecisionRequest.kind:type_name -> ptah.console.v1.DecisionKind
 	5,  // 9: ptah.console.v1.GetDecisionResponse.decision:type_name -> ptah.console.v1.Decision
 	3,  // 10: ptah.console.v1.DecisionResult.outcome:type_name -> ptah.console.v1.DecisionOutcome
@@ -1595,25 +1861,29 @@ var file_ptah_console_v1_decisions_proto_depIdxs = []int32{
 	3,  // 16: ptah.console.v1.SetSuspendedResponse.outcome:type_name -> ptah.console.v1.DecisionOutcome
 	4,  // 17: ptah.console.v1.RequestReadRequest.kind:type_name -> ptah.console.v1.ResourceKind
 	3,  // 18: ptah.console.v1.RequestReadResponse.outcome:type_name -> ptah.console.v1.DecisionOutcome
-	6,  // 19: ptah.console.v1.DecisionService.ListDecisions:input_type -> ptah.console.v1.ListDecisionsRequest
-	8,  // 20: ptah.console.v1.DecisionService.GetDecision:input_type -> ptah.console.v1.GetDecisionRequest
-	10, // 21: ptah.console.v1.DecisionService.ApproveSchemaPlan:input_type -> ptah.console.v1.ApproveSchemaPlanRequest
-	11, // 22: ptah.console.v1.DecisionService.ApproveMigrationPlan:input_type -> ptah.console.v1.ApproveMigrationPlanRequest
-	12, // 23: ptah.console.v1.DecisionService.AcknowledgeMigrationRun:input_type -> ptah.console.v1.AcknowledgeMigrationRunRequest
-	17, // 24: ptah.console.v1.DecisionService.SetSuspended:input_type -> ptah.console.v1.SetSuspendedRequest
-	19, // 25: ptah.console.v1.DecisionService.RequestRead:input_type -> ptah.console.v1.RequestReadRequest
-	7,  // 26: ptah.console.v1.DecisionService.ListDecisions:output_type -> ptah.console.v1.ListDecisionsResponse
-	9,  // 27: ptah.console.v1.DecisionService.GetDecision:output_type -> ptah.console.v1.GetDecisionResponse
-	14, // 28: ptah.console.v1.DecisionService.ApproveSchemaPlan:output_type -> ptah.console.v1.ApproveSchemaPlanResponse
-	15, // 29: ptah.console.v1.DecisionService.ApproveMigrationPlan:output_type -> ptah.console.v1.ApproveMigrationPlanResponse
-	16, // 30: ptah.console.v1.DecisionService.AcknowledgeMigrationRun:output_type -> ptah.console.v1.AcknowledgeMigrationRunResponse
-	18, // 31: ptah.console.v1.DecisionService.SetSuspended:output_type -> ptah.console.v1.SetSuspendedResponse
-	20, // 32: ptah.console.v1.DecisionService.RequestRead:output_type -> ptah.console.v1.RequestReadResponse
-	26, // [26:33] is the sub-list for method output_type
-	19, // [19:26] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	4,  // 19: ptah.console.v1.SetSourceRequest.kind:type_name -> ptah.console.v1.ResourceKind
+	3,  // 20: ptah.console.v1.SetSourceResponse.outcome:type_name -> ptah.console.v1.DecisionOutcome
+	6,  // 21: ptah.console.v1.DecisionService.ListDecisions:input_type -> ptah.console.v1.ListDecisionsRequest
+	8,  // 22: ptah.console.v1.DecisionService.GetDecision:input_type -> ptah.console.v1.GetDecisionRequest
+	10, // 23: ptah.console.v1.DecisionService.ApproveSchemaPlan:input_type -> ptah.console.v1.ApproveSchemaPlanRequest
+	11, // 24: ptah.console.v1.DecisionService.ApproveMigrationPlan:input_type -> ptah.console.v1.ApproveMigrationPlanRequest
+	12, // 25: ptah.console.v1.DecisionService.AcknowledgeMigrationRun:input_type -> ptah.console.v1.AcknowledgeMigrationRunRequest
+	17, // 26: ptah.console.v1.DecisionService.SetSuspended:input_type -> ptah.console.v1.SetSuspendedRequest
+	19, // 27: ptah.console.v1.DecisionService.RequestRead:input_type -> ptah.console.v1.RequestReadRequest
+	21, // 28: ptah.console.v1.DecisionService.SetSource:input_type -> ptah.console.v1.SetSourceRequest
+	7,  // 29: ptah.console.v1.DecisionService.ListDecisions:output_type -> ptah.console.v1.ListDecisionsResponse
+	9,  // 30: ptah.console.v1.DecisionService.GetDecision:output_type -> ptah.console.v1.GetDecisionResponse
+	14, // 31: ptah.console.v1.DecisionService.ApproveSchemaPlan:output_type -> ptah.console.v1.ApproveSchemaPlanResponse
+	15, // 32: ptah.console.v1.DecisionService.ApproveMigrationPlan:output_type -> ptah.console.v1.ApproveMigrationPlanResponse
+	16, // 33: ptah.console.v1.DecisionService.AcknowledgeMigrationRun:output_type -> ptah.console.v1.AcknowledgeMigrationRunResponse
+	18, // 34: ptah.console.v1.DecisionService.SetSuspended:output_type -> ptah.console.v1.SetSuspendedResponse
+	20, // 35: ptah.console.v1.DecisionService.RequestRead:output_type -> ptah.console.v1.RequestReadResponse
+	22, // 36: ptah.console.v1.DecisionService.SetSource:output_type -> ptah.console.v1.SetSourceResponse
+	29, // [29:37] is the sub-list for method output_type
+	21, // [21:29] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_ptah_console_v1_decisions_proto_init() }
@@ -1628,7 +1898,7 @@ func file_ptah_console_v1_decisions_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ptah_console_v1_decisions_proto_rawDesc), len(file_ptah_console_v1_decisions_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   16,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

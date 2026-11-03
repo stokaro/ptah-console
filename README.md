@@ -75,7 +75,8 @@ The page follows changes live. What a button offers depends on what RBAC says
 you may do; the server decides. [Using the console](docs/use/console.md) goes
 through the tasks: approving a plan, following a release, finding out why
 something failed, settling a run nobody can prove, creating a resource,
-asking for a read, suspending, and seeing what you may do.
+asking for a read, suspending, pointing a resource at a new artifact, and
+seeing what you may do.
 
 ## Demo
 

@@ -92,7 +92,7 @@ lacks one they assume it has. The rows in `web/e2e/acceptance.spec.ts` run in
 order, one `ptah-console local` per person, and `web/e2e/console.spec.ts`
 continues from the state they leave with the full console's later pages and
 actions: creating a resource, reading on request, suspend and resume, the
-plan review, Execution & diagnosis, Activity. The rows in
+plan review, a change of source, Execution & diagnosis, Activity. The rows in
 `web/e2e/hosted.spec.ts` follow them: `hack/e2e/hosted.sh` builds the
 console's image on the lab's Docker context, loads it into kind, installs
 `charts/ptah-console` with an author and an approver account, and serves it

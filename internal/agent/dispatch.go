@@ -215,8 +215,16 @@ func (d *Dispatcher) admit(request *agentv1.Request) error {
 }
 
 // namespacesOf is what a request names, and whether it is one the agent
-// serves.
+// serves: a read, or one of the changes phase 1 makes.
 func namespacesOf(request *agentv1.Request) ([]string, bool) {
+	if namespaces, ok := readNamespaces(request); ok {
+		return namespaces, true
+	}
+	return changeNamespaces(request)
+}
+
+// readNamespaces is what a read names.
+func readNamespaces(request *agentv1.Request) ([]string, bool) {
 	switch action := request.GetAction().(type) {
 	case *agentv1.Request_WhoAmI, *agentv1.Request_ListNamespaces:
 		return nil, true
@@ -236,6 +244,20 @@ func namespacesOf(request *agentv1.Request) ([]string, bool) {
 		return action.ListDecisions.GetNamespaces(), true
 	case *agentv1.Request_GetDecision:
 		return []string{action.GetDecision.GetNamespace()}, true
+	case *agentv1.Request_GetDiagnostics:
+		return []string{action.GetDiagnostics.GetNamespace()}, true
+	case *agentv1.Request_ListEvents:
+		return action.ListEvents.GetNamespaces(), true
+	case *agentv1.Request_Watch:
+		return action.Watch.GetNamespaces(), true
+	default:
+		return nil, false
+	}
+}
+
+// changeNamespaces is what a change names.
+func changeNamespaces(request *agentv1.Request) ([]string, bool) {
+	switch action := request.GetAction().(type) {
 	case *agentv1.Request_ApproveSchemaPlan:
 		return []string{action.ApproveSchemaPlan.GetNamespace()}, true
 	case *agentv1.Request_ApproveMigrationPlan:
@@ -246,16 +268,12 @@ func namespacesOf(request *agentv1.Request) ([]string, bool) {
 		return []string{action.SetSuspended.GetNamespace()}, true
 	case *agentv1.Request_RequestRead:
 		return []string{action.RequestRead.GetNamespace()}, true
-	case *agentv1.Request_GetDiagnostics:
-		return []string{action.GetDiagnostics.GetNamespace()}, true
-	case *agentv1.Request_ListEvents:
-		return action.ListEvents.GetNamespaces(), true
+	case *agentv1.Request_SetSource:
+		return []string{action.SetSource.GetNamespace()}, true
 	case *agentv1.Request_CreateSchema:
 		return []string{action.CreateSchema.GetDraft().GetNamespace()}, true
 	case *agentv1.Request_CreateMigration:
 		return []string{action.CreateMigration.GetDraft().GetNamespace()}, true
-	case *agentv1.Request_Watch:
-		return action.Watch.GetNamespaces(), true
 	default:
 		return nil, false
 	}
@@ -263,66 +281,99 @@ func namespacesOf(request *agentv1.Request) ([]string, bool) {
 
 // call runs one request that has one answer.
 func (d *Dispatcher) call(ctx context.Context, account string, request *agentv1.Request) (*agentv1.Result, error) {
+	if result, served, err := d.read(ctx, account, request); served {
+		return result, err
+	}
+	if result, served, err := d.change(ctx, request); served {
+		return result, err
+	}
+	return nil, connect.NewError(connect.CodeUnimplemented, "the agent serves no such request")
+}
+
+// read runs a read, and says whether the request was one.
+func (d *Dispatcher) read(ctx context.Context, account string, request *agentv1.Request) (*agentv1.Result, bool, error) {
+	var (
+		result *agentv1.Result
+		err    error
+	)
 	switch action := request.GetAction().(type) {
 	case *agentv1.Request_WhoAmI:
-		return d.whoAmI(ctx, account)
+		result, err = d.whoAmI(ctx, account)
 	case *agentv1.Request_ListNamespaces:
-		response, err := d.scope.ListNamespaces(ctx, action.ListNamespaces)
-		return &agentv1.Result{Outcome: &agentv1.Result_ListNamespaces{ListNamespaces: response}}, err
+		response, callErr := d.scope.ListNamespaces(ctx, action.ListNamespaces)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_ListNamespaces{ListNamespaces: response}}, callErr
 	case *agentv1.Request_ListSchemas:
-		response, err := d.schemas.ListSchemas(ctx, action.ListSchemas)
-		return &agentv1.Result{Outcome: &agentv1.Result_ListSchemas{ListSchemas: response}}, err
+		response, callErr := d.schemas.ListSchemas(ctx, action.ListSchemas)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_ListSchemas{ListSchemas: response}}, callErr
 	case *agentv1.Request_GetSchema:
-		response, err := d.schemas.GetSchema(ctx, action.GetSchema)
-		return &agentv1.Result{Outcome: &agentv1.Result_GetSchema{GetSchema: response}}, err
+		response, callErr := d.schemas.GetSchema(ctx, action.GetSchema)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_GetSchema{GetSchema: response}}, callErr
 	case *agentv1.Request_GetSchemaPlan:
-		response, err := d.schemas.GetSchemaPlan(ctx, action.GetSchemaPlan)
-		return &agentv1.Result{Outcome: &agentv1.Result_GetSchemaPlan{GetSchemaPlan: response}}, err
+		response, callErr := d.schemas.GetSchemaPlan(ctx, action.GetSchemaPlan)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_GetSchemaPlan{GetSchemaPlan: response}}, callErr
 	case *agentv1.Request_ListMigrations:
-		response, err := d.migrations.ListMigrations(ctx, action.ListMigrations)
-		return &agentv1.Result{Outcome: &agentv1.Result_ListMigrations{ListMigrations: response}}, err
+		response, callErr := d.migrations.ListMigrations(ctx, action.ListMigrations)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_ListMigrations{ListMigrations: response}}, callErr
 	case *agentv1.Request_GetMigration:
-		response, err := d.migrations.GetMigration(ctx, action.GetMigration)
-		return &agentv1.Result{Outcome: &agentv1.Result_GetMigration{GetMigration: response}}, err
+		response, callErr := d.migrations.GetMigration(ctx, action.GetMigration)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_GetMigration{GetMigration: response}}, callErr
 	case *agentv1.Request_GetMigrationPlan:
-		response, err := d.migrations.GetMigrationPlan(ctx, action.GetMigrationPlan)
-		return &agentv1.Result{Outcome: &agentv1.Result_GetMigrationPlan{GetMigrationPlan: response}}, err
+		response, callErr := d.migrations.GetMigrationPlan(ctx, action.GetMigrationPlan)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_GetMigrationPlan{GetMigrationPlan: response}}, callErr
 	case *agentv1.Request_ListDecisions:
-		response, err := d.decisions.ListDecisions(ctx, action.ListDecisions)
-		return &agentv1.Result{Outcome: &agentv1.Result_ListDecisions{ListDecisions: response}}, err
+		response, callErr := d.decisions.ListDecisions(ctx, action.ListDecisions)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_ListDecisions{ListDecisions: response}}, callErr
 	case *agentv1.Request_GetDecision:
-		response, err := d.decisions.GetDecision(ctx, action.GetDecision)
-		return &agentv1.Result{Outcome: &agentv1.Result_GetDecision{GetDecision: response}}, err
-	case *agentv1.Request_ApproveSchemaPlan:
-		response, err := d.decisions.ApproveSchemaPlan(ctx, action.ApproveSchemaPlan)
-		return &agentv1.Result{Outcome: &agentv1.Result_ApproveSchemaPlan{ApproveSchemaPlan: response}}, err
-	case *agentv1.Request_ApproveMigrationPlan:
-		response, err := d.decisions.ApproveMigrationPlan(ctx, action.ApproveMigrationPlan)
-		return &agentv1.Result{Outcome: &agentv1.Result_ApproveMigrationPlan{ApproveMigrationPlan: response}}, err
-	case *agentv1.Request_AcknowledgeMigrationRun:
-		response, err := d.decisions.AcknowledgeMigrationRun(ctx, action.AcknowledgeMigrationRun)
-		return &agentv1.Result{Outcome: &agentv1.Result_AcknowledgeMigrationRun{AcknowledgeMigrationRun: response}}, err
-	case *agentv1.Request_SetSuspended:
-		response, err := d.decisions.SetSuspended(ctx, action.SetSuspended)
-		return &agentv1.Result{Outcome: &agentv1.Result_SetSuspended{SetSuspended: response}}, err
-	case *agentv1.Request_RequestRead:
-		response, err := d.decisions.RequestRead(ctx, action.RequestRead)
-		return &agentv1.Result{Outcome: &agentv1.Result_RequestRead{RequestRead: response}}, err
+		response, callErr := d.decisions.GetDecision(ctx, action.GetDecision)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_GetDecision{GetDecision: response}}, callErr
 	case *agentv1.Request_GetDiagnostics:
-		response, err := d.diagnostics.GetDiagnostics(ctx, action.GetDiagnostics)
-		return &agentv1.Result{Outcome: &agentv1.Result_GetDiagnostics{GetDiagnostics: response}}, err
+		response, callErr := d.diagnostics.GetDiagnostics(ctx, action.GetDiagnostics)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_GetDiagnostics{GetDiagnostics: response}}, callErr
 	case *agentv1.Request_ListEvents:
-		response, err := d.diagnostics.ListEvents(ctx, action.ListEvents)
-		return &agentv1.Result{Outcome: &agentv1.Result_ListEvents{ListEvents: response}}, err
-	case *agentv1.Request_CreateSchema:
-		response, err := d.authoring.CreateSchema(ctx, action.CreateSchema)
-		return &agentv1.Result{Outcome: &agentv1.Result_CreateSchema{CreateSchema: response}}, err
-	case *agentv1.Request_CreateMigration:
-		response, err := d.authoring.CreateMigration(ctx, action.CreateMigration)
-		return &agentv1.Result{Outcome: &agentv1.Result_CreateMigration{CreateMigration: response}}, err
+		response, callErr := d.diagnostics.ListEvents(ctx, action.ListEvents)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_ListEvents{ListEvents: response}}, callErr
 	default:
-		return nil, connect.NewError(connect.CodeUnimplemented, "the agent serves no such request")
+		return nil, false, nil
 	}
+	return result, true, err
+}
+
+// change runs one of the changes phase 1 makes, and says whether the request
+// was one.
+func (d *Dispatcher) change(ctx context.Context, request *agentv1.Request) (*agentv1.Result, bool, error) {
+	var (
+		result *agentv1.Result
+		err    error
+	)
+	switch action := request.GetAction().(type) {
+	case *agentv1.Request_ApproveSchemaPlan:
+		response, callErr := d.decisions.ApproveSchemaPlan(ctx, action.ApproveSchemaPlan)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_ApproveSchemaPlan{ApproveSchemaPlan: response}}, callErr
+	case *agentv1.Request_ApproveMigrationPlan:
+		response, callErr := d.decisions.ApproveMigrationPlan(ctx, action.ApproveMigrationPlan)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_ApproveMigrationPlan{ApproveMigrationPlan: response}}, callErr
+	case *agentv1.Request_AcknowledgeMigrationRun:
+		response, callErr := d.decisions.AcknowledgeMigrationRun(ctx, action.AcknowledgeMigrationRun)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_AcknowledgeMigrationRun{AcknowledgeMigrationRun: response}}, callErr
+	case *agentv1.Request_SetSuspended:
+		response, callErr := d.decisions.SetSuspended(ctx, action.SetSuspended)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_SetSuspended{SetSuspended: response}}, callErr
+	case *agentv1.Request_RequestRead:
+		response, callErr := d.decisions.RequestRead(ctx, action.RequestRead)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_RequestRead{RequestRead: response}}, callErr
+	case *agentv1.Request_SetSource:
+		response, callErr := d.decisions.SetSource(ctx, action.SetSource)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_SetSource{SetSource: response}}, callErr
+	case *agentv1.Request_CreateSchema:
+		response, callErr := d.authoring.CreateSchema(ctx, action.CreateSchema)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_CreateSchema{CreateSchema: response}}, callErr
+	case *agentv1.Request_CreateMigration:
+		response, callErr := d.authoring.CreateMigration(ctx, action.CreateMigration)
+		result, err = &agentv1.Result{Outcome: &agentv1.Result_CreateMigration{CreateMigration: response}}, callErr
+	default:
+		return nil, false, nil
+	}
+	return result, true, err
 }
 
 // whoAmI asks the API server whom the account's client acts as.

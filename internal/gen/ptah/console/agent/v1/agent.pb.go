@@ -435,6 +435,7 @@ type Request struct {
 	//	*Request_CreateSchema
 	//	*Request_CreateMigration
 	//	*Request_RequestRead
+	//	*Request_SetSource
 	Action        isRequest_Action `protobuf_oneof:"action"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -664,6 +665,15 @@ func (x *Request) GetRequestRead() *v1.RequestReadRequest {
 	return nil
 }
 
+func (x *Request) GetSetSource() *v1.SetSourceRequest {
+	if x != nil {
+		if x, ok := x.Action.(*Request_SetSource); ok {
+			return x.SetSource
+		}
+	}
+	return nil
+}
+
 type isRequest_Action interface {
 	isRequest_Action()
 }
@@ -749,6 +759,10 @@ type Request_RequestRead struct {
 	RequestRead *v1.RequestReadRequest `protobuf:"bytes,29,opt,name=request_read,json=requestRead,proto3,oneof"`
 }
 
+type Request_SetSource struct {
+	SetSource *v1.SetSourceRequest `protobuf:"bytes,30,opt,name=set_source,json=setSource,proto3,oneof"`
+}
+
 func (*Request_WhoAmI) isRequest_Action() {}
 
 func (*Request_ListNamespaces) isRequest_Action() {}
@@ -788,6 +802,8 @@ func (*Request_CreateSchema) isRequest_Action() {}
 func (*Request_CreateMigration) isRequest_Action() {}
 
 func (*Request_RequestRead) isRequest_Action() {}
+
+func (*Request_SetSource) isRequest_Action() {}
 
 // Cancel ends a request in flight.
 type Cancel struct {
@@ -955,6 +971,7 @@ type Result struct {
 	//	*Result_CreateSchema
 	//	*Result_CreateMigration
 	//	*Result_RequestRead
+	//	*Result_SetSource
 	Outcome       isResult_Outcome `protobuf_oneof:"outcome"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1200,6 +1217,15 @@ func (x *Result) GetRequestRead() *v1.RequestReadResponse {
 	return nil
 }
 
+func (x *Result) GetSetSource() *v1.SetSourceResponse {
+	if x != nil {
+		if x, ok := x.Outcome.(*Result_SetSource); ok {
+			return x.SetSource
+		}
+	}
+	return nil
+}
+
 type isResult_Outcome interface {
 	isResult_Outcome()
 }
@@ -1288,6 +1314,10 @@ type Result_RequestRead struct {
 	RequestRead *v1.RequestReadResponse `protobuf:"bytes,29,opt,name=request_read,json=requestRead,proto3,oneof"`
 }
 
+type Result_SetSource struct {
+	SetSource *v1.SetSourceResponse `protobuf:"bytes,30,opt,name=set_source,json=setSource,proto3,oneof"`
+}
+
 func (*Result_Failure) isResult_Outcome() {}
 
 func (*Result_WhoAmI) isResult_Outcome() {}
@@ -1329,6 +1359,8 @@ func (*Result_CreateSchema) isResult_Outcome() {}
 func (*Result_CreateMigration) isResult_Outcome() {}
 
 func (*Result_RequestRead) isResult_Outcome() {}
+
+func (*Result_SetSource) isResult_Outcome() {}
 
 // Failure is how a request ended when it did not succeed: the Connect code
 // and message the console's own service would have returned, such as
@@ -1414,7 +1446,7 @@ const file_ptah_console_agent_v1_agent_proto_rawDesc = "" +
 	"\n" +
 	"account_id\x18\x04 \x01(\tR\taccountId\x125\n" +
 	"\bdeadline\x18\x05 \x01(\v2\x19.google.protobuf.DurationR\bdeadline\x123\n" +
-	"\asent_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x06sentAt\"\x99\r\n" +
+	"\asent_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x06sentAt\"\xdd\r\n" +
 	"\aRequest\x12;\n" +
 	"\benvelope\x18\x01 \x01(\v2\x1f.ptah.console.agent.v1.EnvelopeR\benvelope\x12@\n" +
 	"\bwho_am_i\x18\n" +
@@ -1439,7 +1471,9 @@ const file_ptah_console_agent_v1_agent_proto_rawDesc = "" +
 	"listEvents\x12K\n" +
 	"\rcreate_schema\x18\x1b \x01(\v2$.ptah.console.v1.CreateSchemaRequestH\x00R\fcreateSchema\x12T\n" +
 	"\x10create_migration\x18\x1c \x01(\v2'.ptah.console.v1.CreateMigrationRequestH\x00R\x0fcreateMigration\x12H\n" +
-	"\frequest_read\x18\x1d \x01(\v2#.ptah.console.v1.RequestReadRequestH\x00R\vrequestReadB\b\n" +
+	"\frequest_read\x18\x1d \x01(\v2#.ptah.console.v1.RequestReadRequestH\x00R\vrequestRead\x12B\n" +
+	"\n" +
+	"set_source\x18\x1e \x01(\v2!.ptah.console.v1.SetSourceRequestH\x00R\tsetSourceB\b\n" +
 	"\x06action\"'\n" +
 	"\x06Cancel\x12\x1d\n" +
 	"\n" +
@@ -1447,7 +1481,7 @@ const file_ptah_console_agent_v1_agent_proto_rawDesc = "" +
 	"\rWhoAmIRequest\"D\n" +
 	"\x0eWhoAmIResponse\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x16\n" +
-	"\x06groups\x18\x02 \x03(\tR\x06groups\"\xdf\r\n" +
+	"\x06groups\x18\x02 \x03(\tR\x06groups\"\xa4\x0e\n" +
 	"\x06Result\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x12\n" +
@@ -1475,7 +1509,9 @@ const file_ptah_console_agent_v1_agent_proto_rawDesc = "" +
 	"listEvents\x12L\n" +
 	"\rcreate_schema\x18\x1b \x01(\v2%.ptah.console.v1.CreateSchemaResponseH\x00R\fcreateSchema\x12U\n" +
 	"\x10create_migration\x18\x1c \x01(\v2(.ptah.console.v1.CreateMigrationResponseH\x00R\x0fcreateMigration\x12I\n" +
-	"\frequest_read\x18\x1d \x01(\v2$.ptah.console.v1.RequestReadResponseH\x00R\vrequestReadB\t\n" +
+	"\frequest_read\x18\x1d \x01(\v2$.ptah.console.v1.RequestReadResponseH\x00R\vrequestRead\x12C\n" +
+	"\n" +
+	"set_source\x18\x1e \x01(\v2\".ptah.console.v1.SetSourceResponseH\x00R\tsetSourceB\t\n" +
 	"\aoutcome\"7\n" +
 	"\aFailure\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
@@ -1529,25 +1565,27 @@ var file_ptah_console_agent_v1_agent_proto_goTypes = []any{
 	(*v1.CreateSchemaRequest)(nil),             // 29: ptah.console.v1.CreateSchemaRequest
 	(*v1.CreateMigrationRequest)(nil),          // 30: ptah.console.v1.CreateMigrationRequest
 	(*v1.RequestReadRequest)(nil),              // 31: ptah.console.v1.RequestReadRequest
-	(*v1.ListNamespacesResponse)(nil),          // 32: ptah.console.v1.ListNamespacesResponse
-	(*v1.ListSchemasResponse)(nil),             // 33: ptah.console.v1.ListSchemasResponse
-	(*v1.GetSchemaResponse)(nil),               // 34: ptah.console.v1.GetSchemaResponse
-	(*v1.GetSchemaPlanResponse)(nil),           // 35: ptah.console.v1.GetSchemaPlanResponse
-	(*v1.ListMigrationsResponse)(nil),          // 36: ptah.console.v1.ListMigrationsResponse
-	(*v1.GetMigrationResponse)(nil),            // 37: ptah.console.v1.GetMigrationResponse
-	(*v1.GetMigrationPlanResponse)(nil),        // 38: ptah.console.v1.GetMigrationPlanResponse
-	(*v1.ListDecisionsResponse)(nil),           // 39: ptah.console.v1.ListDecisionsResponse
-	(*v1.GetDecisionResponse)(nil),             // 40: ptah.console.v1.GetDecisionResponse
-	(*v1.ApproveSchemaPlanResponse)(nil),       // 41: ptah.console.v1.ApproveSchemaPlanResponse
-	(*v1.ApproveMigrationPlanResponse)(nil),    // 42: ptah.console.v1.ApproveMigrationPlanResponse
-	(*v1.AcknowledgeMigrationRunResponse)(nil), // 43: ptah.console.v1.AcknowledgeMigrationRunResponse
-	(*v1.SetSuspendedResponse)(nil),            // 44: ptah.console.v1.SetSuspendedResponse
-	(*v1.GetDiagnosticsResponse)(nil),          // 45: ptah.console.v1.GetDiagnosticsResponse
-	(*v1.SubscribeResponse)(nil),               // 46: ptah.console.v1.SubscribeResponse
-	(*v1.ListEventsResponse)(nil),              // 47: ptah.console.v1.ListEventsResponse
-	(*v1.CreateSchemaResponse)(nil),            // 48: ptah.console.v1.CreateSchemaResponse
-	(*v1.CreateMigrationResponse)(nil),         // 49: ptah.console.v1.CreateMigrationResponse
-	(*v1.RequestReadResponse)(nil),             // 50: ptah.console.v1.RequestReadResponse
+	(*v1.SetSourceRequest)(nil),                // 32: ptah.console.v1.SetSourceRequest
+	(*v1.ListNamespacesResponse)(nil),          // 33: ptah.console.v1.ListNamespacesResponse
+	(*v1.ListSchemasResponse)(nil),             // 34: ptah.console.v1.ListSchemasResponse
+	(*v1.GetSchemaResponse)(nil),               // 35: ptah.console.v1.GetSchemaResponse
+	(*v1.GetSchemaPlanResponse)(nil),           // 36: ptah.console.v1.GetSchemaPlanResponse
+	(*v1.ListMigrationsResponse)(nil),          // 37: ptah.console.v1.ListMigrationsResponse
+	(*v1.GetMigrationResponse)(nil),            // 38: ptah.console.v1.GetMigrationResponse
+	(*v1.GetMigrationPlanResponse)(nil),        // 39: ptah.console.v1.GetMigrationPlanResponse
+	(*v1.ListDecisionsResponse)(nil),           // 40: ptah.console.v1.ListDecisionsResponse
+	(*v1.GetDecisionResponse)(nil),             // 41: ptah.console.v1.GetDecisionResponse
+	(*v1.ApproveSchemaPlanResponse)(nil),       // 42: ptah.console.v1.ApproveSchemaPlanResponse
+	(*v1.ApproveMigrationPlanResponse)(nil),    // 43: ptah.console.v1.ApproveMigrationPlanResponse
+	(*v1.AcknowledgeMigrationRunResponse)(nil), // 44: ptah.console.v1.AcknowledgeMigrationRunResponse
+	(*v1.SetSuspendedResponse)(nil),            // 45: ptah.console.v1.SetSuspendedResponse
+	(*v1.GetDiagnosticsResponse)(nil),          // 46: ptah.console.v1.GetDiagnosticsResponse
+	(*v1.SubscribeResponse)(nil),               // 47: ptah.console.v1.SubscribeResponse
+	(*v1.ListEventsResponse)(nil),              // 48: ptah.console.v1.ListEventsResponse
+	(*v1.CreateSchemaResponse)(nil),            // 49: ptah.console.v1.CreateSchemaResponse
+	(*v1.CreateMigrationResponse)(nil),         // 50: ptah.console.v1.CreateMigrationResponse
+	(*v1.RequestReadResponse)(nil),             // 51: ptah.console.v1.RequestReadResponse
+	(*v1.SetSourceResponse)(nil),               // 52: ptah.console.v1.SetSourceResponse
 }
 var file_ptah_console_agent_v1_agent_proto_depIdxs = []int32{
 	0,  // 0: ptah.console.agent.v1.ChannelRequest.binding:type_name -> ptah.console.agent.v1.Binding
@@ -1579,34 +1617,36 @@ var file_ptah_console_agent_v1_agent_proto_depIdxs = []int32{
 	29, // 26: ptah.console.agent.v1.Request.create_schema:type_name -> ptah.console.v1.CreateSchemaRequest
 	30, // 27: ptah.console.agent.v1.Request.create_migration:type_name -> ptah.console.v1.CreateMigrationRequest
 	31, // 28: ptah.console.agent.v1.Request.request_read:type_name -> ptah.console.v1.RequestReadRequest
-	10, // 29: ptah.console.agent.v1.Result.failure:type_name -> ptah.console.agent.v1.Failure
-	8,  // 30: ptah.console.agent.v1.Result.who_am_i:type_name -> ptah.console.agent.v1.WhoAmIResponse
-	32, // 31: ptah.console.agent.v1.Result.list_namespaces:type_name -> ptah.console.v1.ListNamespacesResponse
-	33, // 32: ptah.console.agent.v1.Result.list_schemas:type_name -> ptah.console.v1.ListSchemasResponse
-	34, // 33: ptah.console.agent.v1.Result.get_schema:type_name -> ptah.console.v1.GetSchemaResponse
-	35, // 34: ptah.console.agent.v1.Result.get_schema_plan:type_name -> ptah.console.v1.GetSchemaPlanResponse
-	36, // 35: ptah.console.agent.v1.Result.list_migrations:type_name -> ptah.console.v1.ListMigrationsResponse
-	37, // 36: ptah.console.agent.v1.Result.get_migration:type_name -> ptah.console.v1.GetMigrationResponse
-	38, // 37: ptah.console.agent.v1.Result.get_migration_plan:type_name -> ptah.console.v1.GetMigrationPlanResponse
-	39, // 38: ptah.console.agent.v1.Result.list_decisions:type_name -> ptah.console.v1.ListDecisionsResponse
-	40, // 39: ptah.console.agent.v1.Result.get_decision:type_name -> ptah.console.v1.GetDecisionResponse
-	41, // 40: ptah.console.agent.v1.Result.approve_schema_plan:type_name -> ptah.console.v1.ApproveSchemaPlanResponse
-	42, // 41: ptah.console.agent.v1.Result.approve_migration_plan:type_name -> ptah.console.v1.ApproveMigrationPlanResponse
-	43, // 42: ptah.console.agent.v1.Result.acknowledge_migration_run:type_name -> ptah.console.v1.AcknowledgeMigrationRunResponse
-	44, // 43: ptah.console.agent.v1.Result.set_suspended:type_name -> ptah.console.v1.SetSuspendedResponse
-	45, // 44: ptah.console.agent.v1.Result.get_diagnostics:type_name -> ptah.console.v1.GetDiagnosticsResponse
-	46, // 45: ptah.console.agent.v1.Result.watch:type_name -> ptah.console.v1.SubscribeResponse
-	47, // 46: ptah.console.agent.v1.Result.list_events:type_name -> ptah.console.v1.ListEventsResponse
-	48, // 47: ptah.console.agent.v1.Result.create_schema:type_name -> ptah.console.v1.CreateSchemaResponse
-	49, // 48: ptah.console.agent.v1.Result.create_migration:type_name -> ptah.console.v1.CreateMigrationResponse
-	50, // 49: ptah.console.agent.v1.Result.request_read:type_name -> ptah.console.v1.RequestReadResponse
-	1,  // 50: ptah.console.agent.v1.AgentService.Channel:input_type -> ptah.console.agent.v1.ChannelRequest
-	3,  // 51: ptah.console.agent.v1.AgentService.Channel:output_type -> ptah.console.agent.v1.ChannelResponse
-	51, // [51:52] is the sub-list for method output_type
-	50, // [50:51] is the sub-list for method input_type
-	50, // [50:50] is the sub-list for extension type_name
-	50, // [50:50] is the sub-list for extension extendee
-	0,  // [0:50] is the sub-list for field type_name
+	32, // 29: ptah.console.agent.v1.Request.set_source:type_name -> ptah.console.v1.SetSourceRequest
+	10, // 30: ptah.console.agent.v1.Result.failure:type_name -> ptah.console.agent.v1.Failure
+	8,  // 31: ptah.console.agent.v1.Result.who_am_i:type_name -> ptah.console.agent.v1.WhoAmIResponse
+	33, // 32: ptah.console.agent.v1.Result.list_namespaces:type_name -> ptah.console.v1.ListNamespacesResponse
+	34, // 33: ptah.console.agent.v1.Result.list_schemas:type_name -> ptah.console.v1.ListSchemasResponse
+	35, // 34: ptah.console.agent.v1.Result.get_schema:type_name -> ptah.console.v1.GetSchemaResponse
+	36, // 35: ptah.console.agent.v1.Result.get_schema_plan:type_name -> ptah.console.v1.GetSchemaPlanResponse
+	37, // 36: ptah.console.agent.v1.Result.list_migrations:type_name -> ptah.console.v1.ListMigrationsResponse
+	38, // 37: ptah.console.agent.v1.Result.get_migration:type_name -> ptah.console.v1.GetMigrationResponse
+	39, // 38: ptah.console.agent.v1.Result.get_migration_plan:type_name -> ptah.console.v1.GetMigrationPlanResponse
+	40, // 39: ptah.console.agent.v1.Result.list_decisions:type_name -> ptah.console.v1.ListDecisionsResponse
+	41, // 40: ptah.console.agent.v1.Result.get_decision:type_name -> ptah.console.v1.GetDecisionResponse
+	42, // 41: ptah.console.agent.v1.Result.approve_schema_plan:type_name -> ptah.console.v1.ApproveSchemaPlanResponse
+	43, // 42: ptah.console.agent.v1.Result.approve_migration_plan:type_name -> ptah.console.v1.ApproveMigrationPlanResponse
+	44, // 43: ptah.console.agent.v1.Result.acknowledge_migration_run:type_name -> ptah.console.v1.AcknowledgeMigrationRunResponse
+	45, // 44: ptah.console.agent.v1.Result.set_suspended:type_name -> ptah.console.v1.SetSuspendedResponse
+	46, // 45: ptah.console.agent.v1.Result.get_diagnostics:type_name -> ptah.console.v1.GetDiagnosticsResponse
+	47, // 46: ptah.console.agent.v1.Result.watch:type_name -> ptah.console.v1.SubscribeResponse
+	48, // 47: ptah.console.agent.v1.Result.list_events:type_name -> ptah.console.v1.ListEventsResponse
+	49, // 48: ptah.console.agent.v1.Result.create_schema:type_name -> ptah.console.v1.CreateSchemaResponse
+	50, // 49: ptah.console.agent.v1.Result.create_migration:type_name -> ptah.console.v1.CreateMigrationResponse
+	51, // 50: ptah.console.agent.v1.Result.request_read:type_name -> ptah.console.v1.RequestReadResponse
+	52, // 51: ptah.console.agent.v1.Result.set_source:type_name -> ptah.console.v1.SetSourceResponse
+	1,  // 52: ptah.console.agent.v1.AgentService.Channel:input_type -> ptah.console.agent.v1.ChannelRequest
+	3,  // 53: ptah.console.agent.v1.AgentService.Channel:output_type -> ptah.console.agent.v1.ChannelResponse
+	53, // [53:54] is the sub-list for method output_type
+	52, // [52:53] is the sub-list for method input_type
+	52, // [52:52] is the sub-list for extension type_name
+	52, // [52:52] is the sub-list for extension extendee
+	0,  // [0:52] is the sub-list for field type_name
 }
 
 func init() { file_ptah_console_agent_v1_agent_proto_init() }
@@ -1643,6 +1683,7 @@ func file_ptah_console_agent_v1_agent_proto_init() {
 		(*Request_CreateSchema)(nil),
 		(*Request_CreateMigration)(nil),
 		(*Request_RequestRead)(nil),
+		(*Request_SetSource)(nil),
 	}
 	file_ptah_console_agent_v1_agent_proto_msgTypes[9].OneofWrappers = []any{
 		(*Result_Failure)(nil),
@@ -1666,6 +1707,7 @@ func file_ptah_console_agent_v1_agent_proto_init() {
 		(*Result_CreateSchema)(nil),
 		(*Result_CreateMigration)(nil),
 		(*Result_RequestRead)(nil),
+		(*Result_SetSource)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

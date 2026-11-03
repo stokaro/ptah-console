@@ -1,0 +1,341 @@
+[
+  {
+    "value": "oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": true,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+    "value": "oci://localhost:5000/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": true,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+    "value": "oci://registry.example/acme/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": true,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront:1.5.0",
+    "ok": false,
+    "tag": "1.5.0",
+    "message": "\"oci://registry.example/shop/storefront:1.5.0\" names tag 1.5.0, not a digest"
+  },
+  {
+    "value": "oci://localhost:5000/shop/storefront:1.5.0",
+    "ok": false,
+    "tag": "1.5.0",
+    "message": "\"oci://localhost:5000/shop/storefront:1.5.0\" names tag 1.5.0, not a digest"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront",
+    "ok": false,
+    "tag": "latest",
+    "message": "\"oci://registry.example/shop/storefront\" names no digest, and no tag either, which means tag latest"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront:1.5.0@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront:1.5.0@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" names tag 1.5.0 beside its digest; the operator reads the digest alone, so the tag would be stored and never checked"
+  },
+  {
+    "value": "oci://registry.example/oci://other.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/oci://other.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" has oci://other.example/shop/storefront where its repository path belongs, and a repository path carries no scheme: the operator would read repository oci from it and drop the rest unread"
+  },
+  {
+    "value": "oci://registry.example/https://other.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/https://other.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" has https://other.example/shop/storefront where its repository path belongs, and a repository path carries no scheme: the operator would read repository https from it and drop the rest unread"
+  },
+  {
+    "value": "oci://registry.example/oci://other.example/shop/storefront:1.5.0",
+    "ok": false,
+    "message": "\"oci://registry.example/oci://other.example/shop/storefront:1.5.0\" has oci://other.example/shop/storefront:1.5.0 where its repository path belongs, and a repository path carries no scheme"
+  },
+  {
+    "value": "oci://registry.example/shop:storefront/v1@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop:storefront/v1@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" has shop:storefront/v1 where its repository path belongs, which is not a repository path, with a tag or without: the operator would read repository shop from it and drop the rest unread"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront:@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront:@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" has shop/storefront: where its repository path belongs, which is not a repository path, with a tag or without: the operator would read repository shop/storefront from it and drop the rest unread"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront:1.5:0@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront:1.5:0@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" has shop/storefront:1.5:0 where its repository path belongs, which is not a repository path, with a tag or without: the operator would read repository shop/storefront from it and drop the rest unread"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront:vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront:vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" has shop/storefront:vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv where its repository path belongs, which is not a repository path, with a tag or without: the operator would read repository shop/storefront from it and drop the rest unread"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront:vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront:vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" names tag vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv beside its digest; the operator reads the digest alone, so the tag would be stored and never checked"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha512:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@sha512:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" names digest sha512:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; the operator pins an artifact by sha256: and 64 lowercase hexadecimal digits"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha256:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@sha256:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid digest \"sha256:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\": invalid checksum digest format"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid digest \"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\": invalid checksum digest length"
+  },
+  {
+    "value": "registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: OCI reference must use the oci:// scheme"
+  },
+  {
+    "value": "oci://user:secret@registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://user:secret@registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: OCI reference must not contain embedded credentials"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb?x=1",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb?x=1\" is not an OCI reference the operator accepts: OCI reference contains unsupported query, fragment, or path data"
+  },
+  {
+    "value": " oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\" oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: OCI reference must not be empty or contain whitespace"
+  },
+  {
+    "value": "oci://[::1]:5000/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": true,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+    "value": "oci://a:b:5000/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": true,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+    "value": "oci://[127.0.0.1]/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://[127.0.0.1]/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid registry \"[127.0.0.1]\""
+  },
+  {
+    "value": "oci://registry.example:port/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example:port/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid registry \"registry.example:port\""
+  },
+  {
+    "value": "oci://registry%41.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry%41.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid registry \"registry%41.example\""
+  },
+  {
+    "value": "oci:///shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci:///shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid registry \"\""
+  },
+  {
+    "value": "oci://registry.example/Shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/Shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid repository \"Shop/storefront\""
+  },
+  {
+    "value": "oci://registry.example/shop/@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid repository \"shop/\""
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha384:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@sha384:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" names digest sha384:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; the operator pins an artifact by sha256: and 64 lowercase hexadecimal digits"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@md5:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@md5:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid digest \"md5:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\": unsupported digest algorithm"
+  },
+  {
+    "value": "oci://[::ffff:1.2.3.4]:443/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": true,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+    "value": "oci://[fe80::1%25en0]/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://[fe80::1%25en0]/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid registry \"[fe80::1%25en0]\""
+  },
+  {
+    "value": "oci://[::1/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://[::1/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid registry \"[::1\""
+  },
+  {
+    "value": "oci://x[::1]/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://x[::1]/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid registry \"x[::1]\""
+  },
+  {
+    "value": "oci://localhost:/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": true,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+    "value": "oci://a:b:c/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://a:b:c/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid registry \"a:b:c\""
+  },
+  {
+    "value": "oci://reg_istry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": true,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+    "value": "oci://registré.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": true,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+    "value": "oci://reg😀.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": true,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+    "value": "oci://reg{istry}.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://reg{istry}.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid registry \"reg{istry}.example\""
+  },
+  {
+    "value": "oci://registry.example",
+    "ok": false,
+    "message": "\"oci://registry.example\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: missing registry or repository"
+  },
+  {
+    "value": "oci://registry.example/",
+    "ok": false,
+    "message": "\"oci://registry.example/\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid repository \"\""
+  },
+  {
+    "value": "oci://registry.example/shop__x/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": true,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+    "value": "oci://registry.example/shop---x/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": true,
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+    "value": "oci://registry.example/shop..x@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop..x@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid repository \"shop..x\""
+  },
+  {
+    "value": "oci://registry.example/shop/storefront:v1.0_beta-2",
+    "ok": false,
+    "tag": "v1.0_beta-2",
+    "message": "\"oci://registry.example/shop/storefront:v1.0_beta-2\" names tag v1.0_beta-2, not a digest"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront:-v1",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront:-v1\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid tag \"-v1\""
+  },
+  {
+    "value": "oci://registry.example/shop/storefront%2Fx@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront%2Fx@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: OCI reference contains an escaped path separator"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront#x",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront#x\" is not an OCI reference the operator accepts: OCI reference contains unsupported query, fragment, or path data"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/store\\x7ffront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid repository \"shop/store\\x7ffront\""
+  },
+  {
+    "value": "OCI://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"OCI://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: OCI reference must use the oci:// scheme"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid digest \"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\": invalid checksum digest length"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha256:gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@sha256:gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid digest \"sha256:gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg\": invalid checksum digest format"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha256:éééééééééééééééééééééééééééééééé",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@sha256:éééééééééééééééééééééééééééééééé\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid digest \"sha256:éééééééééééééééééééééééééééééééé\": invalid checksum digest format"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha384:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@sha384:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid digest \"sha384:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\": invalid checksum digest length"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@SHA256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@SHA256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid digest \"SHA256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\": invalid checksum digest format"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid digest \":bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\": invalid checksum digest format"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha256:",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@sha256:\" is not an OCI reference the operator accepts: parse OCI reference: invalid reference: invalid digest \"sha256:\": invalid checksum digest format"
+  },
+  {
+    "value": "",
+    "ok": false,
+    "message": "\"\" is not an OCI reference the operator accepts: OCI reference must not be empty or contain whitespace"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb ",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\\u00a0\" is not an OCI reference the operator accepts: OCI reference must not be empty or contain whitespace"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"\\u0085oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: OCI reference must not be empty or contain whitespace"
+  },
+  {
+    "value": "﻿oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"\\ufeffoci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: OCI reference must use the oci:// scheme"
+  },
+  {
+    "value": "\u000boci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"\\voci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: OCI reference must not be empty or contain whitespace"
+  },
+  {
+    "value": "oci://registry example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "ok": false,
+    "message": "\"oci://registry example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" is not an OCI reference the operator accepts: OCI reference must not be empty or contain whitespace"
+  },
+  {
+    "value": "oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\t",
+    "ok": false,
+    "message": "\"oci://registry.example/shop/storefront@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\\t\" is not an OCI reference the operator accepts: OCI reference must not be empty or contain whitespace"
+  }
+]

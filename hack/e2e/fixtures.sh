@@ -5,6 +5,8 @@
 #   storefront  waits for an approval of a plan that drops a column and grants
 #               SELECT to every role; the lead persona wrote that spec
 #   inventory   InSync, applied without an approval
+#   pricing     v1 applied without an approval, then under OnApproval: a row
+#               points it at v2 through the console's change of source
 #   billing     migrations 1-13 applied, 14-17 waiting for an approval
 #   deliveries  MySQL; release 1 applied, release 2 waiting for an approval
 #   reports     published, not applied: a row applies it and interrupts it
@@ -46,7 +48,7 @@ say 'a PostgreSQL server for the databases this repository adds'
 PASSWORD=$(cat "$OUT_DIR/postgres-password")
 postgres_server admin "$PASSWORD"
 probe_server
-for database in inventory billing journal reports catalog ledger; do
+for database in inventory pricing billing journal reports catalog ledger; do
 	postgres -c "DROP DATABASE IF EXISTS $database WITH (FORCE)" -c "CREATE DATABASE $database"
 	admin -n "$NAMESPACE" create secret generic "e2e-database-$database" \
 		--from-literal=url="postgres://postgres:$PASSWORD@e2e-postgres.$NAMESPACE.svc.cluster.local:5432/$database?sslmode=disable" \
@@ -59,6 +61,7 @@ for version in v3 v4 v5; do
 	push_schema "storefront-$version" schemas/demo "$E2E_DIR/schemas/storefront-$version.sql"
 done
 push_schema inventory-v1 schemas/inventory "$E2E_DIR/schemas/inventory-v1.sql"
+push_schema pricing-v1 schemas/pricing "$E2E_DIR/schemas/pricing-v1.sql"
 STAGE="$OUT_DIR/stage"
 rm -rf "$STAGE"
 mkdir -p "$STAGE/billing-release-1"
@@ -93,6 +96,8 @@ export INTERVAL=10m
 
 say 'inventory, applied without an approval'
 APPLY=Always render inventory "$(digest inventory-v1)" | admin apply -f - >/dev/null
+say 'pricing v1, applied without an approval'
+APPLY=Always render pricing "$(digest pricing-v1)" | admin apply -f - >/dev/null
 say 'storefront v2, applied without an approval'
 APPLY=Always "$LAB" manifest storefront "$(digest storefront-v2)" | admin apply -f - >/dev/null
 say 'billing migrations 1 to 13, applied without an approval'
@@ -101,6 +106,10 @@ say 'deliveries release 1 on MySQL, applied without an approval'
 APPLY=Always render deliveries "$(digest deliveries-release-1)" | admin apply -f - >/dev/null
 
 wait_condition ptahschema inventory InSync
+wait_condition ptahschema pricing InSync
+# What pricing plans next waits for a person: the row that changes its source
+# reaches that plan and approves nothing.
+APPLY=OnApproval render pricing "$(digest pricing-v1)" | admin apply -f - >/dev/null
 wait_condition ptahschema storefront InSync
 wait_condition ptahmigration billing Ready
 wait_condition ptahmigration deliveries Ready

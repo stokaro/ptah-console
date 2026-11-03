@@ -91,5 +91,8 @@ var procedures = map[string]procedure{
 	cv1.DecisionServiceRequestReadProcedure: across(func(r *consolev1.RequestReadRequest) *agentv1.Request {
 		return &agentv1.Request{Action: &agentv1.Request_RequestRead{RequestRead: r}}
 	}, (*agentv1.Result).GetRequestRead, true),
+	cv1.DecisionServiceSetSourceProcedure: across(func(r *consolev1.SetSourceRequest) *agentv1.Request {
+		return &agentv1.Request{Action: &agentv1.Request_SetSource{SetSource: r}}
+	}, (*agentv1.Result).GetSetSource, true),
 	cv1.WatchServiceSubscribeProcedure: {watch: true},
 }

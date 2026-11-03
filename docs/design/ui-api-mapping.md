@@ -160,9 +160,11 @@ the identity may not read is named above the list rather than left out.
 | Where the schema stands and why; its current and applied plans; every condition; the artifact and its verification; the target by reference and the drift its last read found; the operation under way; the spec as YAML | `ptahschemas` | list, watch; get when opened from a link |
 | Review the plan | the approver's plan review | as above |
 | Suspend or resume | `ptahschemas` | patch, as below |
+| Change the source | `ptahschemas` | get, patch, as below |
 
 The page's Actions menu suspends or resumes the resource and asks for a read
-where RBAC lets this identity patch it, and copies the page's link or the
+where RBAC lets this identity patch it, offers a change of source where it may
+patch it and the source is an OCI artifact, and copies the page's link or the
 `kubectl ptah` command that shows the same state; a migration's page has the
 same menu. Reviewing the plan, execution and diagnosis, and the history stay
 beside it as links.
@@ -406,6 +408,33 @@ the version the person saw. Before the person confirms, the screen says that
 a spec change retires the current plan and its approval, that suspending a
 migration while its Apply runs leaves a run someone has to acknowledge, and
 that a GitOps controller managing the object may revert the change.
+
+## Change the source
+
+| Shows | Reads | Verbs |
+| --- | --- | --- |
+| Whether this identity may change it | `selfsubjectaccessreviews`, for `patch` on the kind, as for suspend | create |
+| The reference the spec names, and what follows the change | the resource's spec and status: `spec.desired.ociRef` or `spec.artifact.ociRef`, the apply policy, suspension, the operation in flight | get, watch |
+| What the API server says of the change, and the source as it would store it | `ptahschemas` or `ptahmigrations`, as a server-side dry run | get; patch with `dryRun=All` |
+| The change itself | `ptahschemas` or `ptahmigrations` | get, patch |
+
+The change is `kubectl ptah set-source` as a typed action. The reference is
+held to the operator's own rules before anything is read: a reference pinned
+by a SHA-256 digest, parsed by oras-go as the operator parses it, in the
+browser for inline validation and again on the server. The server then reads
+the object as the person and decides from that read: it has to be the object
+the page showed, by UID, its spec has to name the reference the person saw,
+its source has to be an OCI artifact, and no Apply whose Job may exist may be
+in flight. The JSON patch tests `metadata.uid` and the `metadata.resourceVersion`
+of that read and replaces the one field, under the console's field manager.
+A write in between makes the API server refuse it; the console then decides
+again from a fresh read, three times at most, so a status write the operator
+made costs nothing and another writer's reference is reported rather than
+replaced. A resource version is not taken from the page, because the operator
+writes status between any two looks. A ConfigMap or Git source is not
+offered: moving to an artifact also names its verification policy, which is
+an edit of the resource. A read-only console sends nothing, and each change
+sent is audited with the reference it set.
 
 ## Namespaces
 

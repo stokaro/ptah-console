@@ -22,6 +22,7 @@ const applying = () =>
       jobUid: "uid-job",
       startedAt: minutesAgo(2),
       attempt: 1,
+      dispatched: true,
     }
     schema.target = {
       $typeName: "ptah.console.v1.Target",

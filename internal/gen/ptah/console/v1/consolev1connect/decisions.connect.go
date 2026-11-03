@@ -45,6 +45,8 @@ const (
 	// DecisionServiceRequestReadProcedure is the procedure name of the DecisionService's RequestRead
 	// RPC.
 	DecisionServiceRequestReadProcedure = "/ptah.console.v1.DecisionService/RequestRead"
+	// DecisionServiceSetSourceProcedure is the procedure name of the DecisionService's SetSource RPC.
+	DecisionServiceSetSourceProcedure = "/ptah.console.v1.DecisionService/SetSource"
 )
 
 var (
@@ -99,6 +101,13 @@ var (
 			Procedure:  DecisionServiceRequestReadProcedure,
 		}
 	})
+	decisionServiceSetSourceSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_ptah_console_v1_decisions_proto.Services().ByName("DecisionService").Methods().ByName("SetSource"),
+			Procedure:  DecisionServiceSetSourceProcedure,
+		}
+	})
 )
 
 // DecisionServiceClient is a client for the ptah.console.v1.DecisionService service.
@@ -121,6 +130,15 @@ type DecisionServiceClient interface {
 	// now, by setting its read-requested-at annotation to the current instant.
 	// It changes nothing else: not the spec, not the generation, not the plan.
 	RequestRead(context.Context, *v1.RequestReadRequest) (*v1.RequestReadResponse, error)
+	// SetSource points exactly the object the person saw at another OCI
+	// artifact, given as a reference pinned by digest, as kubectl ptah
+	// set-source does. It sets spec.desired.ociRef of a schema or
+	// spec.artifact.ociRef of a migration and changes nothing else: the
+	// verification policy, the registry credential, the transport and the
+	// apply policy stay as they are, and the new artifact is held to them. It
+	// refuses a ConfigMap or Git source and a resource whose Apply may already
+	// have its Job.
+	SetSource(context.Context, *v1.SetSourceRequest) (*v1.SetSourceResponse, error)
 }
 
 // NewDecisionServiceClient constructs a client for the ptah.console.v1.DecisionService service.
@@ -149,6 +167,15 @@ type DecisionServiceHandler interface {
 	// now, by setting its read-requested-at annotation to the current instant.
 	// It changes nothing else: not the spec, not the generation, not the plan.
 	RequestRead(context.Context, *v1.RequestReadRequest) (*v1.RequestReadResponse, error)
+	// SetSource points exactly the object the person saw at another OCI
+	// artifact, given as a reference pinned by digest, as kubectl ptah
+	// set-source does. It sets spec.desired.ociRef of a schema or
+	// spec.artifact.ociRef of a migration and changes nothing else: the
+	// verification policy, the registry credential, the transport and the
+	// apply policy stay as they are, and the new artifact is held to them. It
+	// refuses a ConfigMap or Git source and a resource whose Apply may already
+	// have its Job.
+	SetSource(context.Context, *v1.SetSourceRequest) (*v1.SetSourceResponse, error)
 }
 
 // RegisterDecisionServiceHandler registers svc as the ptah.console.v1.DecisionService
@@ -163,6 +190,7 @@ func RegisterDecisionServiceHandler(server *connect.Server, svc DecisionServiceH
 		connect.Method{Spec: decisionServiceAcknowledgeMigrationRunSpec(), Handler: adapter.acknowledgeMigrationRun},
 		connect.Method{Spec: decisionServiceSetSuspendedSpec(), Handler: adapter.setSuspended},
 		connect.Method{Spec: decisionServiceRequestReadSpec(), Handler: adapter.requestRead},
+		connect.Method{Spec: decisionServiceSetSourceSpec(), Handler: adapter.setSource},
 	)
 }
 
@@ -195,6 +223,10 @@ func (UnimplementedDecisionServiceHandler) SetSuspended(context.Context, *v1.Set
 
 func (UnimplementedDecisionServiceHandler) RequestRead(context.Context, *v1.RequestReadRequest) (*v1.RequestReadResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.DecisionService.RequestRead is not implemented")
+}
+
+func (UnimplementedDecisionServiceHandler) SetSource(context.Context, *v1.SetSourceRequest) (*v1.SetSourceResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "ptah.console.v1.DecisionService.SetSource is not implemented")
 }
 
 type decisionServiceClient struct {
@@ -252,6 +284,14 @@ func (c *decisionServiceClient) SetSuspended(ctx context.Context, req *v1.SetSus
 func (c *decisionServiceClient) RequestRead(ctx context.Context, req *v1.RequestReadRequest) (*v1.RequestReadResponse, error) {
 	var res v1.RequestReadResponse
 	if err := c.client.CallUnary(ctx, decisionServiceRequestReadSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *decisionServiceClient) SetSource(ctx context.Context, req *v1.SetSourceRequest) (*v1.SetSourceResponse, error) {
+	var res v1.SetSourceResponse
+	if err := c.client.CallUnary(ctx, decisionServiceSetSourceSpec(), req, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -337,6 +377,18 @@ func (h decisionServiceHandler) requestRead(ctx context.Context, _ connect.Spec,
 		return err
 	}
 	res, err := h.svc.RequestRead(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h decisionServiceHandler) setSource(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SetSourceRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SetSource(ctx, &req)
 	if err != nil {
 		return err
 	}

@@ -32,7 +32,7 @@ func TestALineHasExactlyTheFixedFields(t *testing.T) {
 	c.Assert(slices.Sorted(maps.Keys(line)), qt.DeepEquals, []string{
 		"account", "action", "address", "at", "auditID", "context", "identity", "kind", "level", "msg",
 		"name", "namespace", "outcome", "plan", "planFingerprint", "planUID", "reason",
-		"requestID", "time", "uid",
+		"reference", "requestID", "time", "uid",
 	})
 	c.Assert(line["msg"], qt.Equals, "audit")
 	c.Assert(line["identity"], qt.Equals, "alice")

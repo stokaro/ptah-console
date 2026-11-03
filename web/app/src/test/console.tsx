@@ -18,6 +18,8 @@ import {
   type GetDecisionRequest,
   type RequestReadRequest,
   type RequestReadResponseSchema,
+  type SetSourceRequest,
+  type SetSourceResponseSchema,
   type SetSuspendedRequest,
   type SetSuspendedResponseSchema,
 } from "../gen/ptah/console/v1/decisions_pb"
@@ -254,6 +256,11 @@ export interface Fixture {
   setSuspended?: (
     request: SetSuspendedRequest
   ) => MessageInitShape<typeof SetSuspendedResponseSchema>
+  /**
+   * How a change of source is answered; a dry run is accepted and a change
+   * admitted by default, at generation 5.
+   */
+  setSource?: (request: SetSourceRequest) => MessageInitShape<typeof SetSourceResponseSchema>
   /** How a request to read now is answered; admitted, at the current instant, by default. */
   requestRead?: (request: RequestReadRequest) => MessageInitShape<typeof RequestReadResponseSchema>
   /** What diagnostics answer, or how they answer the request they were sent. */
@@ -552,6 +559,16 @@ export function consoleTransport(fixture: Fixture) {
       approveSchemaPlan: async (request) => ({ result: await fixture.approve?.(request) }),
       acknowledgeMigrationRun: (request) => ({ result: fixture.acknowledge?.(request) }),
       setSuspended: (request) => fixture.setSuspended?.(request) ?? {},
+      setSource: (request) =>
+        fixture.setSource?.(request) ?? {
+          outcome: DecisionOutcome.ADMITTED,
+          dryRun: request.dryRun,
+          changed: !request.dryRun,
+          field: "spec.desired.ociRef",
+          previous: request.fromReference,
+          generation: 5n,
+          sourceYaml: `desired:\n  ociRef: ${request.reference}\n`,
+        },
       requestRead: (request) =>
         fixture.requestRead?.(request) ?? {
           outcome: DecisionOutcome.ADMITTED,

@@ -63,7 +63,7 @@ serves no other:
 | List and get schemas, migrations, plans and decisions | reads through the same typed client and `pkg/planread` as phase 1 |
 | Diagnostics | the Jobs, Pods, Events and log excerpts phase 1 reads, by the references status names |
 | Watch window | one watch of at most 30 seconds, as the mapped user |
-| Approve, acknowledge, suspend | the same writes as phase 1, as the mapped user |
+| Approve, acknowledge, suspend, ask for a read, change the source, create | the same writes as phase 1, as the mapped user |
 
 Each request carries an envelope: request ID, console instance, the console
 session's generation, the immutable account ID and a deadline. Every frame

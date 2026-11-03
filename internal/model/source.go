@@ -25,7 +25,7 @@ func schemaSource(schema *operatorv1alpha1.PtahSchema) *consolev1.Source {
 			out.Resolved, out.ContentDigest = git.Commit, git.ContentDigest
 		}
 	default:
-		out.Kind = consolev1.SourceKind_SOURCE_KIND_OCI
+		out.Kind, out.SpecReference = consolev1.SourceKind_SOURCE_KIND_OCI, spec.OCIRef
 		out.Requested = firstOf(status.RequestedReference, spec.OCIRef)
 		out.Resolved, out.Digest, out.Verified = status.ResolvedReference, status.Digest, status.Verified
 		out.VerifiedAt = timestamp(status.VerifiedAt)
@@ -50,7 +50,7 @@ func migrationSource(migration *operatorv1alpha1.PtahMigration, c conditions) *c
 			out.Resolved, out.ContentDigest = artifact.Git.Commit, artifact.Git.ContentDigest
 		}
 	default:
-		out.Kind, out.Requested = consolev1.SourceKind_SOURCE_KIND_OCI, spec.OCIRef
+		out.Kind, out.Requested, out.SpecReference = consolev1.SourceKind_SOURCE_KIND_OCI, spec.OCIRef, spec.OCIRef
 		if artifact != nil {
 			out.Resolved, out.Digest = artifact.ResolvedReference, artifact.Digest
 			out.Verified = c.is(operatorv1alpha1.ConditionArtifactVerified, metav1.ConditionTrue)
