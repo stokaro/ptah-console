@@ -45,6 +45,7 @@ say 'a PostgreSQL server for the databases this repository adds'
 	head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' >"$OUT_DIR/postgres-password"
 PASSWORD=$(cat "$OUT_DIR/postgres-password")
 postgres_server admin "$PASSWORD"
+probe_server
 for database in inventory billing journal reports catalog ledger; do
 	postgres -c "DROP DATABASE IF EXISTS $database WITH (FORCE)" -c "CREATE DATABASE $database"
 	admin -n "$NAMESPACE" create secret generic "e2e-database-$database" \
