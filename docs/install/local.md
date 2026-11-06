@@ -31,12 +31,14 @@ sha256sum --check --ignore-missing SHA256SUMS
 gh attestation verify "ptah-console_${version}_linux_amd64.tar.gz" \
   --repo stokaro/ptah-console --signer-workflow stokaro/ptah-console/.github/workflows/release.yml
 tar -xzf "ptah-console_${version}_linux_amd64.tar.gz" ptah-console
+mkdir -p ~/.local/bin
 install -m 0755 ptah-console ~/.local/bin/
 ```
 
 The archives for macOS end in `_darwin_amd64.tar.gz` or `_darwin_arm64.tar.gz`,
-and the Windows ones are `.zip`. `ptah-console version` names the version and
-says the web app is in it.
+and the Windows ones are `.zip`. Add `~/.local/bin` to your `PATH` if it is not
+there yet. `ptah-console version` names the version and says the web app is in
+it.
 
 ## Run
 
