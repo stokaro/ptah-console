@@ -8,7 +8,7 @@ require (
 	connectrpc.com/connect/v2 v2.0.1
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/frankban/quicktest v1.14.6
-	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/go-jose/go-jose/v4 v4.1.9
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/crypto v0.58.0
 	google.golang.org/protobuf v1.36.12
