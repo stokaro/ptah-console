@@ -27,6 +27,8 @@ The console runs two ways:
 what impersonation cannot contain. [Compatibility](docs/compatibility.md)
 names the operator and Kubernetes versions, and [Releases](docs/releases.md)
 how to verify what you download.
+[Compared with SchemaHero](docs/compared-with-schemahero.md) shows what each job
+looks like here and there.
 
 The plan this console follows is
 [stokaro/ptah-operator#587](https://github.com/stokaro/ptah-operator/issues/587),
