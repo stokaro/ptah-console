@@ -30,7 +30,7 @@ not itself a release.
 ## Verify before you install
 
 ```sh
-version=0.3.0
+version=0.3.1
 repository=stokaro/ptah-console
 workflow="$repository/.github/workflows/release.yml"
 

@@ -8,9 +8,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/version: "0.3.1"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.0
+    helm.sh/chart: ptah-console-0.3.1
 
 ---
 # Source: ptah-console/templates/configmap.yaml
@@ -22,9 +22,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/version: "0.3.1"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.0
+    helm.sh/chart: ptah-console-0.3.1
 data:
   configuration.yaml: |
     apiVersion: console.ptah.run/v1alpha1
@@ -48,9 +48,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/version: "0.3.1"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.0
+    helm.sh/chart: ptah-console-0.3.1
 rules:
   - apiGroups: [""]
     resources: ["users"]
@@ -67,9 +67,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/version: "0.3.1"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.0
+    helm.sh/chart: ptah-console-0.3.1
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -89,9 +89,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/version: "0.3.1"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.0
+    helm.sh/chart: ptah-console-0.3.1
 rules:
   - apiGroups:
     - operator.ptah.run
@@ -118,9 +118,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/version: "0.3.1"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.0
+    helm.sh/chart: ptah-console-0.3.1
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -140,9 +140,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/version: "0.3.1"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.0
+    helm.sh/chart: ptah-console-0.3.1
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -162,9 +162,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/version: "0.3.1"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.0
+    helm.sh/chart: ptah-console-0.3.1
 spec:
   type: ClusterIP
   selector:
@@ -186,9 +186,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/version: "0.3.1"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.0
+    helm.sh/chart: ptah-console-0.3.1
 spec:
   # Sessions live in the one replica's memory; a rollout replaces it whole.
   replicas: 1
@@ -204,7 +204,7 @@ spec:
         app.kubernetes.io/name: ptah-console
         app.kubernetes.io/instance: console
       annotations:
-        checksum/configuration: 457ab3b201860a715cc77e5b95cde202274ee0dda105fd225c8cd4682d19c53b
+        checksum/configuration: d6423e863f9b8adbc6d5d510abe03c99df71b8b1584974e42581273fdd58c5e0
     spec:
       serviceAccountName: console-ptah-console
       automountServiceAccountToken: true
@@ -216,7 +216,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: console
-          image: ghcr.io/stokaro/ptah-console:0.3.0
+          image: ghcr.io/stokaro/ptah-console:0.3.1
           imagePullPolicy: IfNotPresent
           args:
             - serve
