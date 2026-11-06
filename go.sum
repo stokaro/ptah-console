@@ -38,8 +38,8 @@ github.com/go-extras/nolintguard v0.4.2 h1:Y0+Y5PYuEAGYCdcmQesWTCvLXqVSbINJDy8+S
 github.com/go-extras/nolintguard v0.4.2/go.mod h1:nRqJ7rc4y9j7OXHetTlCbUwYZqMVSsohvRnz8v4Had4=
 github.com/go-extras/qtlint v1.15.0 h1:r2AqBqVilr1uONzv7oE1yPEhOMU5ul3e6eQwji41rWA=
 github.com/go-extras/qtlint v1.15.0/go.mod h1:fR+NpGY2oX5m5dEnkqUUih1GNYLEDJX8WVowPcKM3Cs=
-github.com/go-jose/go-jose/v4 v4.1.4 h1:moDMcTHmvE6Groj34emNPLs/qtYXRVcd6S7NHbHz3kA=
-github.com/go-jose/go-jose/v4 v4.1.4/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
+github.com/go-jose/go-jose/v4 v4.1.9 h1:pKfeQkig1NmgK4hJrZYXLEYURXfoJB61Larw0uIW4gY=
+github.com/go-jose/go-jose/v4 v4.1.9/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
 github.com/go-logr/logr v1.4.3 h1:CjnDlHq8ikf6E492q6eKboGOC0T8CDaOvkHCIg8idEI=
 github.com/go-logr/logr v1.4.3/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
