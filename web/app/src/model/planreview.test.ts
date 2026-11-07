@@ -3,12 +3,13 @@ import { timestampFromDate } from "@bufbuild/protobuf/wkt"
 import { describe, expect, it } from "vitest"
 
 import { DecisionSchema, DecisionState } from "../gen/ptah/console/v1/decisions_pb"
-import { SchemaSchema, SqlAccess } from "../gen/ptah/console/v1/resources_pb"
+import { MigrationPlanSchema, SchemaSchema, SqlAccess } from "../gen/ptah/console/v1/resources_pb"
 import { storedPlan } from "../test/console"
 import {
   approvalChecks,
   filterStatements,
   integrity,
+  planReadCheck,
   statementTypes,
   tombstone,
 } from "./planreview"
@@ -118,16 +119,32 @@ describe("A plan the link named", () => {
 })
 
 describe("The checks before an approval", () => {
-  const base = { current: true, open: true, allowed: "allowed" as const, namespace: "application" }
+  const base = {
+    current: true,
+    open: true,
+    allowed: "allowed" as const,
+    namespace: "application",
+    planRead: planReadCheck({ plan: storedPlan(), failed: false }),
+  }
 
   it("all pass for a current plan an approver may approve", () => {
     expect(approvalChecks({ ...base, contractSupported: true }).map((check) => check.tone)).toEqual(
-      ["ok", "ok", "ok", "ok"]
+      ["ok", "ok", "ok", "ok", "ok"]
     )
   })
 
   it("leave the contract out for a migration, whose SQL the console does not read", () => {
-    expect(approvalChecks(base).map((check) => check.label)).toEqual([
+    const planRead = planReadCheck({ plan: create(MigrationPlanSchema), failed: false })
+    expect(approvalChecks({ ...base, planRead }).map((check) => check.label)).toEqual([
+      "The plan you read is the current plan",
+      "The operator waits for the decision",
+      "The console read this plan's steps",
+      "This identity may create approvals in application",
+    ])
+  })
+
+  it("leave the read out while there is no plan to read", () => {
+    expect(approvalChecks({ ...base, planRead: undefined }).map((check) => check.label)).toEqual([
       "The plan you read is the current plan",
       "The operator waits for the decision",
       "This identity may create approvals in application",
@@ -144,5 +161,36 @@ describe("The checks before an approval", () => {
   ])("fail on %j", (change, label) => {
     const checks = approvalChecks({ ...base, contractSupported: true, ...change })
     expect(checks.find((check) => check.tone !== "ok")?.label).toBe(label)
+  })
+})
+
+describe("The check on the plan read", () => {
+  const read = (access: SqlAccess) =>
+    planReadCheck({ plan: storedPlan((plan) => (plan.sqlAccess = access)), failed: false })
+
+  it.each([
+    [SqlAccess.UNSPECIFIED, "bad", "Whether this plan can be read is not known"],
+    [SqlAccess.NOT_GRANTED, "bad", "This identity may not read this plan's SQL"],
+    [SqlAccess.INTEGRITY_FAILED, "bad", "The stored plan failed verification"],
+    [SqlAccess.UNSUPPORTED, "bad", "This console does not read the form this plan is written in"],
+    [SqlAccess.AVAILABLE, "ok", "The console read and verified this plan"],
+  ])("answers SQL access %s", (access, tone, label) => {
+    expect(read(access)).toMatchObject({ tone, label })
+  })
+
+  it("fails on a read that failed, even with the plan an earlier read returned", () => {
+    expect(planReadCheck({ plan: storedPlan(), failed: true })).toMatchObject({
+      tone: "bad",
+      label: "The console could not read this plan",
+    })
+    expect(planReadCheck({ failed: true }).tone).toBe("bad")
+  })
+
+  it("waits for a read that is running, and offers nothing meanwhile", () => {
+    expect(planReadCheck({ failed: false }).tone).toBe("run")
+  })
+
+  it("passes a migration plan, which has no SQL to verify, once it read", () => {
+    expect(planReadCheck({ plan: create(MigrationPlanSchema), failed: false }).tone).toBe("ok")
   })
 })

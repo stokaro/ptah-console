@@ -207,7 +207,9 @@ const (
 	DecisionOutcome_DECISION_OUTCOME_CHANGED DecisionOutcome = 2
 	// RBAC refused the identity.
 	DecisionOutcome_DECISION_OUTCOME_FORBIDDEN DecisionOutcome = 3
-	// The operator's admission refused the decision.
+	// The operator's admission or the API server refused the decision, or the
+	// console did because it could not read and verify the plan. Nothing was
+	// stored.
 	DecisionOutcome_DECISION_OUTCOME_REFUSED DecisionOutcome = 4
 	// The submission was sent and no answer came back. It may have been
 	// stored; read it back by name before doing anything else.
@@ -915,7 +917,8 @@ func (x *AcknowledgeMigrationRunRequest) GetOperationId() string {
 type DecisionResult struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Outcome DecisionOutcome        `protobuf:"varint,1,opt,name=outcome,proto3,enum=ptah.console.v1.DecisionOutcome" json:"outcome,omitempty"`
-	// The API server's or admission's own words, or the console's for CHANGED.
+	// The API server's or admission's own words, or the console's when it sent
+	// nothing.
 	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	// The object's name, whatever the outcome, so it can be read back.
 	Name          string    `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`

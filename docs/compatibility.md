@@ -19,9 +19,10 @@ across versions. Pin both, and move them together the way this table says.
 
 What the console checks while it runs, rather than trusting the table:
 
-- It approves a schema plan only when the plan's `spec.contractVersion` is one
-  its plan reader supports. Any other plan is shown with the reason, and the
-  approve action is off.
+- It approves a schema plan only when its plan reader read and verified the
+  plan as the person approving. A plan under another `spec.contractVersion`, or
+  a document this build does not decode at the same version, is shown with the
+  reason, the approve action is off, and the server refuses one sent anyway.
 - It reads the API group, version and kinds it uses through discovery, which
   every authenticated identity may read, and says when the cluster does not
   serve them.

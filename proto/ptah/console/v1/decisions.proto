@@ -21,10 +21,12 @@ service DecisionService {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 
-  // ApproveSchemaPlan approves exactly the plan the person reviewed.
+  // ApproveSchemaPlan approves exactly the plan the person reviewed, and only
+  // a plan the console read and verified as that person.
   rpc ApproveSchemaPlan(ApproveSchemaPlanRequest) returns (ApproveSchemaPlanResponse) {}
 
-  // ApproveMigrationPlan approves exactly the plan the person reviewed.
+  // ApproveMigrationPlan approves exactly the plan the person reviewed, and
+  // only a plan the console read as that person.
   rpc ApproveMigrationPlan(ApproveMigrationPlanRequest) returns (ApproveMigrationPlanResponse) {}
 
   // AcknowledgeMigrationRun settles exactly one unresolved run. It does not
@@ -156,7 +158,9 @@ enum DecisionOutcome {
   DECISION_OUTCOME_CHANGED = 2;
   // RBAC refused the identity.
   DECISION_OUTCOME_FORBIDDEN = 3;
-  // The operator's admission refused the decision.
+  // The operator's admission or the API server refused the decision, or the
+  // console did because it could not read and verify the plan. Nothing was
+  // stored.
   DECISION_OUTCOME_REFUSED = 4;
   // The submission was sent and no answer came back. It may have been
   // stored; read it back by name before doing anything else.
@@ -165,7 +169,8 @@ enum DecisionOutcome {
 
 message DecisionResult {
   DecisionOutcome outcome = 1;
-  // The API server's or admission's own words, or the console's for CHANGED.
+  // The API server's or admission's own words, or the console's when it sent
+  // nothing.
   string message = 2;
   // The object's name, whatever the outcome, so it can be read back.
   string name = 3;

@@ -11,6 +11,8 @@
 #                                     wait for a plan to approve, print it
 #   act.sh plan <kind> <name>         print the plan a resource waits on
 #   act.sh applied storefront         print the plan storefront last applied
+#   act.sh lose-chunk <schema>        delete a chunk of the plan a schema waits
+#                                     on, and print the plan
 #   act.sh fail journal               apply the journal migrations that fail
 #   act.sh run reports                apply the reports migrations
 #   act.sh interrupt reports          delete the Apply Job while it runs, and
@@ -162,6 +164,17 @@ plan)
 	;;
 applied)
 	admin -n "$NAMESPACE" get "ptahschema/$1" -o jsonpath='{.status.applied.planRef.name}'
+	;;
+lose-chunk)
+	# The operator's store reads this as a plan that no longer holds together.
+	# It writes a missing chunk again the next time it publishes the plan, so
+	# a row calls next-read first and is done before that read.
+	schema=${1:?name a schema}
+	plan=$(plan_of ptahschema "$schema")
+	[ -n "$plan" ] || fail "ptahschema/$schema waits on no plan"
+	chunk=$(admin -n "$NAMESPACE" get "ptahschemaplan/$plan" -o json | jq -r '.spec.chunks[-1].name')
+	admin -n "$NAMESPACE" delete "ptahschemaplanchunk/$chunk" >/dev/null
+	printf '%s\n' "$plan"
 	;;
 fail)
 	[ "${1:-}" = journal ] || fail 'only journal fails'

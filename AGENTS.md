@@ -45,7 +45,8 @@ a change to #588 first.
   own integrity checks; nothing renders a partial or unverified plan.
 - An approval names the exact owner and plan UIDs and the fingerprint the
   person reviewed. The console re-reads before sending and never approves
-  "whatever is current". Admission stamps who approved.
+  "whatever is current". The server refuses a plan it could not read and verify
+  as that person, whatever the page sends. Admission stamps who approved.
 - A capability check (`SelfSubjectAccessReview`) is a hint for the UI. The real
   request decides. Unknown is shown as unavailable.
 - Cluster data is untrusted text: SQL, annotations, Events and logs render as

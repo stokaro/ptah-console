@@ -34,6 +34,17 @@ current plan is no longer the one the person reviewed (owner UID, plan name
 and UID, fingerprint, contract version), nothing is created and the screen
 shows the plan that replaced it.
 
+The server then reads the plan as the person, through the operator's plan
+reader for a schema plan and as the plan object for a migration plan. If that
+read does not return the plan whole, nothing is created, the outcome is
+refused, and the audit records why. This covers a plan that failed
+verification, one in a form this console does not read, an identity that may
+not read it, and a read that failed. The screens offer no approval in those
+states, and they do not decide it: the server does, whatever a page sends. An
+identity that may approve and may not read the chunks is refused too. The grants
+above, which `<release>-approver` holds, are what an approval through the console
+needs.
+
 The operator chart's `<release>-approver` ClusterRole grants all of the above.
 The operator's `examples/approver-plan-reader-role.yaml` grants `get` only: a
 reviewer bound to it can open a plan from a link, and sees no queue, because
@@ -244,9 +255,10 @@ order before any SQL is shown, the manifest alone for an identity that may not
 read the chunks, and nothing of a plan that failed a check. The SQL can be
 filtered, or narrowed to the marked statements, and keeps the plan's
 numbering. The approval panel lists what the console checks before it offers
-to send one: the plan read is the current one, its contract is one the console
-reads, for a schema plan, and RBAC lets this identity create the approval;
-admission and the operator decide again either way. A link that names a plan
+to send one: the plan read is the current one, the console read and verified
+it, its contract is one the console reads, for a schema plan, and RBAC lets this
+identity create the approval; admission and the operator decide again either
+way. A link that names a plan
 by `?plan=` says when that plan is no longer current, what replaced it, and
 what the journal and the decisions record of it, and approves nothing from it.
 

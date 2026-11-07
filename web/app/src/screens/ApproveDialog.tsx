@@ -8,6 +8,7 @@ import { useState } from "react"
 import { useSession } from "../api/resources"
 import { DecisionKind, DecisionService } from "../gen/ptah/console/v1/decisions_pb"
 import { MigrationService, PlanSelection, SchemaService } from "../gen/ptah/console/v1/resources_pb"
+import { planReadCheck } from "../model/planreview"
 import { readingAgain, type ResourceView } from "../model/resource"
 import { where } from "./common"
 import { DecisionDialog } from "./DecisionDialog"
@@ -66,9 +67,13 @@ export function ApproveDialog({
   const approveMigration = useMutation(DecisionService.method.approveMigrationPlan)
 
   const read = isSchema ? schemaPlan.data?.plan : migrationPlan.data?.plan
-  if (!held && read) {
-    // The first reading is the plan this dialog approves, whatever later
-    // readings say.
+  const readCheck = planReadCheck({
+    plan: read,
+    failed: Boolean(isSchema ? schemaPlan.error : migrationPlan.error),
+  })
+  if (!held && read && readCheck.tone === "ok") {
+    // The first reading the console could verify is the plan this dialog
+    // approves, whatever later readings say.
     setHeld({
       ownerUid: resource.ref.uid,
       name: read.name,
@@ -128,7 +133,9 @@ export function ApproveDialog({
       title={`Approve ${plan?.name ?? resource.plan?.name ?? "this plan"}?`}
       explanation={
         !plan
-          ? "Reading the plan…"
+          ? readCheck.tone === "bad"
+            ? `${readCheck.label}. ${readCheck.note}`
+            : "Reading the plan…"
           : resource.approvalOpen
             ? `Sends the exact plan you reviewed (${shortDigest(fingerprint)}). Admission records you as the approver.`
             : `${readingAgain(resource)} Confirm waits for it.`

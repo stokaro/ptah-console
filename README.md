@@ -55,7 +55,8 @@ The page has four views of the same resources:
 - **Approver**: plans waiting for a decision. A plan shows what it changes and
   its exact SQL, read through the operator's integrity-checked plan reader and
   shown as plain text. Approving sends that plan, by UID and fingerprint, and
-  nothing else; admission records who approved.
+  nothing else; admission records who approved. A plan the console could not
+  read and verify cannot be approved here.
 - **Developer**: each schema and migration as steps, with one sentence on
   where it stands and what happened.
 - **On call**: what needs a person, the next step the operator supports, and
@@ -99,6 +100,8 @@ issued:
   follows it until the operator has applied it and verified it by a fresh read;
 - a plan replaced while the approver decides is not approved, and the page
   says so;
+- a plan whose stored chunk is gone is not offered, and an approval sent anyway
+  is refused;
 - migrations 14 to 17 are approved without SQL the operator API does not carry;
 - on call, a failed run shows the evidence Kubernetes still keeps and the end
   of its log;

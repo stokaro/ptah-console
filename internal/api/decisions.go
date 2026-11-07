@@ -174,13 +174,47 @@ type submission struct {
 }
 
 // approval is one plan approval on its way: the owner and plan the person
-// reviewed, and how to tell whether they are still current.
+// reviewed, and how to tell whether an approval of them may be sent.
 type approval struct {
 	kind        consolev1.DecisionKind
 	namespace   string
 	owner, plan operatorv1alpha1.ImmutableObjectReference
 	fingerprint string
-	changed     func(context.Context, client.Client) (string, error)
+	// held reads the owner and the plan again and says why nothing may be sent,
+	// or nil when the approval may be. An error is a failed read of the owner.
+	held func(context.Context, client.Client) (*hold, error)
+}
+
+// hold is why a decision is not sent: what the person reviewed is no longer
+// current, or the console could not read and verify it. The message goes to
+// the person and to the audit, so it carries no text the cluster wrote.
+type hold struct {
+	outcome consolev1.DecisionOutcome
+	message string
+}
+
+func planChanged(message string) *hold {
+	return &hold{outcome: consolev1.DecisionOutcome_DECISION_OUTCOME_CHANGED, message: message}
+}
+
+func planRefused(message string) *hold {
+	return &hold{outcome: consolev1.DecisionOutcome_DECISION_OUTCOME_REFUSED, message: message}
+}
+
+// planNotRead is the refusal of a plan the console could not read or verify,
+// told apart the way the plan page tells them apart. Nobody can review such a
+// plan here, so nothing goes out in their name.
+func planNotRead(err error) *hold {
+	switch {
+	case errors.Is(err, planread.ErrIntegrity):
+		return planRefused("The stored plan failed verification, so nobody can review it here. Nothing was approved.")
+	case errors.Is(err, planread.ErrUnsupported):
+		return planRefused("This plan is written in a form this console does not read, so nobody can review it here. Approve it with a console built for it. Nothing was approved.")
+	case apierrors.IsForbidden(err):
+		return planRefused("This identity may not read the whole plan, so it cannot review what it would approve. Nothing was approved.")
+	default:
+		return planRefused("The console could not read the plan, so it cannot say what an approval would approve. Try again. Nothing was approved.")
+	}
 }
 
 // approvalKinds names, for each kind of approval, the action, the owner's
@@ -207,8 +241,9 @@ func ref(name, uid string) operatorv1alpha1.ImmutableObjectReference {
 	return operatorv1alpha1.ImmutableObjectReference{Name: name, UID: types.UID(uid)}
 }
 
-// approve reads the owner again and sends the approval only if the plan the
-// person reviewed is still the current one.
+// approve reads the owner and the plan again, and sends the approval only if
+// the plan the person reviewed is still the current one and the console read
+// and verified it.
 func (d *DecisionService) approve(ctx context.Context, a approval) (*consolev1.DecisionResult, error) {
 	names := approvalKinds[a.kind]
 	if err := d.scope.check([]string{a.namespace}); err != nil {
@@ -229,10 +264,14 @@ func (d *DecisionService) approve(ctx context.Context, a approval) (*consolev1.D
 		Namespace: a.namespace, Kind: names.ownerKind, Name: a.owner.Name, UID: string(a.owner.UID),
 		PlanName: a.plan.Name, PlanUID: string(a.plan.UID), PlanFingerprint: a.fingerprint,
 	}
-	if changed, err := a.changed(ctx, c); err != nil {
+	held, err := a.held(ctx, c)
+	if err != nil {
+		event.Outcome, event.Reason = audit.Failed, "The console could not read the "+names.ownerField+". Nothing was approved."
+		d.audit.Record(ctx, event)
 		return nil, readError(err, "the "+names.ownerField)
-	} else if changed != "" {
-		return d.changed(ctx, event, changed), nil
+	}
+	if held != nil {
+		return d.notSent(ctx, event, *held), nil
 	}
 	return d.submit(ctx, c, submission{
 		action: names.action, kind: a.kind, principal: principal, event: event, object: a.object(),
@@ -241,13 +280,15 @@ func (d *DecisionService) approve(ctx context.Context, a approval) (*consolev1.D
 }
 
 // ApproveSchemaPlan approves exactly the plan the person reviewed. The schema
-// is read again first; if its current plan is not that plan, nothing is sent.
+// and the plan are read again first, as the person: if the schema's current
+// plan is not that plan, or the plan reader does not return it whole and
+// verified, nothing is sent.
 func (d *DecisionService) ApproveSchemaPlan(ctx context.Context, request *consolev1.ApproveSchemaPlanRequest) (*consolev1.ApproveSchemaPlanResponse, error) {
 	result, err := d.approve(ctx, approval{
 		kind: consolev1.DecisionKind_DECISION_KIND_SCHEMA_APPROVAL, namespace: request.GetNamespace(),
 		owner: ref(request.GetSchemaName(), request.GetSchemaUid()), plan: ref(request.GetPlanName(), request.GetPlanUid()),
 		fingerprint: request.GetPlanFingerprint(),
-		changed:     func(ctx context.Context, c client.Client) (string, error) { return schemaPlanChanged(ctx, c, request) },
+		held:        func(ctx context.Context, c client.Client) (*hold, error) { return schemaPlanHeld(ctx, c, request) },
 	})
 	if err != nil {
 		return nil, err
@@ -255,33 +296,38 @@ func (d *DecisionService) ApproveSchemaPlan(ctx context.Context, request *consol
 	return &consolev1.ApproveSchemaPlanResponse{Result: result}, nil
 }
 
-// schemaPlanChanged says why the schema's current plan is not the one the
-// request names, or nothing when it is.
-func schemaPlanChanged(ctx context.Context, c client.Client, request *consolev1.ApproveSchemaPlanRequest) (string, error) {
+// schemaPlanHeld says why an approval of the plan the request names may not be
+// sent, or nothing when it may.
+func schemaPlanHeld(ctx context.Context, c client.Client, request *consolev1.ApproveSchemaPlanRequest) (*hold, error) {
 	schema := &operatorv1alpha1.PtahSchema{}
 	if err := c.Get(ctx, types.NamespacedName{Namespace: request.GetNamespace(), Name: request.GetSchemaName()}, schema); err != nil {
-		return "", err
+		return nil, err
 	}
 	current := schema.Status.Plan
 	switch {
 	case string(schema.UID) != request.GetSchemaUid():
-		return "The schema was deleted and created again since you reviewed it. Nothing was approved.", nil
+		return planChanged("The schema was deleted and created again since you reviewed it. Nothing was approved."), nil
 	case current == nil:
-		return "The schema no longer has a plan waiting. Nothing was approved.", nil
+		return planChanged("The schema no longer has a plan waiting. Nothing was approved."), nil
 	case current.Name != request.GetPlanName() || string(current.UID) != request.GetPlanUid() || current.Fingerprint != request.GetPlanFingerprint():
-		return "A newer plan replaced the one you reviewed. Nothing was approved.", nil
+		return planChanged("A newer plan replaced the one you reviewed. Nothing was approved."), nil
 	}
-	plan := &operatorv1alpha1.PtahSchemaPlan{}
-	if err := c.Get(ctx, types.NamespacedName{Namespace: request.GetNamespace(), Name: request.GetPlanName()}, plan); err != nil {
-		return "", err
-	}
+
+	read, err := planread.Load(ctx, c, request.GetNamespace(), request.GetSchemaName(), planread.Current)
 	switch {
-	case string(plan.UID) != request.GetPlanUid():
-		return "The plan under that name is a different object now. Nothing was approved.", nil
-	case !planread.SupportedContract(plan.Spec.ContractVersion) || plan.Spec.ContractVersion != request.GetContractVersion():
-		return fmt.Sprintf("The plan was written under contract %d, which this console does not approve. Nothing was approved.", plan.Spec.ContractVersion), nil
+	case errors.Is(err, planread.ErrSchemaNotFound), errors.Is(err, planread.ErrNoPlan):
+		return planChanged("The plan you reviewed is no longer stored. Nothing was approved."), nil
+	case err != nil:
+		return planNotRead(err), nil
+	// The reader resolved the current plan for itself, so the plan it verified
+	// is the one approved only if it is the one the request names.
+	case string(read.PlanUID) != request.GetPlanUid() || read.Fingerprint != request.GetPlanFingerprint():
+		return planChanged("A newer plan replaced the one you reviewed. Nothing was approved."), nil
+	case read.Manifest.Spec.ContractVersion != request.GetContractVersion():
+		return planChanged(fmt.Sprintf("You reviewed this plan under contract %d, and it records contract %d. Nothing was approved.",
+			request.GetContractVersion(), read.Manifest.Spec.ContractVersion)), nil
 	}
-	return "", nil
+	return nil, nil
 }
 
 // ApproveMigrationPlan approves exactly the plan the person reviewed.
@@ -290,9 +336,7 @@ func (d *DecisionService) ApproveMigrationPlan(ctx context.Context, request *con
 		kind: consolev1.DecisionKind_DECISION_KIND_MIGRATION_APPROVAL, namespace: request.GetNamespace(),
 		owner: ref(request.GetMigrationName(), request.GetMigrationUid()), plan: ref(request.GetPlanName(), request.GetPlanUid()),
 		fingerprint: request.GetPlanFingerprint(),
-		changed: func(ctx context.Context, c client.Client) (string, error) {
-			return migrationPlanChanged(ctx, c, request)
-		},
+		held:        func(ctx context.Context, c client.Client) (*hold, error) { return migrationPlanHeld(ctx, c, request) },
 	})
 	if err != nil {
 		return nil, err
@@ -300,26 +344,39 @@ func (d *DecisionService) ApproveMigrationPlan(ctx context.Context, request *con
 	return &consolev1.ApproveMigrationPlanResponse{Result: result}, nil
 }
 
-func migrationPlanChanged(ctx context.Context, c client.Client, request *consolev1.ApproveMigrationPlanRequest) (string, error) {
+// migrationPlanHeld says why an approval of the plan the request names may not
+// be sent, or nothing when it may. A migration plan stores no SQL and no chunk:
+// what a person reviews is the plan object itself, so the checks here are the
+// ones GetMigrationPlan holds it to before it shows it.
+func migrationPlanHeld(ctx context.Context, c client.Client, request *consolev1.ApproveMigrationPlanRequest) (*hold, error) {
 	migration := &operatorv1alpha1.PtahMigration{}
 	if err := c.Get(ctx, types.NamespacedName{Namespace: request.GetNamespace(), Name: request.GetMigrationName()}, migration); err != nil {
-		return "", err
+		return nil, err
 	}
 	current := migration.Status.Plan
 	switch {
 	case string(migration.UID) != request.GetMigrationUid():
-		return "The migration was deleted and created again since you reviewed it. Nothing was approved.", nil
+		return planChanged("The migration was deleted and created again since you reviewed it. Nothing was approved."), nil
 	case current == nil || current.Name != request.GetPlanName() || string(current.UID) != request.GetPlanUid():
-		return "A newer plan replaced the one you reviewed. Nothing was approved.", nil
+		return planChanged("A newer plan replaced the one you reviewed. Nothing was approved."), nil
 	}
+
 	plan := &operatorv1alpha1.PtahMigrationPlan{}
-	if err := c.Get(ctx, types.NamespacedName{Namespace: request.GetNamespace(), Name: request.GetPlanName()}, plan); err != nil {
-		return "", err
+	err := c.Get(ctx, types.NamespacedName{Namespace: request.GetNamespace(), Name: request.GetPlanName()}, plan)
+	switch {
+	case apierrors.IsNotFound(err):
+		return planChanged("The plan you reviewed is no longer stored. Nothing was approved."), nil
+	case err != nil:
+		return planNotRead(err), nil
+	case string(plan.UID) != request.GetPlanUid() || plan.Spec.Fingerprint != request.GetPlanFingerprint():
+		return planChanged("The plan under that name is not the one you reviewed. Nothing was approved."), nil
+	case plan.Spec.MigrationRef.UID != migration.UID:
+		return planRefused("The stored plan belongs to another migration, so nobody can review it here. Nothing was approved."), nil
+	case !planread.SupportedContract(plan.Spec.ContractVersion):
+		return planRefused(fmt.Sprintf("The plan was written under contract %d, which this console does not read. Approve it with a console built for it. Nothing was approved.",
+			plan.Spec.ContractVersion)), nil
 	}
-	if string(plan.UID) != request.GetPlanUid() || plan.Spec.Fingerprint != request.GetPlanFingerprint() {
-		return "The plan under that name is not the one you reviewed. Nothing was approved.", nil
-	}
-	return "", nil
+	return nil, nil
 }
 
 // AcknowledgeMigrationRun settles exactly the run the person looked at.
@@ -371,10 +428,15 @@ func (d *DecisionService) AcknowledgeMigrationRun(ctx context.Context, request *
 // changed reports a decision that was not sent because what the person
 // reviewed is no longer current.
 func (d *DecisionService) changed(ctx context.Context, event audit.Event, message string) *consolev1.DecisionResult {
-	event.Outcome = audit.PlanChanged
-	event.Reason = message
+	return d.notSent(ctx, event, *planChanged(message))
+}
+
+// notSent reports a decision that was not sent, and writes down why.
+func (d *DecisionService) notSent(ctx context.Context, event audit.Event, held hold) *consolev1.DecisionResult {
+	event.Outcome = auditOutcome(held.outcome)
+	event.Reason = held.message
 	d.audit.Record(ctx, event)
-	return &consolev1.DecisionResult{Outcome: consolev1.DecisionOutcome_DECISION_OUTCOME_CHANGED, Message: message}
+	return &consolev1.DecisionResult{Outcome: held.outcome, Message: held.message}
 }
 
 // submit creates the decision under its ledger name and says how it ended.

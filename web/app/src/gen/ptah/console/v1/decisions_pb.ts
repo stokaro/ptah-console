@@ -321,7 +321,8 @@ export type DecisionResult = Message<"ptah.console.v1.DecisionResult"> & {
   outcome: DecisionOutcome;
 
   /**
-   * The API server's or admission's own words, or the console's for CHANGED.
+   * The API server's or admission's own words, or the console's when it sent
+   * nothing.
    *
    * @generated from field: string message = 2;
    */
@@ -865,7 +866,9 @@ export const DecisionOutcome = {
   FORBIDDEN: 3,
 
   /**
-   * The operator's admission refused the decision.
+   * The operator's admission or the API server refused the decision, or the
+   * console did because it could not read and verify the plan. Nothing was
+   * stored.
    *
    * @generated from enum value: DECISION_OUTCOME_REFUSED = 4;
    */
@@ -952,7 +955,8 @@ export const DecisionService: GenService<{
     output: typeof GetDecisionResponseSchema;
   },
   /**
-   * ApproveSchemaPlan approves exactly the plan the person reviewed.
+   * ApproveSchemaPlan approves exactly the plan the person reviewed, and only
+   * a plan the console read and verified as that person.
    *
    * @generated from rpc ptah.console.v1.DecisionService.ApproveSchemaPlan
    */
@@ -962,7 +966,8 @@ export const DecisionService: GenService<{
     output: typeof ApproveSchemaPlanResponseSchema;
   },
   /**
-   * ApproveMigrationPlan approves exactly the plan the person reviewed.
+   * ApproveMigrationPlan approves exactly the plan the person reviewed, and
+   * only a plan the console read as that person.
    *
    * @generated from rpc ptah.console.v1.DecisionService.ApproveMigrationPlan
    */
