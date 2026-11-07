@@ -109,6 +109,15 @@ on a Docker context (`remote-dev-container` unless `DOCKER_CONTEXT` names
 another) and never on a local daemon; the Acceptance workflow runs it on a
 GitHub runner, which is where cluster work belongs.
 
+A row never types a password into the page. A Playwright trace keeps every
+call's arguments, every input's value in its DOM snapshots and every request
+body, and the HTML report keeps each step's arguments. `sendPassword` in
+`web/e2e/lab.ts` fills the field with a placeholder and sends the form's
+request again from the test runner with the password in it. Before the
+Acceptance workflow uploads the recordings, `hack/e2e/secretscan` looks in
+them for every fact named `*_PASSWORD`, inside the traces' zip archives and
+the report's embedded data, and refuses the upload if it finds one.
+
 The browser and the server speak Connect. `proto/ptah/console/v1` is the
 contract; `internal/gen` and `web/app/src/gen` are generated from it and
 committed, and `make contract` refuses generated code that differs from what
