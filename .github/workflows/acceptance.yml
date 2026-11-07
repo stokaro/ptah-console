@@ -184,12 +184,13 @@ jobs:
           OUT_DIR: ${{ runner.temp }}/e2e
           E2E_ROWS: ${{ inputs.rows }}
         run: make e2e-verify
-      # The cluster's own account of the run, kept beside the recordings: the
+      # The clusters' own account of the run, kept beside the recordings: the
       # resources as stored, Events, operation Pod logs, the operator's and
-      # the cluster DNS's logs, the database server's connection log and the
-      # probe that asked for that server once a second. A failure the rows and
-      # the check can only name is read from it, rather than rerun.
-      - name: Keep the cluster's account of the run
+      # the cluster DNS's logs, the database server's connection log and, on
+      # the lab, the probe that asked for that server once a second. The second
+      # cluster's is under second-cluster/. A failure the rows and the check
+      # can only name is read from it, rather than rerun.
+      - name: Keep the clusters' account of the run
         if: always() && steps.operator.outputs.dir != ''
         env:
           OPERATOR_DIR: ${{ steps.operator.outputs.dir }}
