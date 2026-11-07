@@ -140,8 +140,8 @@ func firstOf(values ...string) string {
 	return ""
 }
 
-// planBlockers are the PlanReady reasons that hold a schema until a person
-// changes something; the others clear on their own.
+// planBlockers are the reasons, on PlanReady or Ready, that hold a schema
+// until a person changes something; the others clear on their own.
 var planBlockers = map[string]string{
 	"ProtectedTable":             "The artifact changes a table spec.policy.protectedTables fences off.",
 	"DestructiveChangesDisabled": "The plan drops data and spec.policy.allowDestructive is false.",
@@ -156,7 +156,7 @@ func schemaStages(schema *operatorv1alpha1.PtahSchema, c conditions) []*consolev
 		schemaResolve(schema, c),
 		schemaPlan(status, c, inSync),
 		schemaApprove(status, c, inSync),
-		schemaApply(status, c, inSync),
+		schemaApply(status, c, inSync, outcomeUnknown(schema, c)),
 		schemaVerify(status, c, inSync),
 	}
 }
@@ -235,10 +235,10 @@ func schemaApprove(status operatorv1alpha1.PtahSchemaStatus, c conditions, inSyn
 	}
 }
 
-func schemaApply(status operatorv1alpha1.PtahSchemaStatus, c conditions, inSync bool) *consolev1.Stage {
+func schemaApply(status operatorv1alpha1.PtahSchemaStatus, c conditions, inSync, unknown bool) *consolev1.Stage {
 	reason := c.reason(operatorv1alpha1.ConditionApplying)
 	switch {
-	case outcomeUnknown(status):
+	case unknown:
 		return stage(StageApply, consolev1.StageState_STAGE_STATE_UNKNOWN, "the operator does not know whether the SQL committed")
 	case c.is(operatorv1alpha1.ConditionApplying, metav1.ConditionTrue):
 		return stage(StageApply, consolev1.StageState_STAGE_STATE_ACTIVE, "")
@@ -269,23 +269,37 @@ func schemaVerify(status operatorv1alpha1.PtahSchemaStatus, c conditions, inSync
 	}
 }
 
-// outcomeUnknown is an Apply the operator still owes a read-only proof. The
-// operator records that debt as a pending observation with outcome
-// OutcomeUnknown, in the same write as Applying False OutcomeUnknown, and
-// removes it in the write that consumes the proof's Plan. Its unresolved-Apply
-// alert counts a schema by the same record. The Applying condition is no
-// evidence once the record is gone: nothing rewrites it before the next Apply,
-// so it goes on saying OutcomeUnknown after the read that settled the outcome.
-func outcomeUnknown(status operatorv1alpha1.PtahSchemaStatus) bool {
-	pending := status.PendingObservation
-	return pending != nil && pending.Outcome == operatorv1alpha1.PendingObservationOutcomeUnknown
+// outcomeUnknown is an Apply whose outcome nobody established. The operator
+// records it as a pending observation with outcome OutcomeUnknown, in the same
+// write as Applying False OutcomeUnknown and ReconciliationFailed True
+// ApplyOutcomeUnknown, and removes it in the write that consumes the proof's
+// Plan. Its unresolved-Apply alert counts a schema by the same record. The
+// Applying condition is no evidence once the record is gone: nothing rewrites
+// it before the next Apply, so it goes on saying OutcomeUnknown after the read
+// that settled the outcome.
+//
+// A schema being deleted is read by nobody. The operator waits until the
+// Apply's Pod has stopped, drops the record without a read and leaves the
+// failure standing, so on such a schema the failure still says what the record
+// said.
+func outcomeUnknown(schema *operatorv1alpha1.PtahSchema, c conditions) bool {
+	if pending := schema.Status.PendingObservation; pending != nil && pending.Outcome == operatorv1alpha1.PendingObservationOutcomeUnknown {
+		return true
+	}
+	return schema.DeletionTimestamp != nil &&
+		c.is(operatorv1alpha1.ConditionReconciliationFailed, metav1.ConditionTrue) &&
+		c.reason(operatorv1alpha1.ConditionReconciliationFailed) == string(operatorv1alpha1.ReasonApplyOutcomeUnknown)
 }
 
 // schemaBlocker is the reason a person has to change something before the
 // schema moves, and the condition it was read from. A plan the operator refused
 // to compute or use says so on PlanReady. A published plan the
-// destructive-change policy holds says so on Ready: PolicyBlocked from the pass
-// that published it, DestructiveChangesDisabled on the passes after.
+// destructive-change policy holds says so on Ready as PolicyBlocked, written by
+// the pass that publishes it; a Blocked schema writes nothing more until its
+// next refresh claims an operation. DestructiveChangesDisabled on Ready is what
+// waitBlocked writes, and only a ReadyToApply or AwaitingApproval schema
+// reaches waitBlocked, while a held plan is Blocked from the start. That reason
+// stays in planBlockers as a defensive case.
 func schemaBlocker(c conditions) (reason, condition string) {
 	for _, kind := range []string{operatorv1alpha1.ConditionPlanReady, operatorv1alpha1.ConditionReady} {
 		if reason := c.reason(kind); c.is(kind, metav1.ConditionFalse) && planBlockers[reason] != "" {
@@ -315,12 +329,18 @@ func schemaAttention(schema *operatorv1alpha1.PtahSchema, c conditions) []*conso
 	add := func(kind consolev1.AttentionKind, reason, next, condition string) {
 		out = append(out, &consolev1.Attention{Kind: kind, Reason: reason, NextStep: next, Since: c.since(condition)})
 	}
-	if outcomeUnknown(status) {
+	switch {
+	case outcomeUnknown(schema, c) && schema.DeletionTimestamp != nil:
+		add(consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN,
+			"An Apply ended without proof of whether it changed the database. The resource is being deleted, so nothing will establish what it did.",
+			"The operator does not read the database again for a resource it is deleting. Read the database to learn what the Apply changed; there is nothing to retry from the console.",
+			operatorv1alpha1.ConditionReconciliationFailed)
+	case outcomeUnknown(schema, c):
 		add(consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN,
 			"An Apply ended without proof of whether it changed the database.",
 			"The operator reads the database again before anything else runs. Wait for that read; there is nothing to retry from the console.",
 			operatorv1alpha1.ConditionReconciliationFailed)
-	} else if c.is(operatorv1alpha1.ConditionReconciliationFailed, metav1.ConditionTrue) {
+	case c.is(operatorv1alpha1.ConditionReconciliationFailed, metav1.ConditionTrue):
 		add(consolev1.AttentionKind_ATTENTION_KIND_FAILED,
 			c.message(operatorv1alpha1.ConditionReconciliationFailed),
 			"The operator tries again after spec.execution.failureRetryInterval. The operation's Job and its log say what failed.",

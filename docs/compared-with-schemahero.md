@@ -30,9 +30,7 @@ The console works with Ptah Operator only, so it cannot show SchemaHero's
 resources. A failed statement does not show PostgreSQL's error yet
 ([ptah-operator#787](https://github.com/stokaro/ptah-operator/issues/787)). The
 Overview counts a `Blocked` resource as "No status"
-([#161](https://github.com/stokaro/ptah-console/issues/161)), and "Outcome unknown"
-can stay after a later read has settled it
-([#162](https://github.com/stokaro/ptah-console/issues/162)).
+([#161](https://github.com/stokaro/ptah-console/issues/161)).
 
 For the comparison of the operators themselves, see
 [Compared with SchemaHero](https://operator.ptah.run/edge/start/compare-schemahero/)
