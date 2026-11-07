@@ -455,19 +455,9 @@ func TestEachSchemaAttentionKindRefusesItsLookAlike(t *testing.T) {
 			kind:   consolev1.AttentionKind_ATTENTION_KIND_BLOCKED,
 		},
 		{
-			name: "a published plan the destructive-change policy holds",
-			schema: schemaWith(condition("PlanReady", metav1.ConditionTrue, "Published"),
-				condition("Ready", metav1.ConditionFalse, "PolicyBlocked")),
-			kind: consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, shown: true,
-		},
-		{
-			// A defensive case: waitBlocked writes it, only a ReadyToApply or
-			// AwaitingApproval schema reaches waitBlocked, and a held plan is
-			// Blocked from the start.
-			name: "a published plan waitBlocked holds",
-			schema: schemaWith(condition("PlanReady", metav1.ConditionTrue, "Published"),
-				condition("Ready", metav1.ConditionFalse, "DestructiveChangesDisabled")),
-			kind: consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, shown: true,
+			name:   "a published plan the destructive-change policy holds",
+			schema: heldByPolicy(),
+			kind:   consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, shown: true,
 		},
 		{
 			name: "a published plan waiting for its approval",

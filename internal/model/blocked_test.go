@@ -22,6 +22,7 @@ const (
 	driftKind    = consolev1.AttentionKind_ATTENTION_KIND_DRIFT
 	approvalKind = consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL
 	runKind      = consolev1.AttentionKind_ATTENTION_KIND_UNRESOLVED_RUN
+	staleKind    = consolev1.AttentionKind_ATTENTION_KIND_STALE_STATUS
 )
 
 func setConditions(list *[]metav1.Condition, conditions ...metav1.Condition) {
@@ -50,20 +51,26 @@ func heldByPolicy() *operatorv1alpha1.PtahSchema {
 }
 
 // readAgain is a schema as a claim of its interval read leaves it: the phase
-// the operation runs in, Ready rewritten, and on Resolve the source, the plan
-// and convergence marked unknown until the read ends (claim and
-// markSourceRefreshPending).
+// the operation runs in, status.observedGeneration made current, Ready
+// rewritten, and on Resolve the source, the plan and convergence marked unknown
+// until the read ends (claim and markSourceRefreshPending). Each condition it
+// writes carries the current generation.
 func readAgain(schema *operatorv1alpha1.PtahSchema, operation operatorv1alpha1.OperationType, phase operatorv1alpha1.ReconciliationPhase) *operatorv1alpha1.PtahSchema {
 	schema.Status.Phase = phase
+	schema.Status.ObservedGeneration = schema.Generation
 	schema.Status.ActiveOperation = &operatorv1alpha1.ActiveOperationStatus{Type: operation, ID: "sha256:" + string(operation)}
-	setConditions(&schema.Status.Conditions, condition("Ready", metav1.ConditionFalse, "OperationInProgress"))
+	written := []metav1.Condition{condition("Ready", metav1.ConditionFalse, "OperationInProgress")}
 	if operation == operatorv1alpha1.OperationResolve {
-		setConditions(&schema.Status.Conditions,
+		written = append(written,
 			condition("ArtifactResolved", metav1.ConditionUnknown, "Refreshing"),
 			condition("PlanReady", metav1.ConditionUnknown, "SourceRefreshPending"),
 			condition("InSync", metav1.ConditionUnknown, "SourceRefreshPending"),
 		)
 	}
+	for i := range written {
+		written[i].ObservedGeneration = schema.Generation
+	}
+	setConditions(&schema.Status.Conditions, written...)
 	return schema
 }
 
@@ -190,8 +197,16 @@ func TestASchemaThePolicyNoLongerHoldsIsNotBlocked(t *testing.T) {
 		)
 		return schema
 	}
-	// The person set spec.policy.allowDestructive, and the plan published
-	// again under it waits for an approval.
+	// The person set spec.policy.allowDestructive. Until the plan harvest
+	// decides again, ApprovalRequired still says what it said for the older
+	// spec, and the plan stays while the digest does not move.
+	allowing := func() *operatorv1alpha1.PtahSchema {
+		schema := heldByPolicy()
+		schema.Generation = 2
+		schema.Spec.Policy.AllowDestructive = true
+		return schema
+	}
+	// The plan published again under it waits for an approval.
 	allowed := func() *operatorv1alpha1.PtahSchema {
 		schema := heldByPolicy()
 		schema.Spec.Policy.AllowDestructive = true
@@ -225,6 +240,17 @@ func TestASchemaThePolicyNoLongerHoldsIsNotBlocked(t *testing.T) {
 			schema: readAgain(converged(), operatorv1alpha1.OperationResolve, operatorv1alpha1.PhaseResolving),
 			want:   make([]consolev1.AttentionKind, 0),
 		},
+		{name: "allowed, before the operator reads the change", schema: allowing(), want: []consolev1.AttentionKind{staleKind}},
+		{
+			name:   "allowed, while the source is resolved again",
+			schema: readAgain(allowing(), operatorv1alpha1.OperationResolve, operatorv1alpha1.PhaseResolving),
+			want:   make([]consolev1.AttentionKind, 0),
+		},
+		{
+			name:   "allowed, while the database is observed again",
+			schema: readAgain(allowing(), operatorv1alpha1.OperationObserve, operatorv1alpha1.PhaseObserving),
+			want:   make([]consolev1.AttentionKind, 0),
+		},
 		{name: "allowed, waiting for an approval", schema: allowed(), want: []consolev1.AttentionKind{approvalKind}},
 		{name: "a plan apply: Never only records", schema: recordedOnly(), want: []consolev1.AttentionKind{driftKind}},
 	}
@@ -238,6 +264,22 @@ func TestASchemaThePolicyNoLongerHoldsIsNotBlocked(t *testing.T) {
 			c.Assert(got, qt.DeepEquals, test.want)
 		})
 	}
+}
+
+// ApprovalRequired keeps the transition time of the False it replaced. On a
+// schema whose earlier plan was applied that is the Satisfied the Apply wrote,
+// days before the refusal, so the refusal is not dated by it.
+func TestAPolicyRefusalIsNotDatedByApprovalRequired(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	schema := heldByPolicy()
+	applied := metav1.NewTime(time.Date(2026, 11, 4, 12, 0, 0, 0, time.UTC))
+	apimeta.FindStatusCondition(schema.Status.Conditions, "ApprovalRequired").LastTransitionTime = applied
+
+	attention := model.Schema(schema).GetAttention()
+
+	c.Assert(kinds(attention), qt.DeepEquals, []consolev1.AttentionKind{blockedKind})
+	c.Assert(attention[0].GetSince(), qt.IsNil)
 }
 
 // blockedMigration is a migration with Blocked true for a reason, as every
@@ -293,6 +335,8 @@ func TestEachWayTheOperatorBlocksAMigrationNeedsAPerson(t *testing.T) {
 			kind:      blockedKind, reason: "The database records a migration the artifact does not carry.",
 		},
 		{
+			// migrationRealmBlocked, taken again at every pass while the
+			// refusal holds.
 			name:      "a database another resource claims",
 			migration: blockedMigration("RealmConflict", "Database is also claimed by PtahSchema application/storefront"),
 			kind:      blockedKind, reason: "Database is also claimed by PtahSchema application/storefront",
@@ -358,6 +402,39 @@ func TestAMigrationBlockedOnAnUnresolvedRunSaysTheRunOnce(t *testing.T) {
 	}
 }
 
+// realmRefusalLifted is a migration the realm refused, as the claim of the
+// pass after the refusal lifted leaves it: Progressing rewritten and Blocked
+// as the refusal wrote it (claimMigration).
+func realmRefusalLifted() *operatorv1alpha1.PtahMigration {
+	migration := blockedMigration("RealmConflict", "Database is also claimed by PtahSchema application/storefront")
+	migration.Status.Phase = operatorv1alpha1.MigrationPhaseResolving
+	migration.Status.ActiveOperation = &operatorv1alpha1.MigrationOperationStatus{
+		Type: operatorv1alpha1.MigrationOperationResolve, ID: "sha256:resolve",
+	}
+	setConditions(&migration.Status.Conditions, condition("Progressing", metav1.ConditionTrue, "OperationInProgress"))
+	return migration
+}
+
+// When the claim after a lifted refusal fails, nothing writes Blocked again
+// before a history read, and the refusal is not what holds the migration
+// (migrationOperationFailure).
+func TestARefusalThatLiftedIsNotSaidAfterTheNextClaimFails(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	migration := realmRefusalLifted()
+	migration.Status.Phase = operatorv1alpha1.MigrationPhaseFailed
+	migration.Status.ActiveOperation = nil
+	setConditions(&migration.Status.Conditions,
+		condition("Ready", metav1.ConditionFalse, "OperationFailed"),
+		condition("Progressing", metav1.ConditionFalse, "OperationFailed"),
+	)
+	c.Assert(apimeta.IsStatusConditionTrue(migration.Status.Conditions, "Blocked"), qt.IsTrue)
+
+	got := kinds(model.Migration(migration).GetAttention())
+
+	c.Assert(contains(got, blockedKind), qt.IsFalse, qt.Commentf("attention: %v", got))
+}
+
 // A migration that was blocked and is not any more is not blocked, whatever
 // its journal remembers.
 func TestAMigrationNoLongerBlockedIsNotBlocked(t *testing.T) {
@@ -384,6 +461,7 @@ func TestAMigrationNoLongerBlockedIsNotBlocked(t *testing.T) {
 		name      string
 		migration *operatorv1alpha1.PtahMigration
 	}{
+		{name: "a realm refusal that lifted, as the next claim leaves it", migration: realmRefusalLifted()},
 		{
 			// The acknowledgment, and the read of the history it starts.
 			name: "a history read again after an acknowledged run",
@@ -391,7 +469,6 @@ func TestAMigrationNoLongerBlockedIsNotBlocked(t *testing.T) {
 				Phase:           operatorv1alpha1.MigrationPhaseResolving,
 				ActiveOperation: &operatorv1alpha1.MigrationOperationStatus{Type: operatorv1alpha1.MigrationOperationResolve, ID: "sha256:resolve"},
 				LastRun:         partialRun,
-				UnresolvedRun:   &operatorv1alpha1.UnresolvedMigrationRunStatus{OperationID: "op-1", Outcome: operatorv1alpha1.MigrationRunOutcomePartial},
 				ResolvedRun:     resolved,
 				Journal:         journal,
 				Conditions: []metav1.Condition{

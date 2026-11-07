@@ -266,35 +266,12 @@ func migrationAttention(migration *operatorv1alpha1.PtahMigration, c conditions)
 			"Read the database's revision table. When you know what the run did, acknowledge exactly this run; the acknowledgment settles the run and does not verify the SQL.",
 			operatorv1alpha1.ConditionMigrationReady)
 	}
-	// Blocked stays true while the operator resolves, verifies and reads the
-	// history again at its interval, whatever phase that passes through, and
-	// the operator never clears it on its own. Any reason is a block; the
-	// reason decides only the words.
-	blocked := false
-	if reason := c.reason(operatorv1alpha1.ConditionMigrationBlocked); c.is(operatorv1alpha1.ConditionMigrationBlocked, metav1.ConditionTrue) {
-		switch {
-		case reason == string(operatorv1alpha1.ReasonApplyOutcomeUnknown) && unresolved(status):
-			// Said once, as the run a person settles.
-		case historyBlockers[reason] != "":
-			blocked = true
-			why := historyBlockers[reason]
-			if run := status.LastRun; failedRun(run) {
-				why += " The last run said: " + run.Message
-			}
-			add(consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, why,
-				"The operator never repairs the revision table. Fix the database, for example with ptah migrations repair, and the next history read continues on its own.",
-				operatorv1alpha1.ConditionMigrationBlocked)
-		default:
-			next := targetBlockedNext(reason)
-			if next == "" {
-				next = "Resolve what the message names. The operator does not clear the block on its own."
-			}
-			add(consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, c.message(operatorv1alpha1.ConditionMigrationBlocked), next,
-				operatorv1alpha1.ConditionMigrationBlocked)
-		}
+	why, next, historyBlocked := migrationBlock(status, c)
+	if why != "" {
+		add(consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, why, next, operatorv1alpha1.ConditionMigrationBlocked)
 	}
 	// A failed run that left the history blocked is said once, as the block.
-	if run := status.LastRun; !blocked && failedRun(run) && !unresolved(status) && !settled(status) &&
+	if run := status.LastRun; !historyBlocked && failedRun(run) && !unresolved(status) && !settled(status) &&
 		!c.is(operatorv1alpha1.ConditionMigrationReady, metav1.ConditionTrue) {
 		add(consolev1.AttentionKind_ATTENTION_KIND_FAILED, run.Message,
 			"Fix the cause the run reported; the operator reads the history again at spec.interval and plans from there.",
@@ -320,6 +297,44 @@ func migrationAttention(migration *operatorv1alpha1.PtahMigration, c conditions)
 			"Wait for the operator to reconcile the latest change.", operatorv1alpha1.ConditionMigrationReady)
 	}
 	return out
+}
+
+// migrationBlock is what holds a blocked migration and the way out, and
+// whether the block is on the history; why is empty when nothing does.
+//
+// The operator writes Blocked true together with Ready and Progressing false
+// for the same reason. A history block stays true while the operator resolves,
+// verifies and reads the history again at its interval, whatever phase that
+// passes through, until a history read clears it. A block on the target or on
+// a run is taken again by every pass that refuses. When the refusal lifts, the
+// claim that follows rewrites only Progressing, and Blocked stays true until
+// the history harvest, or for good if the claim fails first. So such a block
+// counts only while Progressing still says it.
+func migrationBlock(status operatorv1alpha1.PtahMigrationStatus, c conditions) (why, next string, history bool) {
+	reason := c.reason(operatorv1alpha1.ConditionMigrationBlocked)
+	if !c.is(operatorv1alpha1.ConditionMigrationBlocked, metav1.ConditionTrue) {
+		return "", "", false
+	}
+	switch {
+	case reason == string(operatorv1alpha1.ReasonApplyOutcomeUnknown) && unresolved(status):
+		// Said once, as the run a person settles.
+		return "", "", false
+	case historyBlockers[reason] != "":
+		why = historyBlockers[reason]
+		if run := status.LastRun; failedRun(run) {
+			why += " The last run said: " + run.Message
+		}
+		return why, "The operator never repairs the revision table. Fix the database, for example with ptah migrations repair, and the next history read continues on its own.", true
+	case c.is(operatorv1alpha1.ConditionMigrationProgressing, metav1.ConditionFalse) &&
+		c.reason(operatorv1alpha1.ConditionMigrationProgressing) == reason:
+		next = targetBlockedNext(reason)
+		if next == "" {
+			next = "Resolve what the message names. The operator does not clear the block on its own."
+		}
+		return c.message(operatorv1alpha1.ConditionMigrationBlocked), next, false
+	default:
+		return "", "", false
+	}
 }
 
 func failedRun(run *operatorv1alpha1.MigrationRunStatus) bool {

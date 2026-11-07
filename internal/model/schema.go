@@ -140,15 +140,11 @@ func firstOf(values ...string) string {
 	return ""
 }
 
-// planBlockers are the reasons, on PlanReady or Ready, that hold a schema
-// until a person changes something; the others clear on their own.
-// DestructiveChangesDisabled and PolicyBlocked are one refusal, said in the
-// same words whichever condition carries it.
+// planBlockers are the reasons, on PlanReady, that hold a schema until a
+// person changes something; the others clear on their own.
 var planBlockers = map[string]string{
-	"ProtectedTable":             "The artifact changes a table spec.policy.protectedTables fences off.",
-	"DestructiveChangesDisabled": "The destructive-change policy blocks the plan.",
-	"PolicyBlocked":              "The destructive-change policy blocks the plan.",
-	"ArtifactUnverified":         "The artifact did not pass verification.",
+	"ProtectedTable":     "The artifact changes a table spec.policy.protectedTables fences off.",
+	"ArtifactUnverified": "The artifact did not pass verification.",
 }
 
 func schemaStages(schema *operatorv1alpha1.PtahSchema, c conditions) []*consolev1.Stage {
@@ -293,41 +289,31 @@ func outcomeUnknown(schema *operatorv1alpha1.PtahSchema, c conditions) bool {
 		c.reason(operatorv1alpha1.ConditionReconciliationFailed) == string(operatorv1alpha1.ReasonApplyOutcomeUnknown)
 }
 
-// schemaBlocker is the reason a person has to change something before the
-// schema moves, and the condition it was read from. PtahSchema publishes no
-// Blocked condition: each refusal is written on the condition it concerns.
+// destructivePlanHeld says whether the destructive-change policy holds the
+// published plan. PtahSchema publishes no Blocked condition, so this reads the
+// refusal where the operator writes it and decides it (policyHolds in its
+// internal/approve): ApprovalRequired False for DestructiveChangesDisabled,
+// written by setPlanPolicyStatus with the plan and with Ready False
+// PolicyBlocked. Ready is rewritten by the claim of the schema's next interval
+// read; ApprovalRequired is not, so the refusal holds while the phase moves on.
 //
-// A published plan the destructive-change policy holds says so on
-// ApprovalRequired, False for DestructiveChangesDisabled, as the operator
-// itself decides (policyHolds in its internal/approve). The operator writes it
-// with the plan, and nothing it does while it resolves, verifies and observes
-// the schema again at its interval rewrites it, so the refusal holds while the
-// phase moves on. The plan has to be there as well: a plan that comes back with
-// no changes clears status.plan and leaves ApprovalRequired as the refusal
-// wrote it. The operator also clears the plan when it observes the database
-// again and publishes it from the plan step that follows; for that step the
-// status reads exactly like a converged schema being read again, and no
-// refusal is read.
+// The plan has to be there: a plan that comes back with no changes clears it
+// and leaves ApprovalRequired as the refusal wrote it. The operator also clears
+// the plan when it observes the database again and publishes it from the plan
+// step that follows; for that step the status reads exactly like a converged
+// schema being read again, and no refusal is read.
 //
-// A plan the operator refused to compute or use says so on PlanReady. The
-// destructive-change policy also says so on Ready as PolicyBlocked, written by
-// the pass that publishes the plan; a Blocked schema writes nothing more until
-// its next refresh claims an operation. DestructiveChangesDisabled on Ready is
-// what waitBlocked writes, and only a ReadyToApply or AwaitingApproval schema
-// reaches waitBlocked, while a held plan is Blocked from the start. That reason
-// stays in planBlockers as a defensive case.
-func schemaBlocker(status operatorv1alpha1.PtahSchemaStatus, c conditions) (reason, condition string) {
-	if held := string(operatorv1alpha1.ReasonDestructiveChangesDisabled); status.Plan != nil &&
-		c.is(operatorv1alpha1.ConditionApprovalRequired, metav1.ConditionFalse) &&
-		c.reason(operatorv1alpha1.ConditionApprovalRequired) == held {
-		return held, operatorv1alpha1.ConditionApprovalRequired
-	}
-	for _, kind := range []string{operatorv1alpha1.ConditionPlanReady, operatorv1alpha1.ConditionReady} {
-		if reason := c.reason(kind); c.is(kind, metav1.ConditionFalse) && planBlockers[reason] != "" {
-			return reason, kind
-		}
-	}
-	return "", ""
+// The condition has to describe the current spec. A spec edit, such as
+// setting spec.policy.allowDestructive, is claimed by a Resolve that makes
+// status.observedGeneration current and keeps the plan when the digest did
+// not move, while ApprovalRequired keeps its older generation until the plan
+// harvest decides again. Until then the refusal is not read, even if the edit
+// left it in force.
+func destructivePlanHeld(schema *operatorv1alpha1.PtahSchema, c conditions) bool {
+	held := c[operatorv1alpha1.ConditionApprovalRequired]
+	return schema.Status.Plan != nil && held.Status == metav1.ConditionFalse &&
+		held.Reason == string(operatorv1alpha1.ReasonDestructiveChangesDisabled) &&
+		held.ObservedGeneration == schema.Generation
 }
 
 // schemaApprovalOpen says whether the operator's admission admits an approval
@@ -383,8 +369,18 @@ func schemaAttention(schema *operatorv1alpha1.PtahSchema, c conditions) []*conso
 			c.message(operatorv1alpha1.ConditionApprovalRequired), next,
 			operatorv1alpha1.ConditionApprovalRequired)
 	}
-	if reason, condition := schemaBlocker(status, c); reason != "" {
-		add(consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, planBlockers[reason], schemaBlockedNext(reason), condition)
+	switch reason := c.reason(operatorv1alpha1.ConditionPlanReady); {
+	case destructivePlanHeld(schema, c):
+		// No Since: ApprovalRequired keeps the transition time of the False it
+		// replaced, often the Satisfied of an earlier Apply, so it can date the
+		// refusal days early (issue 186).
+		out = append(out, &consolev1.Attention{
+			Kind:     consolev1.AttentionKind_ATTENTION_KIND_BLOCKED,
+			Reason:   "The destructive-change policy blocks the plan.",
+			NextStep: schemaBlockedNext(string(operatorv1alpha1.ReasonDestructiveChangesDisabled)),
+		})
+	case c.is(operatorv1alpha1.ConditionPlanReady, metav1.ConditionFalse) && planBlockers[reason] != "":
+		add(consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, planBlockers[reason], schemaBlockedNext(reason), operatorv1alpha1.ConditionPlanReady)
 	}
 	switch reason := c.reason(operatorv1alpha1.ConditionReady); reason {
 	case "RealmConflict", "RealmNotAuthorized", "UnsupportedEngine":
@@ -413,7 +409,7 @@ func schemaBlockedNext(reason string) string {
 	switch reason {
 	case "ProtectedTable":
 		return "Take the table out of spec.policy.protectedTables, or express the change as a versioned migration."
-	case "DestructiveChangesDisabled", "PolicyBlocked":
+	case "DestructiveChangesDisabled":
 		return "Set spec.policy.allowDestructive if dropping the data is intended, or change the artifact."
 	case "ArtifactUnverified":
 		return "Publish an artifact the verification policy accepts, or correct the policy."
