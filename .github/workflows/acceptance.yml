@@ -59,6 +59,12 @@ jobs:
     name: Run and record the rows
     runs-on: ubuntu-latest
     timeout-minutes: 150
+    env:
+      # What the run keeps. The scan before the upload reads the same list.
+      RECORDINGS: |-
+        film/
+        web/test-results/
+        web/playwright-report/
     steps:
       - name: Check out the console
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -216,15 +222,26 @@ jobs:
             cp "${{ runner.temp }}/e2e/$who-audit.log" "film/$who-audit.log" 2>/dev/null || true
           done
           printf 'operator %s\n' "${{ steps.operator.outputs.commit }}" > film/versions.txt
-      - name: Keep the recordings
+      # A trace keeps what the page typed and sent, and the HTML report each
+      # step's arguments. web/e2e/lab.ts never gives the page a password; this
+      # refuses the upload if one got in all the same, naming the file and
+      # the fact without printing the value.
+      - name: Look for the lab's passwords in the recordings
+        id: passwords
         if: always()
+        env:
+          OUT_DIR: ${{ runner.temp }}/e2e
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t recordings <<<"$RECORDINGS"
+          go run ./hack/e2e/secretscan -facts "$OUT_DIR/facts" "${recordings[@]}"
+      - name: Keep the recordings
+        if: always() && steps.passwords.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ptah-console-acceptance
-          path: |
-            film/
-            web/test-results/
-            web/playwright-report/
+          path: ${{ env.RECORDINGS }}
           if-no-files-found: warn
           retention-days: 30
       - name: Remove the environment

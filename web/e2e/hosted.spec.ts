@@ -86,9 +86,7 @@ test("a changed password takes effect with the rollout, and the old one stops wo
   await lab.skip(() => act("hosted", "password", "approver"))
   await page.goto(`${fact("HOSTED_URL")}/login`)
   const form = page.getByRole("form", { name: "Sign in" })
-  await form.getByLabel("Login").fill("approver@e2e.test")
-  await form.getByLabel("Password").fill(fact("HOSTED_APPROVER_OLD_PASSWORD"))
-  await form.getByRole("button", { name: "Sign in" }).click()
+  await lab.sendHostedSignIn("approver", fact("HOSTED_APPROVER_OLD_PASSWORD"))
   await expect(form.getByRole("alert")).toHaveText("The login or the password is wrong.")
   await lab.caption(
     "The approver's password changed in its Secret and the console rolled out. The old password is refused, with the answer an unknown login gets."
