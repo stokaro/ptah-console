@@ -35,6 +35,17 @@ read_lab() {
 	mkdir -p "$OUT_DIR/digests"
 }
 
+# read_target names the second cluster the two-cluster rows add beside the
+# lab. external.sh creates it; hack/e2e/diagnostics.sh reads it the same way.
+read_target() {
+	TARGET_CLUSTER="${E2E_KIND_CLUSTER_NAME:?the lab names no cluster}-target"
+	# shellcheck disable=SC2034 # Read by the scripts that source this file.
+	TARGET_NODE="$TARGET_CLUSTER-control-plane"
+	TARGET_DIR="$OUT_DIR/target"
+	# shellcheck disable=SC2034 # Read by the scripts that source this file.
+	TARGET_KUBECONFIG="$TARGET_DIR/kubeconfig"
+}
+
 # read_publisher makes `ptah` and the registry credentials available.
 read_publisher() {
 	eval "$("$LAB" credentials)"

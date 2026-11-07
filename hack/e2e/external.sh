@@ -61,11 +61,8 @@ set -eu
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 read_lab
+read_target
 
-TARGET_CLUSTER="$E2E_KIND_CLUSTER_NAME-target"
-TARGET_NODE="$TARGET_CLUSTER-control-plane"
-TARGET_DIR="$OUT_DIR/target"
-TARGET_KUBECONFIG="$TARGET_DIR/kubeconfig"
 TARGET_CONTEXT="kind-$TARGET_CLUSTER"
 AGENT_NS=ptah-console-agent
 AGENT_RELEASE=ptah-console-agent
