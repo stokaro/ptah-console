@@ -2,7 +2,7 @@ import { Code, ConnectError } from "@connectrpc/connect"
 import { useMutation } from "@connectrpc/connect-query"
 import { Button, EmptyState } from "@ptah/console-ui"
 import { useQueryClient } from "@tanstack/react-query"
-import { Navigate } from "@tanstack/react-router"
+import { Navigate, useRouterState } from "@tanstack/react-router"
 import { useState, type FormEvent } from "react"
 
 import { canAnywhere, useHosted, useInfo, useScope, useSession } from "../api/resources"
@@ -218,8 +218,15 @@ function SignInForm() {
 /** The first view: the one for what this identity may do. */
 export function Home() {
   const scope = useScope()
+  // The router keeps this page up until the next one has loaded, its chunk
+  // included. A person who chose a page meanwhile stays on their way there:
+  // the home page decides only for someone still on it.
+  const here = useRouterState({ select: (state) => state.location.pathname === "/" })
   if (scope.isPending) {
     return <Loading what="what you may do" />
+  }
+  if (!here) {
+    return null
   }
   const approves =
     canAnywhere(scope.scopes, "approveSchemaPlans") ||

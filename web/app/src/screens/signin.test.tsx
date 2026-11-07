@@ -1,11 +1,20 @@
 import { Code, ConnectError } from "@connectrpc/connect"
-import { screen, waitFor, within } from "@testing-library/react"
+import { screen, waitFor, waitForElementToBeRemoved, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { axe } from "jest-axe"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import type { LoginRequest } from "../gen/ptah/console/v1/session_pb"
 import { renderConsole, waitingSchema } from "../test/console"
+
+// The releases page is a chunk the router loads on the way there. A test can
+// hold it back, as a slow network does, and say when it arrives.
+const releasesChunk = vi.hoisted(() => ({ requested: false, arrived: Promise.resolve() }))
+vi.mock("./Releases", async (importOriginal) => {
+  releasesChunk.requested = true
+  await releasesChunk.arrived
+  return importOriginal()
+})
 
 /** A hosted console with one account, alex, whose password is alex-secret. */
 function hostedConsole(refusal?: Code) {
@@ -63,6 +72,9 @@ describe("Signing in to a hosted console", () => {
     const { hosted } = hostedConsole()
     let answer = () => {}
     const namespacesAnswered = new Promise<void>((resolve) => (answer = resolve))
+    let arrive = () => {}
+    releasesChunk.requested = false
+    releasesChunk.arrived = new Promise<void>((resolve) => (arrive = resolve))
     const { history } = renderConsole("/login", {
       hosted,
       schemas: [waitingSchema()],
@@ -71,18 +83,25 @@ describe("Signing in to a hosted console", () => {
     await signIn("alex@example.com", "alex-secret")
 
     // Signed in, and the namespaces with what alex may do in each are not
-    // read yet: alex goes to the releases before they are.
+    // read yet: alex goes to the releases before they are. The releases
+    // chunk is still on its way, so the router keeps the home page up, and
+    // the namespaces arrive while it is.
     expect(await screen.findByText("ptah-console:prod:alex")).toBeInTheDocument()
     await userEvent.click(screen.getByRole("link", { name: "Developer" }))
-    await waitFor(() => expect(history.location.pathname).toBe("/releases"))
+    expect(history.location.pathname).toBe("/releases")
+    expect(screen.getByText("Reading what you may do…")).toBeInTheDocument()
     answer()
 
     // Alex may approve, so the home page would have sent them to approve.
+    await waitForElementToBeRemoved(() => screen.queryByText("Reading what you may do…"))
+    expect(history.location.pathname).toBe("/releases")
+    arrive()
     expect(
       await screen.findByRole("heading", { level: 1, name: /release to follow/ })
     ).toBeVisible()
-    await new Promise((resolve) => setTimeout(resolve, 50))
     expect(history.location.pathname).toBe("/releases")
+    // This test loaded the chunk through the hold; an earlier one did not.
+    expect(releasesChunk.requested).toBe(true)
   })
 
   it("says a refusal without saying which half was wrong, and clears the password", async () => {
