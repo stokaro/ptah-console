@@ -238,7 +238,7 @@ func schemaApprove(status operatorv1alpha1.PtahSchemaStatus, c conditions, inSyn
 func schemaApply(status operatorv1alpha1.PtahSchemaStatus, c conditions, inSync bool) *consolev1.Stage {
 	reason := c.reason(operatorv1alpha1.ConditionApplying)
 	switch {
-	case outcomeUnknown(status, c):
+	case outcomeUnknown(status):
 		return stage(StageApply, consolev1.StageState_STAGE_STATE_UNKNOWN, "the operator does not know whether the SQL committed")
 	case c.is(operatorv1alpha1.ConditionApplying, metav1.ConditionTrue):
 		return stage(StageApply, consolev1.StageState_STAGE_STATE_ACTIVE, "")
@@ -269,23 +269,30 @@ func schemaVerify(status operatorv1alpha1.PtahSchemaStatus, c conditions, inSync
 	}
 }
 
-// outcomeUnknown is an Apply the operator cannot attribute, as the current
-// status says. An Applying condition left from an older generation is not
-// evidence of it: the operator rewrites ReconciliationFailed and the pending
-// observation when it settles the outcome.
-func outcomeUnknown(status operatorv1alpha1.PtahSchemaStatus, c conditions) bool {
-	if status.PendingObservation != nil && status.PendingObservation.Outcome == operatorv1alpha1.PendingObservationOutcomeUnknown {
-		return true
+// outcomeUnknown is an Apply the operator still owes a read-only proof. The
+// operator records that debt as a pending observation with outcome
+// OutcomeUnknown, in the same write as Applying False OutcomeUnknown, and
+// removes it in the write that consumes the proof's Plan. Its unresolved-Apply
+// alert counts a schema by the same record. The Applying condition is no
+// evidence once the record is gone: nothing rewrites it before the next Apply,
+// so it goes on saying OutcomeUnknown after the read that settled the outcome.
+func outcomeUnknown(status operatorv1alpha1.PtahSchemaStatus) bool {
+	pending := status.PendingObservation
+	return pending != nil && pending.Outcome == operatorv1alpha1.PendingObservationOutcomeUnknown
+}
+
+// schemaBlocker is the reason a person has to change something before the
+// schema moves, and the condition it was read from. A plan the operator refused
+// to compute or use says so on PlanReady. A published plan the
+// destructive-change policy holds says so on Ready: PolicyBlocked from the pass
+// that published it, DestructiveChangesDisabled on the passes after.
+func schemaBlocker(c conditions) (reason, condition string) {
+	for _, kind := range []string{operatorv1alpha1.ConditionPlanReady, operatorv1alpha1.ConditionReady} {
+		if reason := c.reason(kind); c.is(kind, metav1.ConditionFalse) && planBlockers[reason] != "" {
+			return reason, kind
+		}
 	}
-	if c.is(operatorv1alpha1.ConditionReconciliationFailed, metav1.ConditionTrue) &&
-		c.reason(operatorv1alpha1.ConditionReconciliationFailed) == "ApplyOutcomeUnknown" {
-		return true
-	}
-	switch c.reason(operatorv1alpha1.ConditionApplying) {
-	case "ApplyOutcomeUnknown", "OutcomeUnknown":
-		return c.newest(operatorv1alpha1.ConditionApplying)
-	}
-	return false
+	return "", ""
 }
 
 // schemaApprovalOpen says whether the operator's admission admits an approval
@@ -308,7 +315,7 @@ func schemaAttention(schema *operatorv1alpha1.PtahSchema, c conditions) []*conso
 	add := func(kind consolev1.AttentionKind, reason, next, condition string) {
 		out = append(out, &consolev1.Attention{Kind: kind, Reason: reason, NextStep: next, Since: c.since(condition)})
 	}
-	if outcomeUnknown(status, c) {
+	if outcomeUnknown(status) {
 		add(consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN,
 			"An Apply ended without proof of whether it changed the database.",
 			"The operator reads the database again before anything else runs. Wait for that read; there is nothing to retry from the console.",
@@ -335,8 +342,8 @@ func schemaAttention(schema *operatorv1alpha1.PtahSchema, c conditions) []*conso
 			c.message(operatorv1alpha1.ConditionApprovalRequired), next,
 			operatorv1alpha1.ConditionApprovalRequired)
 	}
-	if reason := c.reason(operatorv1alpha1.ConditionPlanReady); c.is(operatorv1alpha1.ConditionPlanReady, metav1.ConditionFalse) && planBlockers[reason] != "" {
-		add(consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, planBlockers[reason], schemaBlockedNext(reason), operatorv1alpha1.ConditionPlanReady)
+	if reason, condition := schemaBlocker(c); reason != "" {
+		add(consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, planBlockers[reason], schemaBlockedNext(reason), condition)
 	}
 	switch reason := c.reason(operatorv1alpha1.ConditionReady); reason {
 	case "RealmConflict", "RealmNotAuthorized", "UnsupportedEngine":
