@@ -24,5 +24,6 @@ name Secrets only by name and key.
 
 `uncertain-migration-retained-claim.json` is copied unchanged from the
 operator's `testdata/e2e/readings` at the tag v0.2.9, which the console
-requires. The operator recorded it in CI run 36675116019, and its README there
-says which fields it keeps.
+requires. The operator recorded it in CI run 36675116019, and
+`uncertain-migration-retained-claim.md` beside it there says which fields it
+keeps.
