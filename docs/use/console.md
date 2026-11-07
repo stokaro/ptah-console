@@ -42,8 +42,9 @@ then sends that plan and nothing else. The answer is one of:
   plan and verifies it by reading the database again.
 - **It changed**: a newer plan replaced the one you reviewed, and nothing was
   approved. Review the new one.
-- **Refused**: admission said no, in its own words. The usual reason is the
-  four-eyes control: the person who wrote the change may not approve it.
+- **Refused**: admission said no, in its own words, and the usual reason is the
+  four-eyes control: the person who wrote the change may not approve it. The
+  console refuses too, and says why, when it could not read and verify the plan.
 - **Kubernetes does not let you**: RBAC refused the request.
 
 Each interval the operator reads a resource that waits for approval again.
@@ -51,10 +52,24 @@ The plan stays current while it does, but admission refuses an approval until
 the read ends, so the console offers none: the page says the operator is
 reading the resource and offers the approval again when the read ends.
 
-If you may read the plan but not the chunks its SQL is stored in, the page
-says so and shows the plan's manifest without SQL. A migration plan lists its
-steps in order with their checksums; the operator API carries no SQL for
-them.
+The console sends no approval of a plan it could not read and verify as you,
+because nobody could review what it holds. The page says which of these it is,
+and offers no approval:
+
+- the stored plan failed verification: a chunk is missing or does not match its
+  digest;
+- the plan is written in a form this console does not read, which usually means
+  the operator is newer than the console;
+- you may read the plan but not the chunks its SQL is stored in, so the page
+  shows the plan's manifest without SQL;
+- the read failed, such as when the API server did not answer.
+
+If RBAC means an identity to sign off without reading the SQL, it can still
+create the approval with `kubectl`; the console does not send one.
+
+A migration plan lists its steps in order with their checksums; the operator
+API carries no SQL for them. The console approves one only once it has read that
+plan object and the object names this migration.
 
 ## Follow a release
 

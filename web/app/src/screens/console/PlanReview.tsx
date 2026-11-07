@@ -29,6 +29,7 @@ import {
   approvalChecks,
   filterStatements,
   integrity,
+  planReadCheck,
   statementTypes,
   tombstone,
   type Tombstone,
@@ -125,14 +126,18 @@ export function ConsolePlanReview({
   const sPlan = schemaPlan.data?.plan
   const mPlan = migrationPlan.data?.plan
   const removed = tombstone(resource, followed, decisions.data?.decisions ?? [])
+  const planError = kind === "schema" ? schemaPlan.error : migrationPlan.error
   const checks = approvalChecks({
     current: !replaced && !removed,
     open: resource.approvalOpen,
-    contractSupported: kind === "schema" ? (sPlan?.contractSupported ?? true) : undefined,
+    planRead: hasPlan
+      ? planReadCheck({ plan: sPlan ?? mPlan, failed: Boolean(planError) })
+      : undefined,
+    // A plan whose manifest did not read has no contract to judge.
+    contractSupported: sPlan?.uid ? sPlan.contractSupported : undefined,
     allowed,
     namespace,
   })
-  const planError = kind === "schema" ? schemaPlan.error : migrationPlan.error
   const identity = session.isSuccess ? session.data : undefined
 
   return (

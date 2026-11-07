@@ -189,7 +189,7 @@ function describe(step: Step, props: DecisionDialogProps): View {
       return {
         title: "Refused",
         tone: "red",
-        text: "The operator's admission or the API server refused it. Nothing was stored.",
+        text: "The console, the operator's admission or the API server refused it. Nothing was stored.",
         serverWords: result.message,
       }
     case DecisionOutcome.UNKNOWN:

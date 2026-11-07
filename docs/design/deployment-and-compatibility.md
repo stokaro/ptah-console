@@ -40,8 +40,10 @@ The console does not read the operator's Deployment or configuration to find
 its version. Each decision is judged on the object it concerns:
 
 - A schema plan carries `spec.contractVersion`. The console approves only a
-  plan whose contract version its plan reader supports; any other is shown with
-  the reason and the action is disabled.
+  plan its plan reader read and verified, which that version alone does not
+  decide: a newer executor can write a document this build does not decode at
+  the same version. Any other plan is shown with the reason, the action is
+  disabled, and the server refuses one sent anyway.
 - The API group, version and kinds the console uses are checked through
   discovery, which every authenticated identity may read.
 - Anything the console cannot establish is shown as unknown and never as

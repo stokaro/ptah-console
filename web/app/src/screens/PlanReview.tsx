@@ -32,6 +32,7 @@ import {
   waitingForApproval,
   type ResourceView,
 } from "../model/resource"
+import { planReadCheck } from "../model/planreview"
 import { planSummary } from "./ApproverQueue"
 import { ApproveDialog, type ReviewedPlan } from "./ApproveDialog"
 import { BackButton, DetailHeading, Loading, ReadError, where } from "./common"
@@ -98,6 +99,7 @@ export function PlanReview() {
   const sPlan = schemaPlan.data?.plan
   const mPlan = migrationPlan.data?.plan
   const planName = sPlan?.name ?? mPlan?.name ?? resource.plan?.name ?? ""
+  const planRead = planReadCheck({ plan: sPlan ?? mPlan, failed: Boolean(planError) })
 
   return (
     <div className="flex animate-[pt-slide_.3s_both] flex-col gap-3.5">
@@ -145,7 +147,15 @@ export function PlanReview() {
             Nothing to approve until the operator publishes the plan again. This page follows it.
           </span>
         ) : waiting ? (
-          mayApprove === "allowed" && !resource.approvalOpen ? (
+          mayApprove === "allowed" && planRead.tone === "bad" ? (
+            <span
+              role="status"
+              aria-label="Why this plan cannot be approved"
+              className="flex-auto p-2.5 text-sm text-fg2"
+            >
+              {planRead.label}. {planRead.note}
+            </span>
+          ) : mayApprove === "allowed" && !resource.approvalOpen ? (
             <span role="status" className="flex-auto p-2.5 text-sm text-fg2">
               {readingAgain(resource)} This page follows it.
             </span>

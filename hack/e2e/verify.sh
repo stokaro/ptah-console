@@ -19,7 +19,8 @@
 #     value the console wrote, under the console's field manager
 #   - pricing names the artifact the author set through the console, under
 #     the console's field manager alone, with its verification policy kept,
-#     the author recorded as its writer, and a plan from that artifact
+#     the author recorded as its writer, and a plan from that artifact; the
+#     approval sent for that plan once a chunk of it was gone was not stored
 #   - catalog v2 was approved once, by the username the API server maps the
 #     OpenID Connect user's token to, and its database has the new column
 #   - inventory v2 was approved once, by the hosted approver's mapped
@@ -197,6 +198,8 @@ if ran console.spec.ts; then
 		elif (.status.plan.artifactDigest // "") != ($ref | sub("^[^@]*@"; "")) then "plans from \(.status.plan.artifactDigest // "nothing")"
 		else .metadata.annotations["operator.ptah.run/last-spec-writer-username"] // "" end')
 	[ "$pricing" = "$AUTHOR" ] || fail "pricing after its change of source: $pricing"
+	refused=$(ns get ptahschemaapprovals -o json | jq '[.items[] | select(.spec.schemaRef.name == "pricing")] | length')
+	[ "$refused" = 0 ] || fail "pricing has $refused approvals, and its plan had lost a chunk"
 	checked="$checked console.spec.ts"
 fi
 

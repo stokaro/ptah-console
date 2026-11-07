@@ -2,7 +2,12 @@ import { timestampDate } from "@bufbuild/protobuf/wkt"
 import { shortDigest, type Tone } from "@ptah/console-ui"
 
 import { DecisionState, type Decision } from "../gen/ptah/console/v1/decisions_pb"
-import { SqlAccess, type SchemaPlan, type Statement } from "../gen/ptah/console/v1/resources_pb"
+import {
+  SqlAccess,
+  type MigrationPlan,
+  type SchemaPlan,
+  type Statement,
+} from "../gen/ptah/console/v1/resources_pb"
 import { statementTag, type ResourceView } from "./resource"
 
 /** How many statements carry each mark the plan gave them, the unmarked last. */
@@ -123,6 +128,60 @@ export interface ApprovalCheck {
   note: string
 }
 
+/**
+ * Whether the console read the plan, and so whether a person can review it
+ * here. A plan it did not read and verify cannot be approved, and the server
+ * refuses one whatever the page sends; this says why before anyone tries.
+ */
+export function planReadCheck(input: {
+  /** The plan as the last read returned it. */
+  plan?: SchemaPlan | MigrationPlan
+  /** The last read of the plan failed. */
+  failed: boolean
+}): ApprovalCheck {
+  if (input.failed) {
+    return {
+      tone: "bad",
+      label: "The console could not read this plan",
+      note: "Nobody can review it here until it reads, so the console sends no approval.",
+    }
+  }
+  if (!input.plan) {
+    return { tone: "run", label: "The console is reading this plan", note: "" }
+  }
+  if (input.plan.$typeName === "ptah.console.v1.MigrationPlan") {
+    return { tone: "ok", label: "The console read this plan's steps", note: "" }
+  }
+  switch (input.plan.sqlAccess) {
+    case SqlAccess.AVAILABLE:
+      return { tone: "ok", label: "The console read and verified this plan", note: "" }
+    case SqlAccess.NOT_GRANTED:
+      return {
+        tone: "bad",
+        label: "This identity may not read this plan's SQL",
+        note: "It cannot review what it would approve. Ask for get on ptahschemaplanchunks, or share the link with an approver.",
+      }
+    case SqlAccess.INTEGRITY_FAILED:
+      return {
+        tone: "bad",
+        label: "The stored plan failed verification",
+        note: "Nobody can review it here, so the console sends no approval.",
+      }
+    case SqlAccess.UNSUPPORTED:
+      return {
+        tone: "bad",
+        label: "This console does not read the form this plan is written in",
+        note: "Nobody can review it here. Approve it with a console built for it.",
+      }
+    default:
+      return {
+        tone: "bad",
+        label: "Whether this plan can be read is not known",
+        note: "The console sends no approval of a plan it did not read.",
+      }
+  }
+}
+
 export function approvalChecks(input: {
   current: boolean
   /**
@@ -130,6 +189,8 @@ export function approvalChecks(input: {
    * while the operator reads the resource again at its interval.
    */
   open: boolean
+  /** What became of reading the plan; absent while there is no plan to read. */
+  planRead?: ApprovalCheck
   /** Whether the console reads the plan's contract; a migration plan has none it reads. */
   contractSupported?: boolean
   allowed: "allowed" | "read-only" | "denied" | "offline"
@@ -150,6 +211,7 @@ export function approvalChecks(input: {
           label: "The operator is reading the resource again",
           note: "It does so each interval, and admission refuses an approval until the read ends. This check follows it.",
         },
+    input.planRead,
     input.contractSupported === undefined
       ? undefined
       : input.contractSupported

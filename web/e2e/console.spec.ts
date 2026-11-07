@@ -7,8 +7,9 @@ import { act, expect, fact, test } from "./lab"
 // before the hosted rows: the author creates catalog and ledger through the
 // console's form, asks inventory to read its database now, and suspends and
 // resumes catalog; the approver approves both new plans from the full
-// console's plan review; the author points pricing at a new artifact; on call
-// reads journal through Execution & diagnosis and Activity.
+// console's plan review; the author points pricing at a new artifact; the
+// approver is refused pricing's plan once a chunk of it is gone; on call reads
+// journal through Execution & diagnosis and Activity.
 // hack/e2e/verify.sh then checks the cluster's account of them.
 
 const namespace = fact("NAMESPACE")
@@ -404,6 +405,62 @@ test("an author points pricing at a new artifact revision, and the operator plan
     "The console changed spec.desired.ociRef alone, as the author. The operator resolved the new artifact, verified it, and its plan waits for an approver.",
     5000
   )
+})
+
+test("an approver is not offered a plan whose stored chunk is gone, and one sent anyway is refused", async ({
+  page,
+  lab,
+}) => {
+  // The operator writes a missing chunk again when it next publishes the plan,
+  // so the row runs well before that read.
+  await act("next-read", "pricing")
+  const plan = await act("lose-chunk", "pricing")
+  await lab.signIn("approver")
+  await fullConsole(page)
+  await open(page, "PtahSchema", "pricing")
+  await page.getByRole("link", { name: "Review plan" }).click()
+  await expect(page.getByRole("heading", { level: 1, name: "Plan review" })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Integrity" })).toContainText(
+    "The stored plan failed a check"
+  )
+  await expect(page.getByRole("list", { name: "Checks before approving" })).toContainText(
+    "The stored plan failed verification"
+  )
+  await expect(page.getByRole("button", { name: "Approve this plan…" })).toBeDisabled()
+  await lab.audit("a plan the console could not verify")
+  await lab.caption(
+    "A chunk of pricing's plan is gone. Nobody can read its SQL, so the approver is offered no approval.",
+    5000
+  )
+
+  const call = async (procedure: string, data: unknown) => {
+    const response = await page.request.post(`${lab.origin()}/api/ptah.console.v1.${procedure}`, {
+      data,
+      headers: { "Content-Type": "application/json", "Connect-Protocol-Version": "1" },
+    })
+    expect(response.status(), `${procedure} answered`).toBe(200)
+    return response.json()
+  }
+  const { plan: stored } = await call("SchemaService/GetSchemaPlan", {
+    namespace,
+    schema: "pricing",
+    selection: "PLAN_SELECTION_CURRENT",
+  })
+  expect(stored.name).toBe(plan)
+  expect(stored.sqlAccess).toBe("SQL_ACCESS_INTEGRITY_FAILED")
+  // Sent the way a script would through the same session: this identity may
+  // create approvals, and the console refuses before it sends one.
+  const { result } = await call("DecisionService/ApproveSchemaPlan", {
+    namespace,
+    schemaName: "pricing",
+    schemaUid: stored.schemaUid,
+    planName: stored.name,
+    planUid: stored.uid,
+    planFingerprint: stored.fingerprint,
+    contractVersion: stored.contractVersion,
+  })
+  expect(result.outcome).toBe("DECISION_OUTCOME_REFUSED")
+  expect(result.message).toContain("failed verification")
 })
 
 test("on call reads journal's runs, its execution and diagnosis, and the Events in Activity", async ({

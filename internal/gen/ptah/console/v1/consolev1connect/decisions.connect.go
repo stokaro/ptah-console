@@ -116,9 +116,11 @@ type DecisionServiceClient interface {
 	// GetDecision reads one decision back, which is how the outcome of a
 	// submission whose response was lost is established.
 	GetDecision(context.Context, *v1.GetDecisionRequest) (*v1.GetDecisionResponse, error)
-	// ApproveSchemaPlan approves exactly the plan the person reviewed.
+	// ApproveSchemaPlan approves exactly the plan the person reviewed, and only
+	// a plan the console read and verified as that person.
 	ApproveSchemaPlan(context.Context, *v1.ApproveSchemaPlanRequest) (*v1.ApproveSchemaPlanResponse, error)
-	// ApproveMigrationPlan approves exactly the plan the person reviewed.
+	// ApproveMigrationPlan approves exactly the plan the person reviewed, and
+	// only a plan the console read as that person.
 	ApproveMigrationPlan(context.Context, *v1.ApproveMigrationPlanRequest) (*v1.ApproveMigrationPlanResponse, error)
 	// AcknowledgeMigrationRun settles exactly one unresolved run. It does not
 	// verify what the run did to the database.
@@ -153,9 +155,11 @@ type DecisionServiceHandler interface {
 	// GetDecision reads one decision back, which is how the outcome of a
 	// submission whose response was lost is established.
 	GetDecision(context.Context, *v1.GetDecisionRequest) (*v1.GetDecisionResponse, error)
-	// ApproveSchemaPlan approves exactly the plan the person reviewed.
+	// ApproveSchemaPlan approves exactly the plan the person reviewed, and only
+	// a plan the console read and verified as that person.
 	ApproveSchemaPlan(context.Context, *v1.ApproveSchemaPlanRequest) (*v1.ApproveSchemaPlanResponse, error)
-	// ApproveMigrationPlan approves exactly the plan the person reviewed.
+	// ApproveMigrationPlan approves exactly the plan the person reviewed, and
+	// only a plan the console read as that person.
 	ApproveMigrationPlan(context.Context, *v1.ApproveMigrationPlanRequest) (*v1.ApproveMigrationPlanResponse, error)
 	// AcknowledgeMigrationRun settles exactly one unresolved run. It does not
 	// verify what the run did to the database.

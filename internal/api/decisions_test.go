@@ -13,6 +13,7 @@ import (
 	"connectrpc.com/connect/v2/connectinprocess"
 	qt "github.com/frankban/quicktest"
 	operatorv1alpha1 "github.com/stokaro/ptah-operator/api/v1alpha1"
+	"github.com/stokaro/ptah-operator/pkg/planread/planreadtest"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -117,11 +118,24 @@ func (d decisions) auditLines(t *testing.T) []map[string]any {
 
 func decisionService(t *testing.T, answer create, objects ...client.Object) decisions {
 	t.Helper()
+	return decisionServiceReading(t, nil, answer, objects...)
+}
+
+// decisionServiceReading is decisionService with an optional answer to every
+// Get.
+func decisionServiceReading(
+	t *testing.T,
+	get func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error,
+	answer create,
+	objects ...client.Object,
+) decisions {
+	t.Helper()
 	var mu sync.Mutex
 	var creates []client.Object
 	scheme, err := kube.Scheme()
 	qt.New(t).Assert(err, qt.IsNil)
 	built := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).WithInterceptorFuncs(interceptor.Funcs{
+		Get: get,
 		Create: func(ctx context.Context, c client.WithWatch, object client.Object, _ ...client.CreateOption) error {
 			mu.Lock()
 			creates = append(creates, object.DeepCopyObject().(client.Object))
@@ -140,20 +154,15 @@ func decisionService(t *testing.T, answer create, objects ...client.Object) deci
 	}
 }
 
-// waitingSchema is a schema whose current plan waits for approval.
-func waitingSchema(contract int32) []client.Object {
-	return []client.Object{
-		&operatorv1alpha1.PtahSchema{
-			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "storefront", UID: "uid-schema"},
-			Status: operatorv1alpha1.PtahSchemaStatus{Plan: &operatorv1alpha1.CurrentPlanStatus{
-				Name: "storefront-plan-1", UID: "uid-plan", Fingerprint: "sha256:aa",
-			}},
-		},
-		&operatorv1alpha1.PtahSchemaPlan{
-			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "storefront-plan-1", UID: "uid-plan"},
-			Spec:       operatorv1alpha1.PtahSchemaPlanSpec{ContractVersion: contract, Fingerprint: "sha256:aa"},
-		},
-	}
+// waitingSchema is a schema whose current plan waits for approval, stored as
+// the operator stores it, so the plan reader reads it.
+func waitingSchema(t *testing.T, contract int32) []client.Object {
+	t.Helper()
+	lab := planreadtest.NewLab(t, "storefront")
+	plan, _ := lab.Publish(t, []string{"CREATE TABLE customers (id BIGINT PRIMARY KEY)"}, "v1")
+	lab.EditManifest(t, plan, func(spec *operatorv1alpha1.PtahSchemaPlanSpec) { spec.ContractVersion = contract })
+	lab.SetCurrent(t, plan)
+	return lab.Objects(t)
 }
 
 // The plan contracts the console approves: 1, a plan computed from an OCI
@@ -162,14 +171,6 @@ const (
 	ociContract    int32 = 1
 	sourceContract int32 = 2
 )
-
-func reviewed() *consolev1.ApproveSchemaPlanRequest {
-	return &consolev1.ApproveSchemaPlanRequest{
-		Namespace: namespace, SchemaName: "storefront", SchemaUid: "uid-schema",
-		PlanName: "storefront-plan-1", PlanUid: "uid-plan", PlanFingerprint: "sha256:aa",
-		ContractVersion: ociContract,
-	}
-}
 
 const rbacMessage = `ptahschemaapprovals.operator.ptah.run "ptah-console-0123" is forbidden: ` +
 	`User "author" cannot create resource "ptahschemaapprovals" in API group "operator.ptah.run" in the namespace "application"`
@@ -206,13 +207,13 @@ func TestApproveSchemaPlanReportsEachOutcome(t *testing.T) {
 		},
 		{
 			name: "a plan computed from a ConfigMap or Git source", contract: sourceContract,
-			request: func(r *consolev1.ApproveSchemaPlanRequest) { r.ContractVersion = sourceContract },
+			request: func(*consolev1.ApproveSchemaPlanRequest) {},
 			answer:  admit("alice"), want: consolev1.DecisionOutcome_DECISION_OUTCOME_ADMITTED, message: "", sent: 1,
 		},
 		{
 			name: "a plan written under a contract this console does not know", contract: sourceContract + 1,
-			request: func(r *consolev1.ApproveSchemaPlanRequest) { r.ContractVersion = sourceContract + 1 },
-			answer:  admit("alice"), want: consolev1.DecisionOutcome_DECISION_OUTCOME_CHANGED, message: "contract", sent: 0,
+			request: func(*consolev1.ApproveSchemaPlanRequest) {},
+			answer:  admit("alice"), want: consolev1.DecisionOutcome_DECISION_OUTCOME_REFUSED, message: "does not read", sent: 0,
 		},
 		{
 			name: "reviewed under another contract", contract: ociContract,
@@ -249,8 +250,9 @@ func TestApproveSchemaPlanReportsEachOutcome(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			c := qt.New(t)
-			service := decisionService(t, test.answer, waitingSchema(test.contract)...)
-			request := reviewed()
+			objects := waitingSchema(t, test.contract)
+			service := decisionService(t, test.answer, objects...)
+			request := reviewedOf(objects)
 			test.request(request)
 
 			response, err := service.client.ApproveSchemaPlan(service.ctx, request)
@@ -273,24 +275,26 @@ func TestApproveSchemaPlanReportsEachOutcome(t *testing.T) {
 func TestAnApprovalSendsOnlyWhatItApproves(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
-	service := decisionService(t, admit("alice"), waitingSchema(ociContract)...)
+	objects := waitingSchema(t, ociContract)
+	service := decisionService(t, admit("alice"), objects...)
+	request := reviewedOf(objects)
 
-	response, err := service.client.ApproveSchemaPlan(service.ctx, reviewed())
+	response, err := service.client.ApproveSchemaPlan(service.ctx, request)
 
 	c.Assert(err, qt.IsNil)
 	sent := service.sent()
 	c.Assert(sent, qt.HasLen, 1)
 	approval := sent[0].(*operatorv1alpha1.PtahSchemaApproval)
 	c.Assert(approval.Spec, qt.DeepEquals, operatorv1alpha1.PtahSchemaApprovalSpec{
-		SchemaRef:       operatorv1alpha1.ImmutableObjectReference{Name: "storefront", UID: "uid-schema"},
-		PlanRef:         operatorv1alpha1.ImmutableObjectReference{Name: "storefront-plan-1", UID: "uid-plan"},
-		PlanFingerprint: "sha256:aa",
+		SchemaRef:       operatorv1alpha1.ImmutableObjectReference{Name: "storefront", UID: types.UID(request.GetSchemaUid())},
+		PlanRef:         operatorv1alpha1.ImmutableObjectReference{Name: request.GetPlanName(), UID: types.UID(request.GetPlanUid())},
+		PlanFingerprint: request.GetPlanFingerprint(),
 	})
 	c.Assert(approval.Name, qt.Equals, response.GetResult().GetName())
 	c.Assert(approval.Namespace, qt.Equals, namespace)
 	decided := response.GetResult().GetDecision()
 	c.Assert(decided.GetDecidedBy(), qt.Equals, "alice")
-	c.Assert(decided.GetPlanFingerprint(), qt.Equals, "sha256:aa")
+	c.Assert(decided.GetPlanFingerprint(), qt.Equals, request.GetPlanFingerprint())
 	c.Assert(service.auditLines(t)[0]["identity"], qt.Equals, "alice")
 	c.Assert(service.auditLines(t)[0]["outcome"], qt.Equals, audit.Admitted)
 }
@@ -301,11 +305,12 @@ func TestAnApprovalSendsOnlyWhatItApproves(t *testing.T) {
 func TestARetryAfterALostAnswerFindsTheStoredApproval(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
-	service := decisionService(t, storeThenDrop("alice"), waitingSchema(ociContract)...)
+	objects := waitingSchema(t, ociContract)
+	service := decisionService(t, storeThenDrop("alice"), objects...)
 
-	first, err := service.client.ApproveSchemaPlan(service.ctx, reviewed())
+	first, err := service.client.ApproveSchemaPlan(service.ctx, reviewedOf(objects))
 	c.Assert(err, qt.IsNil)
-	again, err := service.client.ApproveSchemaPlan(service.ctx, reviewed())
+	again, err := service.client.ApproveSchemaPlan(service.ctx, reviewedOf(objects))
 	c.Assert(err, qt.IsNil)
 	readBack, err := service.client.GetDecision(service.ctx, &consolev1.GetDecisionRequest{
 		Kind: consolev1.DecisionKind_DECISION_KIND_SCHEMA_APPROVAL, Namespace: namespace, Name: first.GetResult().GetName(),
@@ -326,9 +331,10 @@ func TestARetryAfterALostAnswerFindsTheStoredApproval(t *testing.T) {
 func TestANameHoldingAnotherDecisionIsNotThisOne(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
-	service := decisionService(t, squat("mallory"), waitingSchema(ociContract)...)
+	objects := waitingSchema(t, ociContract)
+	service := decisionService(t, squat("mallory"), objects...)
 
-	response, err := service.client.ApproveSchemaPlan(service.ctx, reviewed())
+	response, err := service.client.ApproveSchemaPlan(service.ctx, reviewedOf(objects))
 
 	c.Assert(err, qt.IsNil)
 	c.Assert(response.GetResult().GetOutcome(), qt.Equals, consolev1.DecisionOutcome_DECISION_OUTCOME_REFUSED)
@@ -340,8 +346,9 @@ func TestANameHoldingAnotherDecisionIsNotThisOne(t *testing.T) {
 func TestAnApprovalMustNameWhatWasReviewed(t *testing.T) {
 	t.Parallel()
 	c := qt.New(t)
-	service := decisionService(t, admit("alice"), waitingSchema(ociContract)...)
-	request := reviewed()
+	objects := waitingSchema(t, ociContract)
+	service := decisionService(t, admit("alice"), objects...)
+	request := reviewedOf(objects)
 	request.PlanFingerprint = ""
 
 	_, err := service.client.ApproveSchemaPlan(service.ctx, request)
@@ -361,12 +368,18 @@ func waitingMigration() []client.Object {
 		},
 		&operatorv1alpha1.PtahMigrationPlan{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "billing-plan-3", UID: "uid-migration-plan"},
-			Spec:       operatorv1alpha1.PtahMigrationPlanSpec{Fingerprint: "sha256:bb"},
+			Spec: operatorv1alpha1.PtahMigrationPlanSpec{
+				ContractVersion: ociContract, Fingerprint: "sha256:bb",
+				MigrationRef: operatorv1alpha1.ImmutableObjectReference{Name: "billing", UID: "uid-migration"},
+			},
 		},
 		// The plan before it, still stored and no longer the migration's.
 		&operatorv1alpha1.PtahMigrationPlan{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "billing-plan-2", UID: "uid-older-plan"},
-			Spec:       operatorv1alpha1.PtahMigrationPlanSpec{Fingerprint: "sha256:b2"},
+			Spec: operatorv1alpha1.PtahMigrationPlanSpec{
+				ContractVersion: ociContract, Fingerprint: "sha256:b2",
+				MigrationRef: operatorv1alpha1.ImmutableObjectReference{Name: "billing", UID: "uid-migration"},
+			},
 		},
 	}
 }
