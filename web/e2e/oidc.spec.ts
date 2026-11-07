@@ -1,4 +1,4 @@
-import { act, expect, fact, test } from "./lab"
+import { act, expect, fact, outPath, sendPassword, test } from "./lab"
 
 // OpenID Connect sign-in, after the hosted rows: hack/e2e/oidc.sh starts a
 // Dex every API server of the lab trusts, and installs the chart again with
@@ -11,12 +11,14 @@ import { act, expect, fact, test } from "./lab"
 // machine: the issuer has to read the same to the browser, the console's Pod
 // and the API servers.
 const dexHost = "dex.ptah-oidc.svc.cluster.local"
+// Where the port-forward listens.
+const dexAddress = "127.0.0.1"
 // How long the operator may take to apply a plan and verify it.
 const applyTimeout = 15 * 60_000
 
 test.use({
   ignoreHTTPSErrors: true,
-  launchOptions: { args: [`--host-resolver-rules=MAP ${dexHost} 127.0.0.1`] },
+  launchOptions: { args: [`--host-resolver-rules=MAP ${dexHost} ${dexAddress}`] },
 })
 
 test("a person signs in with OpenID Connect and approves as the username the API server gave their token", async ({
@@ -38,12 +40,19 @@ test("a person signs in with OpenID Connect and approves as the username the API
 
   await signIn.click()
   await page.locator("#login").fill(fact("OIDC_EMAIL"))
-  await page.locator("#password").fill(fact("OIDC_PASSWORD"))
   await lab.caption(
     "The provider signs the person in, and sends the browser back with a code.",
     3000
   )
-  await page.locator("#submit-login").click()
+  // Of the page's requests to Dex, sendPassword takes the form's POST and lets the rest through.
+  await sendPassword(page, {
+    field: page.locator("#password"),
+    submit: page.locator("#submit-login"),
+    password: fact("OIDC_PASSWORD"),
+    url: (url) => url.hostname === dexHost,
+    ca: outPath("oidc/ca.crt"),
+    address: dexAddress,
+  })
   await expect(page.getByText(username).first()).toBeVisible({ timeout: 60_000 })
   await expect(page.getByText("· OIDC", { exact: false }).first()).toBeVisible()
   await lab.caption(

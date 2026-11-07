@@ -98,107 +98,156 @@ func TestSchemaReadingsFromTheOperator(t *testing.T) {
 // schema by that record. The Applying condition goes on saying OutcomeUnknown
 // after the proof, because nothing rewrites it before the next Apply.
 //
-// Each row is an operator reading, changed only as its comment says. The model
-// compares no instants, so each row first checks the instants its name relies
-// on: that is what makes the row the case it is named for.
+// Each row is an operator reading, changed only by the writes its comment
+// names. The model compares no instants, so each row first checks the instants
+// its name relies on: that is what makes the row the case it is named for.
 func TestASchemaOutcomeIsUnknownUntilTheProofIsRead(t *testing.T) {
 	t.Parallel()
-	// The status the operator writes when no spec edit comes between the Apply
-	// and the read, as in the issue: every condition at one generation. The
-	// readings have a resume in between, which leaves Applying a generation
-	// behind.
-	noSpecEdit := func(schema *operatorv1alpha1.PtahSchema) {
-		apimeta.FindStatusCondition(schema.Status.Conditions, "Applying").ObservedGeneration = schema.Generation
-	}
-	// What setPlanPolicyStatus writes when the proof's Plan publishes a
-	// destructive plan and spec.policy.allowDestructive is false.
-	policyHolds := func(schema *operatorv1alpha1.PtahSchema) {
-		schema.Status.Phase = operatorv1alpha1.PhaseBlocked
-		rewrite(schema, "ApprovalRequired", metav1.ConditionFalse, "DestructiveChangesDisabled")
-		rewrite(schema, "Ready", metav1.ConditionFalse, "PolicyBlocked")
-	}
-	const (
-		unknownReason  = "An Apply ended without proof of whether it changed the database."
-		waitForTheRead = "Wait for that read"
-	)
 	tests := []struct {
 		name            string
-		file            string
 		change          func(*operatorv1alpha1.PtahSchema)
 		readAfterTheRun bool
-		attention       []consolev1.AttentionKind
-		reason          string
-		next            string
-		applyUnknown    bool
 	}{
 		{
 			name:            "the outcome is recorded and the only read came before the run ended",
-			file:            "alert-schema-recovery-wait.json",
 			change:          func(*operatorv1alpha1.PtahSchema) {},
 			readAfterTheRun: false,
-			attention: []consolev1.AttentionKind{
-				consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN,
-				consolev1.AttentionKind_ATTENTION_KIND_SUSPENDED,
-				consolev1.AttentionKind_ATTENTION_KIND_STALE_STATUS,
-			},
-			reason:       unknownReason,
-			next:         waitForTheRead,
-			applyUnknown: true,
 		},
 		{
-			// The proof is two reads. Between them the Observe has dated
-			// target.lastObservedAt after the run, and the record still stands.
-			name: "the proof's Observe read the database after the run and its Plan has not ended",
-			file: "alert-schema-recovered.json",
-			change: func(schema *operatorv1alpha1.PtahSchema) {
-				noSpecEdit(schema)
-				schema.Status.PendingObservation = &operatorv1alpha1.PendingObservationStatus{
-					Outcome: operatorv1alpha1.PendingObservationOutcomeUnknown,
-				}
-			},
+			// The proof is two reads. Consuming the Observe dates
+			// target.lastObservedAt after the run, and the record still stands
+			// until the Plan.
+			name:            "the proof's Observe read the database after the run and its Plan has not ended",
+			change:          proofObserveConsumed,
 			readAfterTheRun: true,
-			attention: []consolev1.AttentionKind{
-				consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN,
-				consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL,
-			},
-			reason:       unknownReason,
-			next:         waitForTheRead,
-			applyUnknown: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			var schema operatorv1alpha1.PtahSchema
+			reading(t, "alert-schema-recovery-wait.json", &schema)
+			test.change(&schema)
+			readFollowsTheRun(c, &schema, test.readAfterTheRun)
+
+			out := model.Schema(&schema)
+
+			c.Assert(out.GetAttention()[0].GetKind(), qt.Equals, consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN)
+			c.Assert(out.GetAttention()[0].GetNextStep(), qt.Contains, "Wait for that read")
+			c.Assert(stateOf(out.GetStages(), model.StageApply), qt.Equals, unknown)
+		})
+	}
+}
+
+// Once the proof's Plan is consumed the record is gone, and what holds the
+// schema is whatever that Plan published.
+func TestASchemaOutcomeTheProofReadSettledIsNotUnknown(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		change    func(*operatorv1alpha1.PtahSchema)
+		attention []consolev1.AttentionKind
+		reason    string
+		next      string
+	}{
+		{
+			name:      "the new plan waits for an approval",
+			change:    noSpecEdit,
+			attention: []consolev1.AttentionKind{consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL},
+			reason:    "Create an approval bound to the current plan fingerprint",
+			next:      "Review the plan and approve it.",
 		},
 		{
-			name:            "the proof read settled it and the new plan waits for an approval",
-			file:            "alert-schema-recovered.json",
-			change:          noSpecEdit,
-			readAfterTheRun: true,
-			attention:       []consolev1.AttentionKind{consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL},
-			reason:          "Create an approval bound to the current plan fingerprint",
-			next:            "Review the plan and approve it.",
-		},
-		{
-			name: "the proof read settled it and the destructive-change policy holds the new plan",
-			file: "alert-schema-recovered.json",
-			change: func(schema *operatorv1alpha1.PtahSchema) {
-				noSpecEdit(schema)
-				policyHolds(schema)
-			},
-			readAfterTheRun: true,
-			attention:       []consolev1.AttentionKind{consolev1.AttentionKind_ATTENTION_KIND_BLOCKED},
-			reason:          "The destructive-change policy blocks the plan.",
-			next:            "Set spec.policy.allowDestructive",
-		},
-		{
-			// waitBlocked, on every pass after the one that published the plan.
-			name: "a later pass finds the new plan still held",
-			file: "alert-schema-recovered.json",
+			name: "the destructive-change policy holds the new plan",
 			change: func(schema *operatorv1alpha1.PtahSchema) {
 				noSpecEdit(schema)
 				policyHolds(schema)
-				rewrite(schema, "Ready", metav1.ConditionFalse, "DestructiveChangesDisabled")
 			},
-			readAfterTheRun: true,
-			attention:       []consolev1.AttentionKind{consolev1.AttentionKind_ATTENTION_KIND_BLOCKED},
-			reason:          "The destructive-change policy blocks the plan.",
-			next:            "Set spec.policy.allowDestructive",
+			attention: []consolev1.AttentionKind{consolev1.AttentionKind_ATTENTION_KIND_BLOCKED},
+			reason:    "The destructive-change policy blocks the plan.",
+			next:      "Set spec.policy.allowDestructive",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			var schema operatorv1alpha1.PtahSchema
+			reading(t, "alert-schema-recovered.json", &schema)
+			test.change(&schema)
+			readFollowsTheRun(c, &schema, true)
+
+			out := model.Schema(&schema)
+
+			c.Assert(kinds(out.GetAttention()), qt.DeepEquals, test.attention)
+			c.Assert(out.GetAttention()[0].GetReason(), qt.Equals, test.reason)
+			c.Assert(out.GetAttention()[0].GetNextStep(), qt.Contains, test.next)
+			c.Assert(stateOf(out.GetStages(), model.StageApply), qt.Not(qt.Equals), unknown)
+		})
+	}
+}
+
+// Nobody reads the database of a schema being deleted. The operator waits until
+// the Apply's Pod has stopped, then drops the pending observation unread and
+// removes its finalizer; ReconciliationFailed True ApplyOutcomeUnknown stays.
+// Another finalizer can keep the object, and the console must not say a read
+// or a retry is coming.
+func TestADeletedSchemaSaysItsOutcomeStaysUnknown(t *testing.T) {
+	t.Parallel()
+	deleting := func(schema *operatorv1alpha1.PtahSchema) {
+		at := metav1.NewTime(schema.Status.PendingObservation.ObserveAfter.Add(time.Minute))
+		schema.DeletionTimestamp = &at
+	}
+	droppedUnread := func(schema *operatorv1alpha1.PtahSchema) { schema.Status.PendingObservation = nil }
+	tests := []struct {
+		name   string
+		file   string
+		change func(*operatorv1alpha1.PtahSchema)
+		kind   consolev1.AttentionKind
+		next   string
+		apply  consolev1.StageState
+	}{
+		{
+			name: "the record was dropped unread and the failure stands",
+			file: "alert-schema-recovery-wait.json",
+			change: func(schema *operatorv1alpha1.PtahSchema) {
+				deleting(schema)
+				droppedUnread(schema)
+			},
+			kind:  consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN,
+			next:  "does not read the database again for a resource it is deleting",
+			apply: unknown,
+		},
+		{
+			name:   "the record still waits for the Apply's Pod to stop",
+			file:   "alert-schema-recovery-wait.json",
+			change: deleting,
+			kind:   consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN,
+			next:   "does not read the database again for a resource it is deleting",
+			apply:  unknown,
+		},
+		{
+			// Operator v0.2.9 writes this status only during deletion. On a
+			// schema nobody is deleting it is an ordinary failure to the console.
+			name:   "the same conditions on a schema nobody is deleting",
+			file:   "alert-schema-recovery-wait.json",
+			change: droppedUnread,
+			kind:   consolev1.AttentionKind_ATTENTION_KIND_FAILED,
+			next:   "The operator tries again after spec.execution.failureRetryInterval.",
+			apply:  failed,
+		},
+		{
+			name: "a schema deleted after the proof read settled its outcome",
+			file: "alert-schema-recovered.json",
+			change: func(schema *operatorv1alpha1.PtahSchema) {
+				noSpecEdit(schema)
+				at := metav1.NewTime(schema.Status.LastAttemptTime.Add(time.Minute))
+				schema.DeletionTimestamp = &at
+			},
+			kind:  consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL,
+			next:  "Review the plan and approve it.",
+			apply: waiting,
 		},
 	}
 	for _, test := range tests {
@@ -208,30 +257,75 @@ func TestASchemaOutcomeIsUnknownUntilTheProofIsRead(t *testing.T) {
 			var schema operatorv1alpha1.PtahSchema
 			reading(t, test.file, &schema)
 			test.change(&schema)
-			applying := apimeta.FindStatusCondition(schema.Status.Conditions, "Applying")
-			c.Assert(applying, qt.IsNotNil)
-			c.Assert(applying.Reason, qt.Equals, "OutcomeUnknown")
-			observed := schema.Status.Target.LastObservedAt
-			c.Assert(observed, qt.IsNotNil)
-			c.Assert(observed.Equal(&applying.LastTransitionTime), qt.IsFalse)
-			c.Assert(observed.After(applying.LastTransitionTime.Time), qt.Equals, test.readAfterTheRun)
 
 			out := model.Schema(&schema)
 
-			c.Assert(kinds(out.GetAttention()), qt.DeepEquals, test.attention)
-			c.Assert(out.GetAttention()[0].GetReason(), qt.Equals, test.reason)
+			c.Assert(out.GetAttention()[0].GetKind(), qt.Equals, test.kind)
 			c.Assert(out.GetAttention()[0].GetNextStep(), qt.Contains, test.next)
-			c.Assert(slices.Contains(states(out.GetStages()), unknown), qt.Equals, test.applyUnknown)
+			c.Assert(stateOf(out.GetStages(), model.StageApply), qt.Equals, test.apply)
 		})
 	}
 }
 
-// rewrite changes a condition the operator wrote the way setCondition would on
-// a later pass, keeping its transition time: the rows compare no instants of
-// their own.
-func rewrite(schema *operatorv1alpha1.PtahSchema, kind string, status metav1.ConditionStatus, reason string) {
-	condition := apimeta.FindStatusCondition(schema.Status.Conditions, kind)
-	condition.Status, condition.Reason, condition.Message = status, reason, kind+" "+reason
+// readFollowsTheRun checks that the reading's last observation is dated
+// distinctly from the moment Applying recorded the unknown outcome, and on the
+// side the row claims.
+func readFollowsTheRun(c *qt.C, schema *operatorv1alpha1.PtahSchema, after bool) {
+	c.Helper()
+	applying := apimeta.FindStatusCondition(schema.Status.Conditions, "Applying")
+	c.Assert(applying, qt.IsNotNil)
+	c.Assert(applying.Reason, qt.Equals, "OutcomeUnknown")
+	observed := schema.Status.Target.LastObservedAt
+	c.Assert(observed, qt.IsNotNil)
+	c.Assert(observed.Equal(&applying.LastTransitionTime), qt.IsFalse)
+	c.Assert(observed.After(applying.LastTransitionTime.Time), qt.Equals, after)
+}
+
+// noSpecEdit is the status the operator writes when no spec edit comes between
+// the Apply and the read, as in issue 162: every condition at one generation.
+// The readings have a resume in between, which leaves Applying a generation
+// behind.
+func noSpecEdit(schema *operatorv1alpha1.PtahSchema) {
+	apimeta.FindStatusCondition(schema.Status.Conditions, "Applying").ObservedGeneration = schema.Generation
+}
+
+// policyHolds is the proof's Plan publishing a destructive plan while
+// spec.policy.allowDestructive is false: what setPlanPolicyStatus writes.
+func policyHolds(schema *operatorv1alpha1.PtahSchema) {
+	schema.Spec.Policy.AllowDestructive = false
+	schema.Status.Plan.Destructive = true
+	schema.Status.Phase = operatorv1alpha1.PhaseBlocked
+	write(schema, "ApprovalRequired", metav1.ConditionFalse, "DestructiveChangesDisabled")
+	write(schema, "Ready", metav1.ConditionFalse, "PolicyBlocked")
+}
+
+// proofObserveConsumed is the schema that resumed and waited out
+// pendingObservation.observeAfter, then had the proof's Observe consumed: the
+// resume's Suspended write, clearFailure, and the Observe branch of
+// consumeResultWithTransport for a schema with a pending observation.
+func proofObserveConsumed(schema *operatorv1alpha1.PtahSchema) {
+	at := metav1.NewTime(schema.Status.PendingObservation.ObserveAfter.Add(20 * time.Second))
+	schema.Status.LastAttemptTime = &at
+	write(schema, "Suspended", metav1.ConditionFalse, "Active")
+	write(schema, "ReconciliationFailed", metav1.ConditionFalse, "Succeeded")
+	schema.Status.Target.LastObservedAt = &at
+	schema.Status.Plan = nil
+	write(schema, "DatabaseReachable", metav1.ConditionTrue, "Observed")
+	write(schema, "DriftDetected", metav1.ConditionUnknown, "ScopedPlanPending")
+	write(schema, "InSync", metav1.ConditionUnknown, "ScopedPlanPending")
+	write(schema, "Ready", metav1.ConditionFalse, "ScopedPlanPending")
+	schema.Status.PendingObservation.PlanRequired = true
+	schema.Status.Phase = operatorv1alpha1.PhaseVerifyingConvergence
+}
+
+// write sets a condition the way the operator's setCondition does in the pass
+// that wrote status.lastAttemptTime: at the object's generation, with a new
+// transition time only when the status changes.
+func write(schema *operatorv1alpha1.PtahSchema, kind string, status metav1.ConditionStatus, reason string) {
+	apimeta.SetStatusCondition(&schema.Status.Conditions, metav1.Condition{
+		Type: kind, Status: status, Reason: reason, Message: kind + " " + reason,
+		ObservedGeneration: schema.Generation, LastTransitionTime: *schema.Status.LastAttemptTime,
+	})
 }
 
 func TestMigrationReadingsFromTheOperator(t *testing.T) {
@@ -364,6 +458,15 @@ func TestEachSchemaAttentionKindRefusesItsLookAlike(t *testing.T) {
 			name: "a published plan the destructive-change policy holds",
 			schema: schemaWith(condition("PlanReady", metav1.ConditionTrue, "Published"),
 				condition("Ready", metav1.ConditionFalse, "PolicyBlocked")),
+			kind: consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, shown: true,
+		},
+		{
+			// A defensive case: waitBlocked writes it, only a ReadyToApply or
+			// AwaitingApproval schema reaches waitBlocked, and a held plan is
+			// Blocked from the start.
+			name: "a published plan waitBlocked holds",
+			schema: schemaWith(condition("PlanReady", metav1.ConditionTrue, "Published"),
+				condition("Ready", metav1.ConditionFalse, "DestructiveChangesDisabled")),
 			kind: consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, shown: true,
 		},
 		{

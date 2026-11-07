@@ -66,7 +66,8 @@ persona() {
 }
 
 # fact records one NAME=value for the rows that follow, replacing an earlier
-# value of the same name.
+# value of the same name. A password's name ends in _PASSWORD: that is how
+# hack/e2e/secretscan knows what to look for in the recordings.
 fact() {
 	touch "$OUT_DIR/facts"
 	grep -v "^$1=" "$OUT_DIR/facts" >"$OUT_DIR/facts.new" || true

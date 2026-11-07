@@ -1,7 +1,15 @@
 import AxeBuilder from "@axe-core/playwright"
-import { test as base, expect, type Page } from "@playwright/test"
+import {
+  test as base,
+  expect,
+  type Locator,
+  type Page,
+  type Request,
+  type Route,
+} from "@playwright/test"
 import { execFile, spawn, type ChildProcess } from "node:child_process"
 import { closeSync, openSync, readFileSync, writeFileSync } from "node:fs"
+import { request as httpsRequest } from "node:https"
 import path from "node:path"
 import { promisify } from "node:util"
 
@@ -47,6 +55,179 @@ export async function act(...args: string[]): Promise<string> {
     timeout: 15 * 60_000,
   })
   return stdout.trim()
+}
+
+/**
+ * What a password field holds instead of the password. A trace keeps the
+ * arguments of every call, the value of every input in its DOM snapshots and
+ * the body of every request, and the HTML report keeps each step's
+ * arguments, so a password the page held would be in all of them.
+ */
+const passwordPlaceholder = "placeholder: the test runner sends the password"
+
+/** A sign-in form whose password the page must not hold. */
+export interface PasswordForm {
+  field: Locator
+  submit: Locator
+  password: string
+  /** The request the form sends, as page.route matches it. */
+  url: string | RegExp | ((url: URL) => boolean)
+  /** The certificate the server's must chain to, a path. */
+  ca: string
+  /** Where the server's host name resolves, when a resolver rule maps it for the browser. */
+  address?: string
+}
+
+/**
+ * Sends a sign-in form without the page ever holding the password. The field
+ * gets a placeholder; the request the form sends goes out again from this
+ * process with the password in its place, and the browser gets the server's
+ * answer as its own, cookies and redirects included. hack/e2e/secretscan
+ * refuses an artifact that holds a password all the same.
+ */
+export async function sendPassword(page: Page, form: PasswordForm): Promise<void> {
+  let taken = false
+  let answered: () => void = () => undefined
+  let failed: (error: unknown) => void = () => undefined
+  const answer = new Promise<void>((resolve, reject) => {
+    answered = resolve
+    failed = reject
+  })
+  // Settled after the wait gave up, it is not an unhandled rejection.
+  answer.catch(() => undefined)
+  const handler = async (route: Route) => {
+    // A page that loads the form, or follows the answer's redirect, goes on
+    // as it would.
+    if (taken || route.request().method() !== "POST") {
+      await route.fallback()
+      return
+    }
+    taken = true
+    try {
+      await route.fulfill(await resend(route.request(), form))
+      answered()
+    } catch (error) {
+      await route.abort().catch(() => undefined)
+      failed(error)
+    }
+  }
+  await page.route(form.url, handler)
+  try {
+    await form.field.fill(passwordPlaceholder)
+    await form.submit.click()
+    await within(answer, 60_000, "the form sent no request with its password")
+  } finally {
+    await page.unroute(form.url, handler)
+  }
+}
+
+/** Request and response headers that belong to one connection, not to the exchange. */
+const perConnection = new Set([
+  "connection",
+  "content-length",
+  "host",
+  "keep-alive",
+  "proxy-connection",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade",
+  // Sent without it, the answer arrives as the page reads it.
+  "accept-encoding",
+])
+
+/** Sends the form's request from this process, with the password in it. */
+async function resend(
+  request: Request,
+  form: PasswordForm
+): Promise<{ status: number; headers: Record<string, string>; body: Buffer }> {
+  const target = new URL(request.url())
+  const headers: Record<string, string> = {}
+  for (const [name, value] of Object.entries(await request.allHeaders())) {
+    if (!name.startsWith(":") && !perConnection.has(name)) {
+      headers[name] = value
+    }
+  }
+  const body = withPassword(headers["content-type"] ?? "", request.postData(), form.password)
+  headers.host = target.host
+  headers["content-length"] = String(Buffer.byteLength(body))
+  const ca = readFileSync(form.ca)
+  return new Promise((resolve, reject) => {
+    const outgoing = httpsRequest(
+      {
+        hostname: form.address ?? target.hostname,
+        port: target.port || 443,
+        path: target.pathname + target.search,
+        method: "POST",
+        headers,
+        servername: target.hostname,
+        ca,
+        agent: false,
+      },
+      (incoming) => {
+        const chunks: Buffer[] = []
+        incoming.on("data", (chunk: Buffer) => chunks.push(chunk))
+        incoming.on("error", reject)
+        incoming.on("end", () => {
+          const answer: Record<string, string> = {}
+          for (const [name, value] of Object.entries(incoming.headers)) {
+            if (value !== undefined && !perConnection.has(name)) {
+              // Playwright takes several Set-Cookie headers one to a line.
+              answer[name] = Array.isArray(value) ? value.join("\n") : value
+            }
+          }
+          const encoding = answer["content-encoding"]
+          if (encoding !== undefined && encoding !== "identity") {
+            reject(new Error(`${target.origin} answered in ${encoding}, which it was not offered`))
+            return
+          }
+          resolve({
+            status: incoming.statusCode ?? 0,
+            headers: answer,
+            body: Buffer.concat(chunks),
+          })
+        })
+      }
+    )
+    outgoing.on("error", reject)
+    outgoing.end(body)
+  })
+}
+
+/**
+ * The form's body with the password in place of the placeholder. Neither the
+ * body nor the password goes into an error.
+ */
+function withPassword(contentType: string, body: string | null, password: string): string {
+  const type = contentType.split(";")[0].trim().toLowerCase()
+  if (type === "application/json" && body !== null) {
+    const fields = JSON.parse(body) as Record<string, unknown>
+    if (fields.password === passwordPlaceholder) {
+      return JSON.stringify({ ...fields, password })
+    }
+  } else if (type === "application/x-www-form-urlencoded" && body !== null) {
+    const fields = new URLSearchParams(body)
+    if (fields.get("password") === passwordPlaceholder) {
+      fields.set("password", password)
+      return fields.toString()
+    }
+  } else {
+    throw new Error(`the form sent ${type || "no content type"}, which holds no password field`)
+  }
+  throw new Error("the form's password field did not hold the placeholder")
+}
+
+/** Waits for a promise, and fails with a message once the time is up. */
+async function within<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms)
+  })
+  try {
+    return await Promise.race([promise, late])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /**
@@ -140,6 +321,12 @@ export interface Lab {
    * password, the current one unless another is given.
    */
   signInHosted(account: Account, password?: string): Promise<void>
+  /**
+   * Fills in the hosted console's sign-in form on the page and sends it,
+   * with the account's current password unless another is given. The page
+   * never holds the password: see sendPassword.
+   */
+  sendHostedSignIn(account: Account, password?: string): Promise<void>
   /** The origin of the console the page is signed in to. */
   origin(): string
   /** Shows a caption, holds it long enough to read, and takes it away. */
@@ -177,6 +364,17 @@ export const test = base.extend<{ lab: Lab }>({
     const children: ChildProcess[] = []
     const cuts: Film["cuts"] = []
     let origin = ""
+    const sendHostedSignIn = async (account: Account, password?: string) => {
+      const form = page.getByRole("form", { name: "Sign in" })
+      await form.getByLabel("Login").fill(`${account}@e2e.test`)
+      await sendPassword(page, {
+        field: form.getByLabel("Password"),
+        submit: form.getByRole("button", { name: "Sign in" }),
+        password: password ?? fact(`HOSTED_${account.toUpperCase()}_PASSWORD`),
+        url: `${fact("HOSTED_URL")}/api/ptah.console.v1.SessionService/Login`,
+        ca: outPath("hosted-tls.crt"),
+      })
+    }
     await provide({
       async signIn(who, namespaces = [fact("NAMESPACE")]) {
         // Starting a console shows a blank page until it is signed in; the
@@ -209,15 +407,12 @@ export const test = base.extend<{ lab: Lab }>({
         const form = page.getByRole("form", { name: "Sign in" })
         await expect(form).toBeVisible({ timeout: 60_000 })
         cuts.push({ from, to: seconds(), keep: 0 })
-        await form.getByLabel("Login").fill(`${account}@e2e.test`)
-        await form
-          .getByLabel("Password")
-          .fill(password ?? fact(`HOSTED_${account.toUpperCase()}_PASSWORD`))
-        await form.getByRole("button", { name: "Sign in" }).click()
+        await sendHostedSignIn(account, password)
         await expect(page.getByText(fact(`HOSTED_${account.toUpperCase()}`)).first()).toBeVisible({
           timeout: 60_000,
         })
       },
+      sendHostedSignIn,
       origin: () => origin,
       async caption(text, holdMs = 3500, at = "top") {
         await showCaption(page, text, at)
