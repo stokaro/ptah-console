@@ -147,7 +147,7 @@ describe("Pre-flight's checks", () => {
     expect(untested).toHaveTextContent(
       "v1.38.0 is not among the minors this console was tested on: 1.35, 1.36, 1.37."
     )
-    unmount()
+    await unmount()
 
     renderConsole("/console/preflight", { kubernetesVersion: "" })
     const unknown = await check("Kubernetes")

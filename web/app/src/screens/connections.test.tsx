@@ -124,7 +124,7 @@ describe("The clusters of a hosted console", () => {
   it("offers the Admin role only to who may change the registry", async () => {
     const { unmount } = renderConsole("/approve", hosted(registry()))
     expect(await screen.findByRole("link", { name: "Admin" })).toBeInTheDocument()
-    unmount()
+    await unmount()
 
     renderConsole("/approve", hosted(registry((fixture) => (fixture.manage = false))))
     await screen.findByRole("link", { name: "Approver" })
