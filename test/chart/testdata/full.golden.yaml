@@ -11,9 +11,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 spec:
   podSelector:
     matchLabels:
@@ -50,9 +50,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 
 ---
 # Source: ptah-console/templates/configmap.yaml
@@ -64,9 +64,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 data:
   configuration.yaml: |
     apiVersion: console.ptah.run/v1alpha1
@@ -91,9 +91,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 rules:
   - apiGroups: [""]
     resources: ["users"]
@@ -112,9 +112,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -134,9 +134,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 rules:
   - apiGroups:
     - operator.ptah.run
@@ -163,9 +163,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 rules:
   - apiGroups:
     - operator.ptah.run
@@ -186,9 +186,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 rules:
   - apiGroups:
     - operator.ptah.run
@@ -214,9 +214,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 rules:
   - apiGroups:
     - operator.ptah.run
@@ -268,9 +268,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 rules:
   - apiGroups:
     - operator.ptah.run
@@ -297,9 +297,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 rules:
   - apiGroups:
     - operator.ptah.run
@@ -320,9 +320,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 rules:
   - apiGroups:
     - operator.ptah.run
@@ -348,9 +348,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 rules:
   - apiGroups:
     - operator.ptah.run
@@ -402,9 +402,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -427,9 +427,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -449,9 +449,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -471,9 +471,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -493,9 +493,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -515,9 +515,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -540,9 +540,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -562,9 +562,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -584,9 +584,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -606,9 +606,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -628,9 +628,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 spec:
   type: ClusterIP
   selector:
@@ -652,9 +652,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 spec:
   # Sessions live in the one replica's memory; a rollout replaces it whole.
   replicas: 1
@@ -670,7 +670,7 @@ spec:
         app.kubernetes.io/name: ptah-console
         app.kubernetes.io/instance: console
       annotations:
-        checksum/configuration: acabf0ddeb9b1dca88d3f17063881db87d3fc78eba47a5db01cb49aa6112dba4
+        checksum/configuration: 9c2feb7f1db3623b7a7b26aa1aa5a92a899a484eef6f32331b0a625885371db1
         example.com/team: data
     spec:
       serviceAccountName: console-ptah-console
@@ -685,7 +685,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: console
-          image: ghcr.io/stokaro/ptah-console:0.3.1@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          image: ghcr.io/stokaro/ptah-console:0.3.2@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
           imagePullPolicy: IfNotPresent
           args:
             - serve
@@ -751,9 +751,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: 1m
 spec:
@@ -783,9 +783,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ptah-console
     app.kubernetes.io/instance: console
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.3.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ptah-console-0.3.1
+    helm.sh/chart: ptah-console-0.3.2
 spec:
   parentRefs:
     - name: public

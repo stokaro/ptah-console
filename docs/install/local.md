@@ -24,7 +24,7 @@ Download the archive for your platform from the
 the binary on your `PATH`. On Linux amd64:
 
 ```sh
-version=0.3.1
+version=0.3.2
 gh release download "v$version" --repo stokaro/ptah-console \
   --pattern "ptah-console_${version}_linux_amd64.tar.gz" --pattern SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS
