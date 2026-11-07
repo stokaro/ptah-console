@@ -105,22 +105,6 @@ func statusCurrent(generation, observed int64) bool {
 	return observed == generation
 }
 
-// newest reports whether a condition was written at the newest generation
-// any condition carries. A condition the operator has not rewritten since an
-// older generation is history, not the current state.
-func (c conditions) newest(kind string) bool {
-	condition, ok := c[kind]
-	if !ok {
-		return false
-	}
-	for _, other := range c {
-		if other.ObservedGeneration > condition.ObservedGeneration {
-			return false
-		}
-	}
-	return true
-}
-
 func stage(name string, state consolev1.StageState, detail string) *consolev1.Stage {
 	return &consolev1.Stage{Name: name, State: state, Detail: detail}
 }
