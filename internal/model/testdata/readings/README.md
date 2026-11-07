@@ -14,9 +14,15 @@ operator produced, not against statuses written by hand.
 | `migration-awaiting-approval.json` | The PtahMigration `deliveries` waiting for an approval, its interval read just ended. |
 | `migration-reading-again.json` | The same migration during that read: phase `Reading`, a History operation running, the plan still current and approval still required. |
 | `migration-between-read-operations.json` | The same read between its last two operations: phase `Planning`, nothing running. |
+| `uncertain-migration-retained-claim.json` | Two PtahMigration statuses, MySQL and PostgreSQL, `Blocked` with reason `ApplyOutcomeUnknown` on a run nobody accounted for. |
 
 The three `deliveries` readings were recorded by watching the object in the
 console's acceptance lab on October 24, 2026: Kubernetes 1.37.0, operator
 `70bd7654e4a8a694ef8ab41e769535f456263c4b`, Ptah v0.15.0 executor. They are
 whole objects without `managedFields` and the client-side apply annotation, and
 name Secrets only by name and key.
+
+`uncertain-migration-retained-claim.json` is copied unchanged from the
+operator's `testdata/e2e/readings` at the tag v0.2.9, which the console
+requires. The operator recorded it in CI run 36675116019, and its README there
+says which fields it keeps.

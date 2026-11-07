@@ -9,6 +9,7 @@ import {
   StageState,
 } from "../gen/ptah/console/v1/resources_pb"
 import { minutesAgo, syncedMigration, waitingSchema } from "../test/console"
+import { stateOf } from "./catalog"
 import {
   leadingAttention,
   namespaceHealth,
@@ -16,7 +17,7 @@ import {
   recentActivity,
   stateCounts,
 } from "./overview"
-import { fromMigration, fromSchema, type ResourceView } from "./resource"
+import { fromMigration, fromSchema, incident, type ResourceView } from "./resource"
 
 function attention(kind: AttentionKind, minutes?: number) {
   return create(AttentionSchema, {
@@ -128,6 +129,45 @@ describe("namespaceHealth", () => {
         total: 0,
       },
     ])
+  })
+})
+
+describe("a schema the destructive-change policy holds", () => {
+  const reason = "The destructive-change policy blocks the plan."
+  const scopes = [create(NamespaceScopeSchema, { name: "application", access: Access.OK })]
+  // The stages the server sends for it: nothing runs, and nothing is done
+  // past the plan.
+  function held(...items: ReturnType<typeof attention>[]) {
+    return fromSchema(
+      waitingSchema((schema) => {
+        schema.phase = "Blocked"
+        schema.approvalOpen = false
+        schema.stages[3].state = StageState.WAITING
+        schema.stages[4].state = StageState.WAITING
+        schema.attention = items
+      })
+    )
+  }
+
+  it("needs attention on the overview, in namespace health and on call, with its reason", () => {
+    const blocked = held(
+      create(AttentionSchema, { kind: AttentionKind.BLOCKED, reason, since: minutesAgo(4) })
+    )
+
+    expect(stateCounts([blocked]).counts.attention).toBe(1)
+    expect(needsAttention([blocked]).map((row) => [row.group, row.attention.reason])).toEqual([
+      ["failing", reason],
+    ])
+    expect(namespaceHealth([blocked], scopes)[0].counts.attention).toBe(1)
+    expect(incident(blocked)?.reason).toBe(reason)
+  })
+
+  it("has no status without the attention, whatever its phase says", () => {
+    const unexplained = held()
+
+    expect(stateOf(unexplained)).toBe("none")
+    expect(needsAttention([unexplained])).toEqual([])
+    expect(namespaceHealth([unexplained], scopes)[0].counts.none).toBe(1)
   })
 })
 
