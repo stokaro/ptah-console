@@ -1,16 +1,19 @@
-import { RouterProvider, type RouterHistory } from "@tanstack/react-router"
+import { RouterProvider } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { createAppRouter } from "./router"
+import { createAppRouter, type AppRouter } from "./router"
 
 export interface AppProps {
   /** Why the launch link could not sign this browser in, if it could not. */
   launchError?: string
-  /** Tests pass a memory history; the app uses the browser's. */
-  history?: RouterHistory
+  /**
+   * Tests pass a router on a memory history, with its own context, so they
+   * can wait for it to finish loading. The app makes one on the browser's.
+   */
+  router?: AppRouter
 }
 
-export function App({ launchError, history }: AppProps) {
-  const [router] = useState(() => createAppRouter({ history, context: { launchError } }))
-  return <RouterProvider router={router} />
+export function App({ launchError, router }: AppProps) {
+  const [current] = useState(() => router ?? createAppRouter({ context: { launchError } }))
+  return <RouterProvider router={current} />
 }

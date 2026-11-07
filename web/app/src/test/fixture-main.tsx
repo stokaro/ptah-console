@@ -2,7 +2,6 @@
 // a cluster: `npm run dev --workspace app`, then open /fixture.html. The
 // production build reads index.html only, so none of this ships.
 import { create } from "@bufbuild/protobuf"
-import { createBrowserHistory } from "@tanstack/react-router"
 import { QueryClient } from "@tanstack/react-query"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
@@ -156,7 +155,7 @@ const transport = consoleTransport({
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppProviders transport={transport} queryClient={new QueryClient()}>
-      <App history={createBrowserHistory()} />
+      <App />
     </AppProviders>
   </StrictMode>
 )

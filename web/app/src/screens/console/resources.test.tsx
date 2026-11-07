@@ -125,7 +125,9 @@ describe("Resources", () => {
 
     await user.click(screen.getByRole("link", { name: /Focused view/ }))
     // The focused view's home sends an approver to the queue.
-    expect(await screen.findByRole("navigation", { name: "Role" })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("list", { name: "Plans waiting for approval" })
+    ).toBeInTheDocument()
     expect(history.location.pathname).toBe("/approve")
   })
 })

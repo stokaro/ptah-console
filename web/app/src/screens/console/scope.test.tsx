@@ -123,7 +123,7 @@ describe("The first visit to the full console", () => {
     )
     await waitFor(() => expect(lastListed(fixture)).toEqual(["application", "billing"]))
     expect(window.localStorage.getItem(aliceKey)).toBeNull()
-    unmount()
+    await unmount()
 
     renderConsole("/console", twoNamespaces())
     expect(await screen.findByRole("dialog", { name: welcomeName })).toBeVisible()

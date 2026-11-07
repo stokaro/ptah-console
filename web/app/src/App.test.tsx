@@ -1,15 +1,11 @@
 import { Code, ConnectError, createRouterTransport } from "@connectrpc/connect"
-import { createMemoryHistory } from "@tanstack/react-router"
-import { QueryClient } from "@tanstack/react-query"
-import { render, screen, within } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import { axe } from "jest-axe"
 import { describe, expect, it } from "vitest"
 
-import { App } from "./App"
-import { AppProviders } from "./AppProviders"
 import { InfoService, Mode } from "./gen/ptah/console/v1/info_pb"
 import { SessionService } from "./gen/ptah/console/v1/session_pb"
-import { renderConsole } from "./test/console"
+import { renderApp, renderConsole } from "./test/console"
 
 describe("App", () => {
   it("says whom it acts as, offers the roles, and has no accessibility violations", async () => {
@@ -43,14 +39,7 @@ describe("App", () => {
         },
       })
     })
-    render(
-      <AppProviders
-        transport={transport}
-        queryClient={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-      >
-        <App history={createMemoryHistory({ initialEntries: ["/approve"] })} />
-      </AppProviders>
-    )
+    renderApp("/approve", transport)
 
     expect(
       await screen.findByRole("heading", { name: "This page is not signed in" })

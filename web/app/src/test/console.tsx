@@ -1,12 +1,14 @@
 import { create, type MessageInitShape } from "@bufbuild/protobuf"
 import { timestampFromDate } from "@bufbuild/protobuf/wkt"
-import { Code, ConnectError, createRouterTransport } from "@connectrpc/connect"
+import { Code, ConnectError, createRouterTransport, type Transport } from "@connectrpc/connect"
 import { createMemoryHistory } from "@tanstack/react-router"
 import { QueryClient } from "@tanstack/react-query"
 import { render } from "@testing-library/react"
 
+import { settle, settleAfterTest } from "../../../test/routers"
 import { App } from "../App"
 import { AppProviders } from "../AppProviders"
+import { createAppRouter } from "../router"
 import {
   DecisionOutcome,
   DecisionResultSchema,
@@ -609,14 +611,28 @@ export function consoleTransport(fixture: Fixture) {
 
 /** Renders the whole console at a path, against the fixture. */
 export function renderConsole(path: string, fixture: Fixture = {}) {
+  return renderApp(path, consoleTransport(fixture))
+}
+
+/**
+ * Renders the app at a path, against a transport. The app unmounts only once
+ * its router has finished loading: in the cleanup after the test, or when the
+ * test awaits the unmount it returns.
+ */
+export function renderApp(path: string, transport: Transport) {
   const history = createMemoryHistory({ initialEntries: [path] })
+  const router = settleAfterTest(createAppRouter({ history }))
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const view = render(
-    <AppProviders transport={consoleTransport(fixture)} queryClient={queryClient}>
-      <App history={history} />
+    <AppProviders transport={transport} queryClient={queryClient}>
+      <App router={router} />
     </AppProviders>
   )
-  return { ...view, history, queryClient }
+  const unmount = async () => {
+    await settle(router)
+    view.unmount()
+  }
+  return { ...view, unmount, history, queryClient }
 }
 
 type WatchEvent = MessageInitShape<typeof SubscribeResponseSchema>

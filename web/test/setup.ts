@@ -3,6 +3,8 @@ import { cleanup, configure } from "@testing-library/react"
 import { toHaveNoViolations } from "jest-axe"
 import { afterEach, expect } from "vitest"
 
+import { settleRouters } from "./routers"
+
 expect.extend(toHaveNoViolations)
 
 // A screen is a lazily imported chunk. The first test in a worker to open one
@@ -12,6 +14,12 @@ expect.extend(toHaveNoViolations)
 // passing test nothing.
 configure({ asyncUtilTimeout: 5_000 })
 
-afterEach(() => {
-  cleanup()
+// A router still loading when its tree unmounts commits later, possibly into
+// a torn-down jsdom, so the routers settle first (test/routers.ts).
+afterEach(async () => {
+  try {
+    await settleRouters()
+  } finally {
+    cleanup()
+  }
 })
