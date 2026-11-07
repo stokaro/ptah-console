@@ -142,9 +142,11 @@ func firstOf(values ...string) string {
 
 // planBlockers are the reasons, on PlanReady or Ready, that hold a schema
 // until a person changes something; the others clear on their own.
+// DestructiveChangesDisabled and PolicyBlocked are one refusal, said in the
+// same words whichever condition carries it.
 var planBlockers = map[string]string{
 	"ProtectedTable":             "The artifact changes a table spec.policy.protectedTables fences off.",
-	"DestructiveChangesDisabled": "The plan drops data and spec.policy.allowDestructive is false.",
+	"DestructiveChangesDisabled": "The destructive-change policy blocks the plan.",
 	"PolicyBlocked":              "The destructive-change policy blocks the plan.",
 	"ArtifactUnverified":         "The artifact did not pass verification.",
 }
@@ -292,15 +294,34 @@ func outcomeUnknown(schema *operatorv1alpha1.PtahSchema, c conditions) bool {
 }
 
 // schemaBlocker is the reason a person has to change something before the
-// schema moves, and the condition it was read from. A plan the operator refused
-// to compute or use says so on PlanReady. A published plan the
-// destructive-change policy holds says so on Ready as PolicyBlocked, written by
-// the pass that publishes it; a Blocked schema writes nothing more until its
-// next refresh claims an operation. DestructiveChangesDisabled on Ready is what
-// waitBlocked writes, and only a ReadyToApply or AwaitingApproval schema
+// schema moves, and the condition it was read from. PtahSchema publishes no
+// Blocked condition: each refusal is written on the condition it concerns.
+//
+// A published plan the destructive-change policy holds says so on
+// ApprovalRequired, False for DestructiveChangesDisabled, as the operator
+// itself decides (policyHolds in its internal/approve). The operator writes it
+// with the plan, and nothing it does while it resolves, verifies and observes
+// the schema again at its interval rewrites it, so the refusal holds while the
+// phase moves on. The plan has to be there as well: a plan that comes back with
+// no changes clears status.plan and leaves ApprovalRequired as the refusal
+// wrote it. The operator also clears the plan when it observes the database
+// again and publishes it from the plan step that follows; for that step the
+// status reads exactly like a converged schema being read again, and no
+// refusal is read.
+//
+// A plan the operator refused to compute or use says so on PlanReady. The
+// destructive-change policy also says so on Ready as PolicyBlocked, written by
+// the pass that publishes the plan; a Blocked schema writes nothing more until
+// its next refresh claims an operation. DestructiveChangesDisabled on Ready is
+// what waitBlocked writes, and only a ReadyToApply or AwaitingApproval schema
 // reaches waitBlocked, while a held plan is Blocked from the start. That reason
 // stays in planBlockers as a defensive case.
-func schemaBlocker(c conditions) (reason, condition string) {
+func schemaBlocker(status operatorv1alpha1.PtahSchemaStatus, c conditions) (reason, condition string) {
+	if held := string(operatorv1alpha1.ReasonDestructiveChangesDisabled); status.Plan != nil &&
+		c.is(operatorv1alpha1.ConditionApprovalRequired, metav1.ConditionFalse) &&
+		c.reason(operatorv1alpha1.ConditionApprovalRequired) == held {
+		return held, operatorv1alpha1.ConditionApprovalRequired
+	}
 	for _, kind := range []string{operatorv1alpha1.ConditionPlanReady, operatorv1alpha1.ConditionReady} {
 		if reason := c.reason(kind); c.is(kind, metav1.ConditionFalse) && planBlockers[reason] != "" {
 			return reason, kind
@@ -362,7 +383,7 @@ func schemaAttention(schema *operatorv1alpha1.PtahSchema, c conditions) []*conso
 			c.message(operatorv1alpha1.ConditionApprovalRequired), next,
 			operatorv1alpha1.ConditionApprovalRequired)
 	}
-	if reason, condition := schemaBlocker(c); reason != "" {
+	if reason, condition := schemaBlocker(status, c); reason != "" {
 		add(consolev1.AttentionKind_ATTENTION_KIND_BLOCKED, planBlockers[reason], schemaBlockedNext(reason), condition)
 	}
 	switch reason := c.reason(operatorv1alpha1.ConditionReady); reason {
@@ -396,6 +417,15 @@ func schemaBlockedNext(reason string) string {
 		return "Set spec.policy.allowDestructive if dropping the data is intended, or change the artifact."
 	case "ArtifactUnverified":
 		return "Publish an artifact the verification policy accepts, or correct the policy."
+	default:
+		return targetBlockedNext(reason)
+	}
+}
+
+// targetBlockedNext is the way out of a block on the database target, which a
+// schema and a migration name with the same spec.target.
+func targetBlockedNext(reason string) string {
+	switch reason {
 	case "RealmConflict":
 		return "Give the database one owner, or set spec.target.sharedRealm and a PtahRealm that admits every claimant."
 	case "RealmNotAuthorized":
