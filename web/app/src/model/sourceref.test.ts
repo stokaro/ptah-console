@@ -4,7 +4,7 @@ import { parsePinned } from "./sourceref"
 import corpus from "./testdata/pinned-references.json?raw"
 
 // The operator's own rows: TestParsePinnedReference in
-// internal/operate/source_test.go of stokaro/ptah-operator at v0.2.9, the
+// internal/operate/source_test.go of stokaro/ptah-operator at v0.2.14, the
 // table kubectl ptah set-source is held to. internal/ociref/ociref_test.go
 // holds the server's copy of these rules to the same rows.
 const digestNew = `sha256:${"b".repeat(64)}`
