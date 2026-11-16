@@ -155,7 +155,7 @@ func schemaStages(schema *operatorv1alpha1.PtahSchema, c conditions) []*consolev
 		schemaPlan(status, c, inSync),
 		schemaApprove(status, c, inSync),
 		schemaApply(status, c, inSync, outcomeUnknown(schema, c)),
-		schemaVerify(status, c, inSync),
+		schemaVerify(status, c, inSync, proofTargetMoved(schema, c)),
 	}
 }
 
@@ -255,10 +255,13 @@ func schemaApply(status operatorv1alpha1.PtahSchemaStatus, c conditions, inSync,
 	}
 }
 
-func schemaVerify(status operatorv1alpha1.PtahSchemaStatus, c conditions, inSync bool) *consolev1.Stage {
+func schemaVerify(status operatorv1alpha1.PtahSchemaStatus, c conditions, inSync, targetMoved bool) *consolev1.Stage {
 	switch {
 	case inSync:
 		return stage(StageVerify, consolev1.StageState_STAGE_STATE_DONE, "a fresh read shows no differences")
+	case targetMoved:
+		return stage(StageVerify, consolev1.StageState_STAGE_STATE_WAITING,
+			"the URL Secret names another database than the one the Apply was planned for")
 	case status.Phase == operatorv1alpha1.PhaseVerifyingConvergence ||
 		c.reason(operatorv1alpha1.ConditionReady) == "VerifyingConvergence":
 		return stage(StageVerify, consolev1.StageState_STAGE_STATE_ACTIVE, "")
@@ -287,6 +290,21 @@ func outcomeUnknown(schema *operatorv1alpha1.PtahSchema, c conditions) bool {
 	return schema.DeletionTimestamp != nil &&
 		c.is(operatorv1alpha1.ConditionReconciliationFailed, metav1.ConditionTrue) &&
 		c.reason(operatorv1alpha1.ConditionReconciliationFailed) == string(operatorv1alpha1.ReasonApplyOutcomeUnknown)
+}
+
+// proofTargetMoved is a schema whose proof of its last Apply stopped because
+// the URL Secret now names another database than the one that Apply was
+// planned for (blockProofOnMovedTarget in the operator). The operator records
+// ReconciliationFailed True TargetIdentityChanged with the proof still owed,
+// and goes on reading each failureRetryInterval, but every read is refused
+// before it connects: only the first URL back in the Secret, or a person
+// settling the proof, ends it. Waiting for the read, which an unknown outcome
+// or a failure asks for, ends nothing. A schema being deleted gives the proof
+// up once the Apply's Pods stop, so it is not stopped here.
+func proofTargetMoved(schema *operatorv1alpha1.PtahSchema, c conditions) bool {
+	return schema.DeletionTimestamp == nil && schema.Status.PendingObservation != nil &&
+		c.is(operatorv1alpha1.ConditionReconciliationFailed, metav1.ConditionTrue) &&
+		c.reason(operatorv1alpha1.ConditionReconciliationFailed) == string(operatorv1alpha1.ReasonTargetIdentityChanged)
 }
 
 // destructivePlanHeld says whether the destructive-change policy holds the
@@ -336,22 +354,8 @@ func schemaAttention(schema *operatorv1alpha1.PtahSchema, c conditions) []*conso
 	add := func(kind consolev1.AttentionKind, reason, next, condition string) {
 		out = append(out, &consolev1.Attention{Kind: kind, Reason: reason, NextStep: next, Since: c.since(condition)})
 	}
-	switch {
-	case outcomeUnknown(schema, c) && schema.DeletionTimestamp != nil:
-		add(consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN,
-			"An Apply ended without proof of whether it changed the database. The resource is being deleted, so nothing will establish what it did.",
-			"The operator does not read the database again for a resource it is deleting. Read the database to learn what the Apply changed; there is nothing to retry from the console.",
-			operatorv1alpha1.ConditionReconciliationFailed)
-	case outcomeUnknown(schema, c):
-		add(consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN,
-			"An Apply ended without proof of whether it changed the database.",
-			"The operator reads the database again before anything else runs. Wait for that read; there is nothing to retry from the console.",
-			operatorv1alpha1.ConditionReconciliationFailed)
-	case c.is(operatorv1alpha1.ConditionReconciliationFailed, metav1.ConditionTrue):
-		add(consolev1.AttentionKind_ATTENTION_KIND_FAILED,
-			c.message(operatorv1alpha1.ConditionReconciliationFailed),
-			"The operator tries again after spec.execution.failureRetryInterval. The operation's Job and its log say what failed.",
-			operatorv1alpha1.ConditionReconciliationFailed)
+	if failure := schemaFailure(schema, c); failure != nil {
+		out = append(out, failure)
 	}
 	if c.is(operatorv1alpha1.ConditionApprovalRequired, metav1.ConditionTrue) {
 		next := "Review the plan and approve it. Nothing changes in the database until someone does."
@@ -403,6 +407,41 @@ func schemaAttention(schema *operatorv1alpha1.PtahSchema, c conditions) []*conso
 			"Wait for the operator to reconcile the latest change.", operatorv1alpha1.ConditionReady)
 	}
 	return out
+}
+
+// schemaFailure is what the last operation left for a person, dated by
+// ReconciliationFailed, or nil when it left nothing: an Apply whose outcome
+// nobody established, a proof stopped on a moved target, or a failure the
+// operator retries.
+func schemaFailure(schema *operatorv1alpha1.PtahSchema, c conditions) *consolev1.Attention {
+	attention := func(kind consolev1.AttentionKind, reason, next string) *consolev1.Attention {
+		return &consolev1.Attention{
+			Kind: kind, Reason: reason, NextStep: next, Since: c.since(operatorv1alpha1.ConditionReconciliationFailed),
+		}
+	}
+	switch {
+	case outcomeUnknown(schema, c) && schema.DeletionTimestamp != nil:
+		return attention(consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN,
+			"An Apply ended without proof of whether it changed the database. The resource is being deleted, so nothing will establish what it did.",
+			"The operator does not read the database again for a resource it is deleting. Read the database to learn what the Apply changed; there is nothing to retry from the console.")
+	case proofTargetMoved(schema, c):
+		return attention(consolev1.AttentionKind_ATTENTION_KIND_BLOCKED,
+			"The URL Secret now names another database than the one the last Apply was planned for, so no read can say what that Apply did.",
+			fmt.Sprintf("Put the first URL back in the Secret and the next read finishes the proof. If the move was the point, "+
+				"give the proof up with kubectl ptah settle schema/%s -n %s: the next plan then binds the new database, and "+
+				"under apply: Always it applies without an approval unless it is destructive or changes privileges.",
+				schema.Name, schema.Namespace))
+	case outcomeUnknown(schema, c):
+		return attention(consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN,
+			"An Apply ended without proof of whether it changed the database.",
+			"The operator reads the database again before anything else runs. Wait for that read; there is nothing to retry from the console.")
+	case c.is(operatorv1alpha1.ConditionReconciliationFailed, metav1.ConditionTrue):
+		return attention(consolev1.AttentionKind_ATTENTION_KIND_FAILED,
+			c.message(operatorv1alpha1.ConditionReconciliationFailed),
+			"The operator tries again after spec.execution.failureRetryInterval. The operation's Job and its log say what failed.")
+	default:
+		return nil
+	}
 }
 
 func schemaBlockedNext(reason string) string {

@@ -119,6 +119,13 @@ run…** on the migration's page or in On call. The operator then reads the
 history again and plans from what it finds. Acknowledging needs the right to
 create `ptahmigrationrunacknowledgments`.
 
+A schema whose URL Secret came to name another database while the proof of
+its last Apply was owed is shown blocked: no read of the new database can say
+what that Apply did, and no retry ends the proof. Put the first URL back and
+the next read finishes it, or give the proof up with
+`kubectl ptah settle schema/NAME -n NAMESPACE`. The console does not settle a
+proof.
+
 ## Create a schema or a migration
 
 **New schema** and **New migration** on the Resources list, or in the palette,
