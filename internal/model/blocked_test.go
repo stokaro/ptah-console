@@ -321,12 +321,12 @@ func TestEachWayTheOperatorBlocksAMigrationNeedsAPerson(t *testing.T) {
 		},
 		{
 			name:      "an applied migration that no longer matches its file",
-			migration: blockedMigration("HistoryModified", "1 applied migrations no longer match their files"),
+			migration: blockedMigration("HistoryModified", "1 applied migration no longer matches its file"),
 			kind:      blockedKind, reason: "An applied migration no longer matches the file that recorded it.",
 		},
 		{
 			name:      "a migration below the applied version",
-			migration: blockedMigration("HistoryOutOfOrder", "1 migrations sort below applied version 4"),
+			migration: blockedMigration("HistoryOutOfOrder", "1 migration sorts below applied version 4"),
 			kind:      blockedKind, reason: "The artifact carries a migration below a version the database already applied.",
 		},
 		{
