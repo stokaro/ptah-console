@@ -331,6 +331,11 @@ func TestSetSourceRefusesWhatThePersonDidNotSee(t *testing.T) {
 		{name: "a Git source", kind: migration, stored: []client.Object{withSource(migration, func(s *operatorv1alpha1.SourceSpec) {
 			*s = operatorv1alpha1.SourceSpec{Git: &operatorv1alpha1.GitSourceSpec{URL: "https://git.example/shop.git"}}
 		})}, request: func(*consolev1.SetSourceRequest) {}, says: "spec.artifact of storefront names a Git source, not an OCI artifact."},
+		{name: "an HTTPS source", kind: schema, stored: []client.Object{withSource(schema, func(s *operatorv1alpha1.SourceSpec) {
+			*s = operatorv1alpha1.SourceSpec{HTTPS: &operatorv1alpha1.HTTPSSourceSpec{
+				URL: "https://downloads.example/shop/schema.sql", Format: operatorv1alpha1.HTTPSFormatFile, Path: "schema.sql",
+			}}
+		})}, request: func(*consolev1.SetSourceRequest) {}, says: "spec.desired of storefront names an HTTPS source, not an OCI artifact. Nothing was changed."},
 		{name: "another writer's reference", kind: migration, stored: []client.Object{withSource(migration, func(s *operatorv1alpha1.SourceSpec) {
 			s.OCIRef = otherReference
 		})}, request: func(*consolev1.SetSourceRequest) {},

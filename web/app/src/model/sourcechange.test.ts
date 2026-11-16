@@ -55,6 +55,7 @@ describe("sourceChange", () => {
   it.each([
     ["a ConfigMap", SourceKind.CONFIG_MAP],
     ["a Git repository", SourceKind.GIT],
+    ["an HTTPS download", SourceKind.HTTPS],
     ["a source the console does not know", SourceKind.UNSPECIFIED],
   ])("offers nothing for %s", (_, kind) => {
     expect(sourceChange(schema((s) => (s.source!.kind = kind)))).toBeUndefined()

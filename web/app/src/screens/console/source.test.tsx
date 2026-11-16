@@ -32,6 +32,22 @@ const configMapSchema = waitingSchema((s) => {
   })
 })
 
+const pinned = "sha256:74c65b2a7497ceacb00e7fb087c38062e92c3f6399ce980247de0a826f7efad4"
+const download = "sha256:9a9a9a9a00000000000000000000000000000000000000000000000044440000"
+
+const httpsSchema = waitingSchema((s) => {
+  s.source = create(SourceSchema, {
+    kind: SourceKind.HTTPS,
+    requested: "https://downloads.example/acme/schema.tar.gz",
+    format: "TarGzip",
+    path: "db/schema.sql",
+    digest: pinned,
+    resolved: download,
+    contentDigest: content,
+    resolvedAt: minutesAgo(4),
+  })
+})
+
 describe("A source with no verification policy", () => {
   it("shows the repository, ref, path and commit of a Git source and the policy it was read under", async () => {
     const { container } = renderConsole("/console/schemas/application/storefront", {
@@ -61,6 +77,47 @@ describe("A source with no verification policy", () => {
     expect(source).toHaveTextContent("ptah-source-0a1b2c3d4e5f6a7b8c9d0e1f")
     expect(source).toHaveTextContent("Source policyNone")
     expect(source).not.toHaveTextContent("Repository")
+  })
+
+  it("shows the URL, format and path of an HTTPS source, the digest it is pinned to and the one read", async () => {
+    const { container } = renderConsole("/console/schemas/application/storefront", {
+      schemas: [httpsSchema],
+    })
+
+    const source = await screen.findByRole("region", { name: "Source" })
+    expect(source).toHaveTextContent("URLhttps://downloads.example/acme/schema.tar.gz")
+    expect(source).toHaveTextContent("FormatTarGzip")
+    expect(source).toHaveTextContent("Pathdb/schema.sql")
+    expect(source).toHaveTextContent(`Pinned to${pinned}`)
+    expect(source).toHaveTextContent(`Download${download}`)
+    expect(source).toHaveTextContent(`Content${content}`)
+    expect(source).toHaveTextContent("Source policyNone")
+    // The operator verifies a download against its digest, not a
+    // signature, so the card names no verification it never makes.
+    expect(source).not.toHaveTextContent("Not verified")
+    expect(source).not.toHaveTextContent("Snapshot")
+    expect(screen.queryByRole("region", { name: "Artifact" })).toBeNull()
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("names an HTTPS plan's source as HTTPS", async () => {
+    renderConsole("/approve/application/schema/storefront", {
+      schemas: [httpsSchema],
+      plan: storedPlan((plan) => {
+        plan.contractVersion = 2
+        plan.artifactDigest = ""
+        plan.source = create(PlanSourceSchema, {
+          kind: SourceKind.HTTPS,
+          revision: "sha256:42b3",
+          contentDigest: content,
+        })
+      }),
+    })
+
+    const bound = await screen.findByRole("region", { name: "Bound to" })
+    expect(bound).toHaveTextContent("SourceHTTPS, content")
+    expect(bound).not.toHaveTextContent("ConfigMap")
+    expect(bound).not.toHaveTextContent("Source policy")
   })
 
   it("binds a plan to the source's content and policy in place of an artifact", async () => {

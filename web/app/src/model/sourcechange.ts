@@ -22,8 +22,8 @@ export interface SourceChange {
 
 /**
  * The change of source a resource offers, or nothing for one whose source is
- * a ConfigMap or Git: moving to an artifact also names the verification
- * policy it is held to, which is an edit of the resource.
+ * a ConfigMap, Git or HTTPS: moving to an artifact also names the
+ * verification policy it is held to, which is an edit of the resource.
  */
 export function sourceChange(resource: ResourceView): SourceChange | undefined {
   const message = resource.schema ?? resource.migration

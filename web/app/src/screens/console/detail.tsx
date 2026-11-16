@@ -317,28 +317,22 @@ export function ConditionsCard({ conditions, now }: { conditions: Condition[]; n
 
 /**
  * The source as requested and as resolved. An OCI artifact also says whether
- * its signature was verified; a ConfigMap or a Git repository has no
- * verification policy, and says which files were read and under which source
- * policy instead.
+ * its signature was verified; a ConfigMap, a Git repository or an HTTPS
+ * download has no verification policy, and says which files were read and
+ * under which source policy instead. A download also names the digest the
+ * spec pins it to beside the digest of the one the last resolution read.
  */
 export function ArtifactCard({ source, now }: { source?: Source; now: Date }) {
-  if (source?.kind === SourceKind.GIT || source?.kind === SourceKind.CONFIG_MAP) {
-    const git = source.kind === SourceKind.GIT
+  if (
+    source?.kind === SourceKind.GIT ||
+    source?.kind === SourceKind.CONFIG_MAP ||
+    source?.kind === SourceKind.HTTPS
+  ) {
     return (
       <Card title="Source">
         <Facts
           rows={[
-            ...(git
-              ? ([
-                  ["Repository", <Mono key="r" value={source.requested} />],
-                  ["Ref", <Mono key="f" value={source.ref} />],
-                  ["Path", <Mono key="p" value={source.path} />],
-                  ["Commit", <Mono key="c" value={source.resolved} />],
-                ] satisfies [string, ReactNode][])
-              : ([
-                  ["ConfigMap", <Mono key="r" value={source.requested} />],
-                  ["Snapshot", <Mono key="s" value={source.resolved} />],
-                ] satisfies [string, ReactNode][])),
+            ...selectionFacts(source),
             ["Content", <Mono key="d" value={source.contentDigest} />],
             ["Source policy", <SourcePolicyFact key="p" policy={source.policy} />],
             ["Resolved at", <When key="a" at={source.resolvedAt} now={now} />],
@@ -371,6 +365,32 @@ export function ArtifactCard({ source, now }: { source?: Source; now: Date }) {
       />
     </Card>
   )
+}
+
+/** What a source without verification names, and what it resolved to. */
+function selectionFacts(source: Source): [string, ReactNode][] {
+  switch (source.kind) {
+    case SourceKind.GIT:
+      return [
+        ["Repository", <Mono key="r" value={source.requested} />],
+        ["Ref", <Mono key="f" value={source.ref} />],
+        ["Path", <Mono key="p" value={source.path} />],
+        ["Commit", <Mono key="c" value={source.resolved} />],
+      ]
+    case SourceKind.HTTPS:
+      return [
+        ["URL", <Mono key="r" value={source.requested} />],
+        ["Format", <Mono key="f" value={source.format} />],
+        ["Path", <Mono key="p" value={source.path} />],
+        ["Pinned to", <Mono key="g" value={source.digest} />],
+        ["Download", <Mono key="s" value={source.resolved} />],
+      ]
+    default:
+      return [
+        ["ConfigMap", <Mono key="r" value={source.requested} />],
+        ["Snapshot", <Mono key="s" value={source.resolved} />],
+      ]
+  }
 }
 
 /**

@@ -68,7 +68,7 @@ const failed = syncedMigration((m) => {
     finishedAt: minutesAgo(3),
     appliedVersions: [1n],
     message:
-      "Migration 2 (Read Ledger) failed and committed nothing; 1 migrations before it are recorded applied",
+      "Migration 2 (Read Ledger) failed and committed nothing; 1 migration before it is recorded applied",
   }
 })
 

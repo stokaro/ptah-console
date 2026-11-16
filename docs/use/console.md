@@ -119,6 +119,13 @@ run…** on the migration's page or in On call. The operator then reads the
 history again and plans from what it finds. Acknowledging needs the right to
 create `ptahmigrationrunacknowledgments`.
 
+A schema whose URL Secret came to name another database while the proof of
+its last Apply was owed is shown blocked: no read of the new database can say
+what that Apply did, and no retry ends the proof. Put the first URL back and
+the next read finishes it, or give the proof up with
+`kubectl ptah settle schema/NAME -n NAMESPACE`. The console does not settle a
+proof.
+
 ## Create a schema or a migration
 
 **New schema** and **New migration** on the Resources list, or in the palette,
@@ -200,12 +207,12 @@ Job, so nothing happens until it is resumed. The change is a spec change: with
 the operator's `approvals.requireDistinctApprover` on, you become the
 resource's last spec writer and cannot approve the plan that follows.
 
-The console sends nothing, and says why, for a ConfigMap or Git source (moving
-to an artifact also names the verification policy it is held to, which is an
-edit of the resource), and while an Apply whose Job may already exist runs: a
-spec change then leaves an outcome nobody established. Wait for the Apply to
-end. A reference another writer changed since you opened the page is
-reported, never replaced.
+The console sends nothing, and says why, for a ConfigMap, Git or HTTPS source
+(moving to an artifact also names the verification policy it is held to,
+which is an edit of the resource), and while an Apply whose Job may already
+exist runs: a spec change then leaves an outcome nobody established. Wait for
+the Apply to end. A reference another writer changed since you opened the
+page is reported, never replaced.
 
 ## See what you may do
 

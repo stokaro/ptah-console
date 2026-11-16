@@ -1017,8 +1017,8 @@ export const DecisionService: GenService<{
    * spec.artifact.ociRef of a migration and changes nothing else: the
    * verification policy, the registry credential, the transport and the
    * apply policy stay as they are, and the new artifact is held to them. It
-   * refuses a ConfigMap or Git source and a resource whose Apply may already
-   * have its Job.
+   * refuses a ConfigMap, Git or HTTPS source and a resource whose Apply may
+   * already have its Job.
    *
    * @generated from rpc ptah.console.v1.DecisionService.SetSource
    */

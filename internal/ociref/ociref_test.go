@@ -11,7 +11,7 @@ import (
 )
 
 // The rows below are the operator's own: TestParsePinnedReference in
-// internal/operate/source_test.go of stokaro/ptah-operator at v0.2.9, the
+// internal/operate/source_test.go of stokaro/ptah-operator at v0.2.14, the
 // table `kubectl ptah set-source` is held to. Each refused value is one edit
 // away from an accepted one, so a row that passes shows the parser refusing
 // that edit and nothing more. web/app/src/model/sourceref.test.ts holds the

@@ -7,9 +7,12 @@ import (
 	consolev1 "github.com/stokaro/ptah-console/internal/gen/ptah/console/v1"
 )
 
-// journal carries the lifecycle journal the operator keeps in status as it
-// is: the console adds nothing to it and drops nothing from it. An operator
-// that keeps none gives none.
+// journal carries the lifecycle journal the operator keeps in status: every
+// entry, in its order, with the fields the console shows, and nothing the
+// console adds. The fields operator v0.2.10 and later add to an entry, such
+// as the operation, plan and approval UIDs, the Job, a replaced plan, the
+// migration log and a schema Apply's failure, are not read yet (#175, #176,
+// #181). An operator that keeps none gives none.
 func journal(kept *operatorv1alpha1.LifecycleJournal) *consolev1.Journal {
 	if kept == nil {
 		return nil

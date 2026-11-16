@@ -4,7 +4,7 @@ How the console is put together across the phases of
 stokaro/ptah-operator#588: the modes, whom each request runs as, how it
 reaches a cluster, where state lives, and what the operator holds whatever
 the console does. Each section links to the page with the details. The page
-describes console 0.3.2, built against operator v0.2.9. Everything under
+describes console 0.4.0, built against operator v0.2.14. Everything under
 [Not built](#not-built) is proposed in #588 and not built.
 
 ## Phases
@@ -146,7 +146,7 @@ what it does read.
 ## What the operator holds whatever the console does
 
 The console sends ordinary requests to the API server, so it can do nothing a
-person could not do with `kubectl` and the same identity. In operator v0.2.9
+person could not do with `kubectl` and the same identity. In operator v0.2.14
 these hold whether a console is installed, down or removed:
 
 - Approval and acknowledgment admission stamps who decided from the
@@ -174,8 +174,8 @@ it goes. From operator v0.2.10 a `PtahMigration` Apply also writes the
 approver's username into the migrated database, in
 `schema_migrations_log.actor`; see
 [the approver's name in the target database](https://operator.ptah.run/v0.2.10/use/security/#approver-in-the-database).
-The operator's [security model](https://operator.ptah.run/v0.2.9/use/security/)
-and its [trust boundaries](https://operator.ptah.run/v0.2.9/use/security/#trust-boundaries)
+The operator's [security model](https://operator.ptah.run/v0.2.14/use/security/)
+and its [trust boundaries](https://operator.ptah.run/v0.2.14/use/security/#trust-boundaries)
 have the details.
 
 ## What the console cannot contain

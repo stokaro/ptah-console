@@ -7,7 +7,9 @@ import (
 	qt "github.com/frankban/quicktest"
 	operatorv1alpha1 "github.com/stokaro/ptah-operator/api/v1alpha1"
 	"google.golang.org/protobuf/testing/protocmp"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	corev1 "k8s.io/api/core/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -15,15 +17,17 @@ import (
 	"github.com/stokaro/ptah-console/internal/model"
 )
 
-// The fields below are the ones the operator writes for a ConfigMap and a Git
-// source. Its acceptance runs record no full status document for either
-// kind yet, so these are built from its API types rather than read.
+// The fields below are the ones the operator writes for a ConfigMap, a Git
+// and an HTTPS source. Its acceptance runs record no full status document of
+// a migration for any of them, nor of a schema for the first two, so these
+// are built from its API types rather than read.
 const (
-	commit        = "3f1c2b0a9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a"
-	contentDigest = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
-	policyDigest  = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
-	ociDigest     = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
-	snapshotName  = "ptah-source-0a1b2c3d4e5f6a7b8c9d0e1f"
+	commit         = "3f1c2b0a9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a"
+	contentDigest  = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+	policyDigest   = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+	ociDigest      = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+	downloadDigest = "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+	snapshotName   = "ptah-source-0a1b2c3d4e5f6a7b8c9d0e1f"
 )
 
 func gitSpec() *operatorv1alpha1.GitSourceSpec {
@@ -34,6 +38,46 @@ func gitSpec() *operatorv1alpha1.GitSourceSpec {
 
 func policyFrom() *corev1.ConfigMapKeySelector {
 	return &corev1.ConfigMapKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "team-sources"}, Key: "policy.yaml"}
+}
+
+func httpsMigration() *operatorv1alpha1.HTTPSSourceSpec {
+	return &operatorv1alpha1.HTTPSSourceSpec{
+		URL: "https://downloads.example/acme/migrations.tar.gz", Digest: downloadDigest,
+		Format: operatorv1alpha1.HTTPSFormatTarGzip, Path: "db/migrations",
+	}
+}
+
+// A schema with an HTTPS source, as the operator's https-ca-pin-refused row
+// read it once the source selected its CA: the download resolved, no
+// ArtifactVerified, and a plan waiting for an approval. The reading is a
+// status, so the spec is the one that status resolved. A console that read
+// the source as an OCI artifact waited for a verification the operator never
+// writes, and left Resolve waiting.
+func TestASchemaWithAnHTTPSSourceResolvesOnceTheDownloadMatched(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+	var schema operatorv1alpha1.PtahSchema
+	reading(t, "https-ca-pin-recovered-schema.json", &schema)
+	asWritten(&schema.ObjectMeta, schema.Status.ObservedGeneration)
+	download := schema.Status.Source.HTTPS
+	c.Assert(download, qt.IsNotNil)
+	c.Assert(apimeta.FindStatusCondition(schema.Status.Conditions, "ArtifactVerified"), qt.IsNil)
+	schema.Spec.Desired = operatorv1alpha1.SourceSpec{HTTPS: &operatorv1alpha1.HTTPSSourceSpec{
+		URL: download.URL, Digest: download.Digest, Format: download.Format, Path: download.Path,
+	}}
+
+	out := model.Schema(&schema)
+
+	c.Assert(out.GetSource(), qt.CmpEquals(protocmp.Transform()), &consolev1.Source{
+		Kind: consolev1.SourceKind_SOURCE_KIND_HTTPS, Requested: download.URL, Path: "schema.sql", Format: "File",
+		Digest:        "sha256:74c65b2a7497ceacb00e7fb087c38062e92c3f6399ce980247de0a826f7efad4",
+		Resolved:      "sha256:74c65b2a7497ceacb00e7fb087c38062e92c3f6399ce980247de0a826f7efad4",
+		ResolvedAt:    timestamppb.New(schema.Status.Source.ResolvedAt.Time),
+		ContentDigest: "sha256:479db95d1e119641e67a5592f9e977a1c600ebbf7cf1a3121b7ef4063d1ac221",
+	})
+	c.Assert(states(out.GetStages()), qt.DeepEquals, []consolev1.StageState{done, done, waiting, waiting, waiting})
+	c.Assert(out.GetStages()[0].GetDetail(), qt.Equals, "download sha256:74c65b2a7497")
+	c.Assert(kinds(out.GetAttention()), qt.DeepEquals, []consolev1.AttentionKind{consolev1.AttentionKind_ATTENTION_KIND_WAITING_FOR_APPROVAL})
 }
 
 // A Git or ConfigMap source has no verification policy: Resolve is done once
@@ -204,6 +248,48 @@ func TestAMigrationSourceWithoutVerificationResolvesOnceRead(t *testing.T) {
 			want:   &consolev1.Source{Kind: consolev1.SourceKind_SOURCE_KIND_GIT, Requested: gitSpec().URL, Ref: "branch main", Path: "db/migrations"},
 			state:  active,
 		},
+		{
+			name: "an HTTPS download",
+			spec: operatorv1alpha1.SourceSpec{HTTPS: httpsMigration(), SourcePolicyFrom: policyFrom()},
+			status: operatorv1alpha1.PtahMigrationStatus{
+				Phase: operatorv1alpha1.MigrationPhaseReading,
+				Artifact: &operatorv1alpha1.SourceAccessBinding{HTTPS: &operatorv1alpha1.HTTPSSourceBinding{
+					URL: httpsMigration().URL, Digest: downloadDigest, Format: operatorv1alpha1.HTTPSFormatTarGzip,
+					Path: "db/migrations", ContentDigest: contentDigest,
+				}},
+				SourcePolicy: &operatorv1alpha1.SourcePolicyBinding{UID: "policy-uid", Digest: policyDigest},
+			},
+			want: &consolev1.Source{
+				Kind: consolev1.SourceKind_SOURCE_KIND_HTTPS, Requested: httpsMigration().URL, Path: "db/migrations",
+				Format: "TarGzip", Digest: downloadDigest, Resolved: downloadDigest, ContentDigest: contentDigest,
+				Policy: &consolev1.SourcePolicy{Name: "team-sources", Uid: "policy-uid", Digest: policyDigest},
+			},
+			state: done, detail: "download sha256:555555555555",
+		},
+		{
+			// The source moved from OCI to HTTPS and has not been read since.
+			name: "an HTTPS source whose status still holds an OCI artifact",
+			spec: operatorv1alpha1.SourceSpec{HTTPS: httpsMigration()},
+			status: operatorv1alpha1.PtahMigrationStatus{
+				Phase:    operatorv1alpha1.MigrationPhaseInSync,
+				Artifact: &operatorv1alpha1.SourceAccessBinding{ResolvedReference: "oci://registry.example/team/migrations@" + ociDigest, Digest: ociDigest},
+			},
+			want: &consolev1.Source{
+				Kind: consolev1.SourceKind_SOURCE_KIND_HTTPS, Requested: httpsMigration().URL, Path: "db/migrations",
+				Format: "TarGzip", Digest: downloadDigest,
+			},
+			state: waiting,
+		},
+		{
+			name:   "an HTTPS source being read",
+			spec:   operatorv1alpha1.SourceSpec{HTTPS: httpsMigration()},
+			status: operatorv1alpha1.PtahMigrationStatus{Phase: operatorv1alpha1.MigrationPhaseResolving},
+			want: &consolev1.Source{
+				Kind: consolev1.SourceKind_SOURCE_KIND_HTTPS, Requested: httpsMigration().URL, Path: "db/migrations",
+				Format: "TarGzip", Digest: downloadDigest,
+			},
+			state: active,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -278,8 +364,8 @@ func TestAChangedSourceNamesTheSpecsReferenceBesideTheResolvedOne(t *testing.T) 
 	c.Assert(fromMigration.GetResolved(), qt.Equals, "oci://registry.example/team/schema@"+ociDigest)
 }
 
-// A plan computed from a ConfigMap or Git source is bound to the revision,
-// the content and the policy, and the console reads its contract.
+// A plan computed from a ConfigMap, Git or HTTPS source is bound to the
+// revision, the content and the policy, and the console reads its contract.
 func TestAPlanBoundToASourceSaysWhatItIsBoundTo(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -305,6 +391,13 @@ func TestAPlanBoundToASourceSaysWhatItIsBoundTo(t *testing.T) {
 			name: "a ConfigMap", contract: 2, supported: true,
 			source: &operatorv1alpha1.PlanSourceBinding{Kind: operatorv1alpha1.SourceKindConfigMap, Revision: "configmap-uid", ContentDigest: contentDigest},
 			want:   &consolev1.PlanSource{Kind: consolev1.SourceKind_SOURCE_KIND_CONFIG_MAP, Revision: "configmap-uid", ContentDigest: contentDigest},
+		},
+		{
+			// The revision of an HTTPS plan is the digest of the URL and the
+			// path, never of the download.
+			name: "an HTTPS download", contract: 2, supported: true,
+			source: &operatorv1alpha1.PlanSourceBinding{Kind: operatorv1alpha1.SourceKindHTTPS, Revision: policyDigest, ContentDigest: contentDigest},
+			want:   &consolev1.PlanSource{Kind: consolev1.SourceKind_SOURCE_KIND_HTTPS, Revision: policyDigest, ContentDigest: contentDigest},
 		},
 		{name: "a contract this build does not read", contract: 3},
 	}

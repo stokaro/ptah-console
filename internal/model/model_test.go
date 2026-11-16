@@ -336,11 +336,15 @@ func TestMigrationReadingsFromTheOperator(t *testing.T) {
 		attention []consolev1.AttentionKind
 	}{
 		{
-			// The run committed part of a file: the Apply failed, and the dirty
-			// row it left is the block, said once.
-			file:      "partial-run-left-a-dirty-revision.json",
-			stages:    []consolev1.StageState{done, failed, waiting, done, failed, waiting},
-			attention: []consolev1.AttentionKind{consolev1.AttentionKind_ATTENTION_KIND_BLOCKED},
+			// The run committed part of a file. The operator holds it as a run
+			// nobody accounted for, and the dirty row it left is the block: a
+			// person acknowledges the one and repairs the other. The reading
+			// published no plan, so nothing waits for an approval.
+			file:   "partial-run-left-a-dirty-revision.json",
+			stages: []consolev1.StageState{done, failed, waiting, waiting, unknown, waiting},
+			attention: []consolev1.AttentionKind{
+				consolev1.AttentionKind_ATTENTION_KIND_UNRESOLVED_RUN, consolev1.AttentionKind_ATTENTION_KIND_BLOCKED,
+			},
 		},
 		{
 			file:      "isolated-node-durable-migration.json",

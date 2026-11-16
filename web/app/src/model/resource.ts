@@ -31,9 +31,12 @@ export interface ResourceView {
   stages: Stage[]
   attention: Attention[]
   conditions: Condition[]
-  /** The source as requested: an OCI reference, a ConfigMap or a Git repository. */
+  /** The source as requested: an OCI reference, a ConfigMap, a Git repository or an HTTPS URL. */
   source: string
-  /** The OCI manifest digest, or the digest of the files a ConfigMap or Git source selected. */
+  /**
+   * The OCI manifest digest, the digest an HTTPS download is pinned to, or the
+   * digest of the files a ConfigMap or Git source selected.
+   */
   sourceDigest: string
   plan?: {
     name: string

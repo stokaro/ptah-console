@@ -30,7 +30,7 @@ not itself a release.
 ## Verify before you install
 
 ```sh
-version=0.3.2
+version=0.4.0
 repository=stokaro/ptah-console
 workflow="$repository/.github/workflows/release.yml"
 
@@ -60,7 +60,7 @@ Install the image by the digest you verified rather than by its tag.
    `make release-check` refuses a pseudo-version:
 
    ```sh
-   go get github.com/stokaro/ptah-operator@v0.2.9
+   go get github.com/stokaro/ptah-operator@v0.2.14
    go mod tidy
    make generate
    ```

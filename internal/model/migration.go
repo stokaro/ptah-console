@@ -119,8 +119,8 @@ func migrationStages(migration *operatorv1alpha1.PtahMigration, c conditions) []
 func migrationResolve(migration *operatorv1alpha1.PtahMigration, c conditions) *consolev1.Stage {
 	status := migration.Status
 	if source := migrationSource(migration, c); unverifiedSource(source) {
-		// A ConfigMap or Git source has no verification policy: the artifact
-		// binding the history read takes is the whole of Resolve.
+		// A ConfigMap, Git or HTTPS source has no verification policy: the
+		// artifact binding the history read takes is the whole of Resolve.
 		switch {
 		case source.GetResolved() != "":
 			return stage(StageResolve, consolev1.StageState_STAGE_STATE_DONE, resolvedDetail(source))

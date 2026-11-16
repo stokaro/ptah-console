@@ -457,7 +457,7 @@ test("on call, a failed run shows its evidence and the next supported step", asy
   await expect(
     page
       .getByText(
-        "Migration 2 (Backfill Entries) failed at statement 1 of 1 with SQLSTATE 42P01 and committed nothing; 1 migrations before it are recorded applied",
+        "Migration 2 (Backfill Entries) failed at statement 1 of 1 with SQLSTATE 42P01 and committed nothing; 1 migration before it is recorded applied",
         { exact: false }
       )
       .first()

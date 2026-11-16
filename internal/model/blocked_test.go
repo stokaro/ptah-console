@@ -1,6 +1,7 @@
 package model_test
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -14,8 +15,9 @@ import (
 )
 
 // The rows below are statuses built the way the operator's controllers write
-// them at v0.2.9, each named after the function that writes it. No reading the
-// operator recorded holds a schema that a policy refused.
+// them at v0.2.9, or at v0.2.14 where a row says so, each named after the
+// function that writes it. No reading the operator recorded holds a schema
+// that a policy refused or a proof stopped on a moved target.
 
 const (
 	blockedKind  = consolev1.AttentionKind_ATTENTION_KIND_BLOCKED
@@ -321,12 +323,12 @@ func TestEachWayTheOperatorBlocksAMigrationNeedsAPerson(t *testing.T) {
 		},
 		{
 			name:      "an applied migration that no longer matches its file",
-			migration: blockedMigration("HistoryModified", "1 applied migrations no longer match their files"),
+			migration: blockedMigration("HistoryModified", "1 applied migration no longer matches its file"),
 			kind:      blockedKind, reason: "An applied migration no longer matches the file that recorded it.",
 		},
 		{
 			name:      "a migration below the applied version",
-			migration: blockedMigration("HistoryOutOfOrder", "1 migrations sort below applied version 4"),
+			migration: blockedMigration("HistoryOutOfOrder", "1 migration sorts below applied version 4"),
 			kind:      blockedKind, reason: "The artifact carries a migration below a version the database already applied.",
 		},
 		{
@@ -514,6 +516,121 @@ func TestAMigrationNoLongerBlockedIsNotBlocked(t *testing.T) {
 			got := kinds(model.Migration(test.migration).GetAttention())
 
 			c.Assert(got, qt.DeepEquals, make([]consolev1.AttentionKind, 0))
+		})
+	}
+}
+
+// stoppedOnAMovedTarget is a schema whose proof read named another target
+// than the plan of its last Apply, as the operator's blockProofOnMovedTarget
+// leaves it at v0.2.14: the failed read retried with the failure named, phase
+// Blocked, Ready pointing at ReconciliationFailed, and the proof still owed.
+func stoppedOnAMovedTarget(outcome operatorv1alpha1.PendingObservationOutcome) *operatorv1alpha1.PtahSchema {
+	applying := "JobCompleted"
+	if outcome == operatorv1alpha1.PendingObservationOutcomeUnknown {
+		applying = "OutcomeUnknown"
+	}
+	failed := condition("ReconciliationFailed", metav1.ConditionTrue, "TargetIdentityChanged")
+	failed.Message = "the URL Secret now holds another target than the plan this Apply ran from: another login, host, port, " +
+		"database or URL parameter, so no read can say what the Apply did; put the first URL back and the proof finishes, " +
+		"or give the proof up, which reads the database under the new URL and, under apply: Always, applies the next plan " +
+		"with no approval unless it is destructive or changes privileges: kubectl annotate ptahschema storefront -n application " +
+		"operator.ptah.run/settled-apply=apply-1/sha256:" + strings.Repeat("6", 64) + " --overwrite"
+	schema := pendingProof(outcome, schemaWith(
+		condition("Applying", metav1.ConditionFalse, applying),
+		failed,
+		condition("Ready", metav1.ConditionFalse, "TargetIdentityChanged"),
+	))
+	schema.Name, schema.Namespace = "storefront", "application"
+	schema.Status.Phase = operatorv1alpha1.PhaseBlocked
+	schema.Status.PendingObservation.ApplyOperationID = "apply-1"
+	schema.Status.ActiveOperation = &operatorv1alpha1.ActiveOperationStatus{Type: operatorv1alpha1.OperationObserve, ID: "observe-1", Attempt: 2}
+	return schema
+}
+
+// A proof stopped on a moved target ends only when the first URL is back or a
+// person settles it. Its reads go on at the retry interval and are refused
+// before they connect, so the console must not say a retry or a read will
+// end it, which is what it said for any failure or unknown outcome.
+func TestASchemaStoppedOnAMovedTargetWaitsForAPerson(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		outcome operatorv1alpha1.PendingObservationOutcome
+		apply   consolev1.StageState
+	}{
+		{name: "after an Apply that succeeded", outcome: operatorv1alpha1.PendingObservationApplySucceeded, apply: done},
+		{name: "after an Apply whose outcome is unknown", outcome: operatorv1alpha1.PendingObservationOutcomeUnknown, apply: unknown},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+
+			out := model.Schema(stoppedOnAMovedTarget(test.outcome))
+
+			c.Assert(kinds(out.GetAttention()), qt.DeepEquals, []consolev1.AttentionKind{blockedKind})
+			attention := out.GetAttention()[0]
+			c.Assert(attention.GetReason(), qt.Contains, "another database than the one the last Apply was planned for")
+			c.Assert(attention.GetNextStep(), qt.Contains, "Put the first URL back in the Secret")
+			c.Assert(attention.GetNextStep(), qt.Contains, "kubectl ptah settle schema/storefront -n application")
+			c.Assert(attention.GetNextStep(), qt.Not(qt.Contains), "failureRetryInterval")
+			c.Assert(states(out.GetStages())[3], qt.Equals, test.apply)
+			verify := out.GetStages()[4]
+			c.Assert(verify.GetState(), qt.Equals, waiting)
+			c.Assert(verify.GetDetail(), qt.Contains, "the URL Secret names another database")
+		})
+	}
+}
+
+// The stop is read from the failure's reason with the proof still owed. A
+// failed proof read with another reason, the same reason once nothing is owed,
+// and a schema being deleted, which gives the proof up, are not that stop.
+func TestOnlyAMovedTargetStopsTheProofForAPerson(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		schema func() *operatorv1alpha1.PtahSchema
+		want   []consolev1.AttentionKind
+	}{
+		{
+			name: "a proof read that failed",
+			schema: func() *operatorv1alpha1.PtahSchema {
+				schema := stoppedOnAMovedTarget(operatorv1alpha1.PendingObservationApplySucceeded)
+				failed := condition("ReconciliationFailed", metav1.ConditionTrue, "OperationFailed")
+				setConditions(&schema.Status.Conditions, failed, condition("Ready", metav1.ConditionFalse, "OperationFailed"))
+				schema.Status.Phase = operatorv1alpha1.PhaseFailed
+				return schema
+			},
+			want: []consolev1.AttentionKind{consolev1.AttentionKind_ATTENTION_KIND_FAILED},
+		},
+		{
+			name: "the reason with no proof owed",
+			schema: func() *operatorv1alpha1.PtahSchema {
+				schema := stoppedOnAMovedTarget(operatorv1alpha1.PendingObservationApplySucceeded)
+				schema.Status.PendingObservation = nil
+				return schema
+			},
+			want: []consolev1.AttentionKind{consolev1.AttentionKind_ATTENTION_KIND_FAILED},
+		},
+		{
+			name: "a schema being deleted after an unknown outcome",
+			schema: func() *operatorv1alpha1.PtahSchema {
+				schema := stoppedOnAMovedTarget(operatorv1alpha1.PendingObservationOutcomeUnknown)
+				schema.DeletionTimestamp = &metav1.Time{Time: time.Date(2026, 11, 15, 9, 0, 0, 0, time.UTC)}
+				return schema
+			},
+			want: []consolev1.AttentionKind{consolev1.AttentionKind_ATTENTION_KIND_OUTCOME_UNKNOWN},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+
+			out := model.Schema(test.schema())
+
+			c.Assert(kinds(out.GetAttention()), qt.DeepEquals, test.want)
+			c.Assert(out.GetStages()[4].GetDetail(), qt.Equals, "")
 		})
 	}
 }

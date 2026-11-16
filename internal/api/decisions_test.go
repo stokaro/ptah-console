@@ -166,7 +166,7 @@ func waitingSchema(t *testing.T, contract int32) []client.Object {
 }
 
 // The plan contracts the console approves: 1, a plan computed from an OCI
-// artifact, and 2, one computed from a ConfigMap or Git source.
+// artifact, and 2, one computed from a ConfigMap, Git or HTTPS source.
 const (
 	ociContract    int32 = 1
 	sourceContract int32 = 2

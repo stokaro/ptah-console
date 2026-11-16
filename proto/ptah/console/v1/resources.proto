@@ -199,6 +199,7 @@ enum SourceKind {
   SOURCE_KIND_OCI = 1;
   SOURCE_KIND_CONFIG_MAP = 2;
   SOURCE_KIND_GIT = 3;
+  SOURCE_KIND_HTTPS = 4;
 }
 
 // Source is what a resource asked for and what it resolved to. For an OCI
@@ -206,8 +207,11 @@ enum SourceKind {
 // digest. For a ConfigMap source, requested is the ConfigMap and resolved the
 // snapshot the operator copied it into. For a Git source, requested is the
 // repository, ref and path name the selection, and resolved is the commit.
-// A ConfigMap or Git source has no verification policy, so verified stays
-// false; content_digest is the digest of the selected files.
+// For an HTTPS source, requested is the URL, path what the download selects
+// and format how it carries the files, digest is the SHA-256 the spec pins the
+// download to, and resolved the SHA-256 of the download the last resolution
+// read. A ConfigMap, Git or HTTPS source has no verification policy, so
+// verified stays false; content_digest is the digest of the selected files.
 message Source {
   string requested = 1;
   string resolved = 2;
@@ -224,18 +228,20 @@ message Source {
   // source replaces. A schema's requested is the reference the operator last
   // resolved, until it observes a change.
   string spec_reference = 12;
+  // For an HTTPS source, File, TarGzip or Zip.
+  string format = 13;
 }
 
-// SourcePolicy is the source policy a ConfigMap or Git source names, and the
-// one its last resolution was checked against.
+// SourcePolicy is the source policy a ConfigMap, Git or HTTPS source names,
+// and the one its last resolution was checked against.
 message SourcePolicy {
   string name = 1;
   string uid = 2;
   string digest = 3;
 }
 
-// PlanSource is what a plan computed from a ConfigMap or Git source is bound
-// to, in place of an artifact digest.
+// PlanSource is what a plan computed from a ConfigMap, Git or HTTPS source is
+// bound to, in place of an artifact digest.
 message PlanSource {
   SourceKind kind = 1;
   string revision = 2;

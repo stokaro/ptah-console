@@ -182,6 +182,63 @@ describe("The activity of a migration's journal", () => {
       ["Run applied 2 versions", "ok"],
     ])
   })
+
+  // The operator's partial-run reading at v0.2.14 ends with RunFinished
+  // Partial and Verified Blocked, and a failed run is usually followed by
+  // Verified Pending. Neither reading is a verification that held.
+  it("names what the reading after a run found, never a bare Verified", () => {
+    const entries = activity(
+      [
+        migration("billing", [
+          { type: "RunFinished", at: at(1), outcome: "Failed" },
+          { type: "Verified", at: at(2), outcome: "Pending" },
+          { type: "RunFinished", at: at(3), outcome: "Partial" },
+          { type: "Verified", at: at(4), outcome: "Blocked" },
+        ]),
+      ],
+      []
+    )
+
+    expect(
+      entries
+        .filter((entry) => entry.type === "verification")
+        .map((entry) => [entry.title, entry.tone])
+    ).toEqual([
+      ["Read after the run: the history is blocked", "warn"],
+      ["Read after the run: migrations still pending", "warn"],
+    ])
+    // One run that stopped is one failure, and the reading after it is no
+    // second one; neither reading counts as verified.
+    expect(movement(entries, start, new Date(start.getTime() + 10 * 60_000))).toMatchObject({
+      failures: 2,
+      verified: 0,
+    })
+  })
+})
+
+describe("A Verified entry that proved nothing", () => {
+  it("says a person gave a schema's proof up, which established nothing", () => {
+    const [entry] = activity(
+      [schema("storefront", [{ type: "Verified", at: at(4), outcome: "Unknown" }])],
+      []
+    )
+
+    expect(entry).toMatchObject({
+      type: "verification",
+      title: "Proof given up: what the Apply did is unknown",
+      tone: "unk",
+    })
+  })
+
+  it("names an outcome it does not know rather than calling it verified", () => {
+    const [entry] = activity(
+      [schema("storefront", [{ type: "Verified", at: at(4), outcome: "Later" }])],
+      []
+    )
+
+    expect(entry.title).toBe("Verification outcome Later")
+    expect(entry.tone).toBe("unk")
+  })
 })
 
 describe("What the journals cover", () => {

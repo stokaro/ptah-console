@@ -255,6 +255,20 @@ export function MigrationSteps({ plan }: { plan: MigrationPlan }) {
   )
 }
 
+/** The kind of source a plan was computed from, as its spec names it. */
+function sourceKindName(kind: SourceKind): string {
+  switch (kind) {
+    case SourceKind.GIT:
+      return "Git"
+    case SourceKind.CONFIG_MAP:
+      return "ConfigMap"
+    case SourceKind.HTTPS:
+      return "HTTPS"
+    default:
+      return "An unknown source"
+  }
+}
+
 /** What a plan is bound to, as an approval of it is. */
 export function bindings(
   resource: ResourceView,
@@ -270,7 +284,7 @@ export function bindings(
   if (source) {
     rows.push({
       name: "Source",
-      value: `${source.kind === SourceKind.GIT ? "Git" : "ConfigMap"}, content ${shortDigest(source.contentDigest, 8)}`,
+      value: `${sourceKindName(source.kind)}, content ${shortDigest(source.contentDigest, 8)}`,
     })
     if (source.policyDigest) {
       rows.push({ name: "Source policy", value: shortDigest(source.policyDigest, 8) })
