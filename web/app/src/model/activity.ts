@@ -97,6 +97,13 @@ const verifications: Record<string, { tone: Tone; title: string }> = {
   InSync: { tone: "ok", title: "Verified in sync" },
   DriftRemains: { tone: "warn", title: "Drift remains after the Apply" },
   Superseded: { tone: "off", title: "Verification superseded by a newer spec or binding" },
+  // A migration's first reading after a run: more to apply, or a history
+  // nothing may run against. The run before it already counts as the
+  // failure, so neither reading is counted again.
+  Pending: { tone: "warn", title: "Read after the run: migrations still pending" },
+  Blocked: { tone: "warn", title: "Read after the run: the history is blocked" },
+  // A schema's proof a person gave up after its target moved.
+  Unknown: { tone: "unk", title: "Proof given up: what the Apply did is unknown" },
 }
 
 /**
@@ -162,7 +169,10 @@ function fromJournal(
         ],
       }
     case "Verified": {
-      const verdict = verifications[entry.outcome] ?? { tone: "unk" as Tone, title: "Verified" }
+      const verdict = verifications[entry.outcome] ?? {
+        tone: "unk" as Tone,
+        title: `Verification outcome ${entry.outcome || "not recorded"}`,
+      }
       return {
         ...base,
         type: "verification" as const,
