@@ -200,12 +200,12 @@ Job, so nothing happens until it is resumed. The change is a spec change: with
 the operator's `approvals.requireDistinctApprover` on, you become the
 resource's last spec writer and cannot approve the plan that follows.
 
-The console sends nothing, and says why, for a ConfigMap or Git source (moving
-to an artifact also names the verification policy it is held to, which is an
-edit of the resource), and while an Apply whose Job may already exist runs: a
-spec change then leaves an outcome nobody established. Wait for the Apply to
-end. A reference another writer changed since you opened the page is
-reported, never replaced.
+The console sends nothing, and says why, for a ConfigMap, Git or HTTPS source
+(moving to an artifact also names the verification policy it is held to,
+which is an edit of the resource), and while an Apply whose Job may already
+exist runs: a spec change then leaves an outcome nobody established. Wait for
+the Apply to end. A reference another writer changed since you opened the
+page is reported, never replaced.
 
 ## See what you may do
 

@@ -443,7 +443,7 @@ A write in between makes the API server refuse it; the console then decides
 again from a fresh read, three times at most, so a status write the operator
 made costs nothing and another writer's reference is reported rather than
 replaced. A resource version is not taken from the page, because the operator
-writes status between any two looks. A ConfigMap or Git source is not
+writes status between any two looks. A ConfigMap, Git or HTTPS source is not
 offered: moving to an artifact also names its verification policy, which is
 an edit of the resource. A read-only console sends nothing, and each change
 sent is audited with the reference it set.

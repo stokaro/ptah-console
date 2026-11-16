@@ -66,14 +66,16 @@ var sourceFamilies = map[consolev1.ResourceKind]sourceFamily{
 }
 
 // notOCI says what a spec selects when it is not an OCI artifact, as the
-// operator's plugin reads it: a ConfigMap or Git selection before an OCI
-// reference. It is empty for an OCI source.
+// operator's plugin reads it: a ConfigMap, Git or HTTPS selection before an
+// OCI reference. It is empty for an OCI source.
 func notOCI(spec operatorv1alpha1.SourceSpec) string {
 	switch {
 	case spec.ConfigMap != nil:
 		return "names a ConfigMap source, not an OCI artifact"
 	case spec.Git != nil:
 		return "names a Git source, not an OCI artifact"
+	case spec.HTTPS != nil:
+		return "names an HTTPS source, not an OCI artifact"
 	case spec.OCIRef != "":
 		return ""
 	default:

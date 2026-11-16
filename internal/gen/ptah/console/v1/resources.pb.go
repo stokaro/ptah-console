@@ -267,6 +267,7 @@ const (
 	SourceKind_SOURCE_KIND_OCI         SourceKind = 1
 	SourceKind_SOURCE_KIND_CONFIG_MAP  SourceKind = 2
 	SourceKind_SOURCE_KIND_GIT         SourceKind = 3
+	SourceKind_SOURCE_KIND_HTTPS       SourceKind = 4
 )
 
 // Enum value maps for SourceKind.
@@ -276,12 +277,14 @@ var (
 		1: "SOURCE_KIND_OCI",
 		2: "SOURCE_KIND_CONFIG_MAP",
 		3: "SOURCE_KIND_GIT",
+		4: "SOURCE_KIND_HTTPS",
 	}
 	SourceKind_value = map[string]int32{
 		"SOURCE_KIND_UNSPECIFIED": 0,
 		"SOURCE_KIND_OCI":         1,
 		"SOURCE_KIND_CONFIG_MAP":  2,
 		"SOURCE_KIND_GIT":         3,
+		"SOURCE_KIND_HTTPS":       4,
 	}
 )
 
@@ -1267,8 +1270,11 @@ func (x *GitOps) GetApplication() string {
 // digest. For a ConfigMap source, requested is the ConfigMap and resolved the
 // snapshot the operator copied it into. For a Git source, requested is the
 // repository, ref and path name the selection, and resolved is the commit.
-// A ConfigMap or Git source has no verification policy, so verified stays
-// false; content_digest is the digest of the selected files.
+// For an HTTPS source, requested is the URL, path what the download selects
+// and format how it carries the files, digest is the SHA-256 the spec pins the
+// download to, and resolved the SHA-256 of the download the last resolution
+// read. A ConfigMap, Git or HTTPS source has no verification policy, so
+// verified stays false; content_digest is the digest of the selected files.
 type Source struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Requested     string                 `protobuf:"bytes,1,opt,name=requested,proto3" json:"requested,omitempty"`
@@ -1286,6 +1292,8 @@ type Source struct {
 	// source replaces. A schema's requested is the reference the operator last
 	// resolved, until it observes a change.
 	SpecReference string `protobuf:"bytes,12,opt,name=spec_reference,json=specReference,proto3" json:"spec_reference,omitempty"`
+	// For an HTTPS source, File, TarGzip or Zip.
+	Format        string `protobuf:"bytes,13,opt,name=format,proto3" json:"format,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1404,8 +1412,15 @@ func (x *Source) GetSpecReference() string {
 	return ""
 }
 
-// SourcePolicy is the source policy a ConfigMap or Git source names, and the
-// one its last resolution was checked against.
+func (x *Source) GetFormat() string {
+	if x != nil {
+		return x.Format
+	}
+	return ""
+}
+
+// SourcePolicy is the source policy a ConfigMap, Git or HTTPS source names,
+// and the one its last resolution was checked against.
 type SourcePolicy struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1466,8 +1481,8 @@ func (x *SourcePolicy) GetDigest() string {
 	return ""
 }
 
-// PlanSource is what a plan computed from a ConfigMap or Git source is bound
-// to, in place of an artifact digest.
+// PlanSource is what a plan computed from a ConfigMap, Git or HTTPS source is
+// bound to, in place of an artifact digest.
 type PlanSource struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Kind          SourceKind             `protobuf:"varint,1,opt,name=kind,proto3,enum=ptah.console.v1.SourceKind" json:"kind,omitempty"`
@@ -4772,7 +4787,7 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\n" +
 	"controller\x18\x01 \x01(\tR\n" +
 	"controller\x12 \n" +
-	"\vapplication\x18\x02 \x01(\tR\vapplication\"\xcc\x03\n" +
+	"\vapplication\x18\x02 \x01(\tR\vapplication\"\xe4\x03\n" +
 	"\x06Source\x12\x1c\n" +
 	"\trequested\x18\x01 \x01(\tR\trequested\x12\x1a\n" +
 	"\bresolved\x18\x02 \x01(\tR\bresolved\x12\x16\n" +
@@ -4788,7 +4803,8 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\x0econtent_digest\x18\n" +
 	" \x01(\tR\rcontentDigest\x125\n" +
 	"\x06policy\x18\v \x01(\v2\x1d.ptah.console.v1.SourcePolicyR\x06policy\x12%\n" +
-	"\x0espec_reference\x18\f \x01(\tR\rspecReference\"L\n" +
+	"\x0espec_reference\x18\f \x01(\tR\rspecReference\x12\x16\n" +
+	"\x06format\x18\r \x01(\tR\x06format\"L\n" +
 	"\fSourcePolicy\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
 	"\x03uid\x18\x02 \x01(\tR\x03uid\x12\x16\n" +
@@ -5143,13 +5159,14 @@ const file_ptah_console_v1_resources_proto_rawDesc = "" +
 	"\x1dATTENTION_KIND_UNRESOLVED_RUN\x10\x05\x12\x18\n" +
 	"\x14ATTENTION_KIND_DRIFT\x10\x06\x12\x1c\n" +
 	"\x18ATTENTION_KIND_SUSPENDED\x10\a\x12\x1f\n" +
-	"\x1bATTENTION_KIND_STALE_STATUS\x10\b*o\n" +
+	"\x1bATTENTION_KIND_STALE_STATUS\x10\b*\x86\x01\n" +
 	"\n" +
 	"SourceKind\x12\x1b\n" +
 	"\x17SOURCE_KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fSOURCE_KIND_OCI\x10\x01\x12\x1a\n" +
 	"\x16SOURCE_KIND_CONFIG_MAP\x10\x02\x12\x13\n" +
-	"\x0fSOURCE_KIND_GIT\x10\x03*\x9a\x01\n" +
+	"\x0fSOURCE_KIND_GIT\x10\x03\x12\x15\n" +
+	"\x11SOURCE_KIND_HTTPS\x10\x04*\x9a\x01\n" +
 	"\tSqlAccess\x12\x1a\n" +
 	"\x16SQL_ACCESS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14SQL_ACCESS_AVAILABLE\x10\x01\x12\x1a\n" +

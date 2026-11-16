@@ -162,8 +162,8 @@ func schemaStages(schema *operatorv1alpha1.PtahSchema, c conditions) []*consolev
 func schemaResolve(schema *operatorv1alpha1.PtahSchema, c conditions) *consolev1.Stage {
 	status := schema.Status
 	if source := schemaSource(schema); unverifiedSource(source) {
-		// A ConfigMap or Git source has no verification policy: once its
-		// files are read, Resolve is done.
+		// A ConfigMap, Git or HTTPS source has no verification policy: once
+		// its files are read, Resolve is done.
 		switch {
 		case c.is(operatorv1alpha1.ConditionArtifactResolved, metav1.ConditionFalse):
 			return stage(StageResolve, consolev1.StageState_STAGE_STATE_FAILED, c.message(operatorv1alpha1.ConditionArtifactResolved))

@@ -17,6 +17,7 @@ the table.
 | `migration-reading-again.json` | The same migration during that read: phase `Reading`, a History operation running, the plan still current and approval still required. |
 | `migration-between-read-operations.json` | The same read between its last two operations: phase `Planning`, nothing running. |
 | `uncertain-migration-retained-claim.json` | Two PtahMigration statuses, MySQL and PostgreSQL, `Blocked` with reason `ApplyOutcomeUnknown` on a run nobody accounted for. |
+| `https-ca-pin-recovered-schema.json` | The status of a PtahSchema with an HTTPS source whose download matched its digest, its plan waiting for an approval. |
 
 The three `deliveries` readings were recorded by watching the object in the
 console's acceptance lab on October 24, 2026: Kubernetes 1.37.0, operator
@@ -36,3 +37,9 @@ keeps.
 stokaro/ptah-operator#1040, on Kubernetes 1.36.4 with the Ptah v0.23.0
 executor, in place of the copies from commit 9571884c; its `README.md` there
 says which rows printed them.
+
+`https-ca-pin-recovered-schema.json` is copied unchanged from the operator's
+`testdata/e2e/readings` at the tag v0.2.14. Its `https-sources` phase printed
+it on November 15, 2026, on Kubernetes 1.36.4 with the Ptah v0.29.0
+executor. It is a status alone: the test supplies the spec the status
+resolved.

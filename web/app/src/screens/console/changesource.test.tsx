@@ -310,6 +310,10 @@ describe("Change source", () => {
       { schemas: [ociSchema((schema) => (schema.source!.kind = SourceKind.CONFIG_MAP))] },
     ],
     ["a Git source", { schemas: [ociSchema((schema) => (schema.source!.kind = SourceKind.GIT))] }],
+    [
+      "an HTTPS source",
+      { schemas: [ociSchema((schema) => (schema.source!.kind = SourceKind.HTTPS))] },
+    ],
     ["a read-only console", { schemas: [ociSchema()], readOnly: true }],
   ])("is not offered to %s", async (_, fixture: Fixture) => {
     const user = userEvent.setup()
