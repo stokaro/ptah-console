@@ -24,9 +24,15 @@ Run `make verify` before pushing.
 
 ### What a pull request says
 
-Read `git log` before writing. An imperative subject under about 72
-characters, a blank line, then a body that explains why. The diff shows what
-changed; spend the body on the reason, the trade-off or the risk.
+Read `git log` before writing. Use an imperative title under about 72
+characters that names the purpose of the complete PR.
+
+Use the [PR template](.github/pull_request_template.md).
+[Pull request descriptions](AGENTS.md#pull-request-descriptions) defines the
+content requirements; the repository-specific section below it names the
+additional details needed for affected contracts and workflows. Describe
+behavior and reasoning in plain American English without a file-by-file
+retelling of the diff.
 
 ## Licensing of contributions
 
