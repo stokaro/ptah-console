@@ -4,6 +4,10 @@
 and coding agents alike. This page covers filing an issue and proposing a
 change; it does not restate AGENTS.md.
 
+For PR and issue titles and opening paragraphs, follow
+[PR and issue writing](AGENTS.md#pr-and-issue-writing). Explain the problem
+and why it matters in plain English before giving technical details.
+
 ## Where an issue belongs
 
 The console shows and asks; the operator decides. A report about what a

@@ -2,11 +2,21 @@ name: Feature request
 description: Something the console should show or let you do.
 labels: ["enhancement"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Write a short title in plain English that names the problem or intended
+        result. Avoid internal names and unexplained acronyms.
+
   - type: textarea
     id: question
     attributes:
       label: The question you could not answer
-      description: What you needed to know or do, and where the console left you to kubectl.
+      description: >-
+        In a short paragraph, usually two to four sentences, explain what you
+        need to know or do, where the console leaves you to kubectl, and why
+        that is a problem. Use plain English. Put architecture and implementation
+        details after this introduction.
     validations:
       required: true
   - type: textarea
