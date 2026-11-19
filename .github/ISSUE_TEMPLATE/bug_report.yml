@@ -5,8 +5,22 @@ body:
   - type: markdown
     attributes:
       value: |
+        Write a short title in plain English that names the problem or intended
+        result. Avoid internal names and unexplained acronyms.
+
         **Redact credentials.** Kubeconfigs, tokens, passwords and database
         URLs never belong in an issue.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Problem summary
+      description: >-
+        In a short paragraph, usually two to four sentences, explain what the
+        console shows or does, what you expected, and why the difference is a
+        problem. Use plain English. Put architecture and implementation details
+        after this introduction.
+    validations:
+      required: true
   - type: input
     id: console-version
     attributes:
@@ -31,12 +45,5 @@ body:
     id: kubernetes
     attributes:
       label: Kubernetes version and distribution
-    validations:
-      required: true
-  - type: textarea
-    id: what-happened
-    attributes:
-      label: What happened, and what you expected
-      description: The screen or request, what it showed or did, and what it should have done.
     validations:
       required: true
