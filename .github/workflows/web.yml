@@ -1,6 +1,9 @@
 name: Web
 
 on:
+  # hack/operator-update.sh starts it on the pull request it opens, which
+  # its token cannot start through pull_request.
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
