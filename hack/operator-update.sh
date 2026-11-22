@@ -7,21 +7,25 @@
 # while main requires the newest release, or while the branch already names it.
 # It rebuilds the branch from main only while every commit on the branch is
 # its own; once a person has pushed there, it leaves the branch alone and says
-# on the pull request that a newer release is out.
+# on the pull request that a newer release is out. A branch that names the
+# newest release with no pull request is rebuilt and proposed again, unless
+# a closed pull request already had its head.
 #
-# A pull request opened with the workflow's token starts no workflow, so the
-# script starts the checks main requires on the branch itself.
+# GH_TOKEN is the ptah-automation App's token, so the pull request it opens
+# and each push to it start the pull request checks, which a push or a pull
+# request made with the workflow's own token would not. RELEASES_TOKEN, when
+# set, reads the operator's releases, which the App's token for this
+# repository alone may not reach.
 #
-# DRY_RUN=1 builds the branch locally and pushes, opens and starts nothing.
+# DRY_RUN=1 builds the branch locally and pushes, opens and comments nothing.
 set -euo pipefail
 
 branch="${OPERATOR_UPDATE_BRANCH:-deps/ptah-operator}"
 module=github.com/stokaro/ptah-operator
-bot_name='github-actions[bot]'
-bot_email='41898283+github-actions[bot]@users.noreply.github.com'
+bot_name='ptah-automation[bot]'
+bot_email='321450905+ptah-automation[bot]@users.noreply.github.com'
 repository="${GITHUB_REPOSITORY:-stokaro/ptah-console}"
 dry_run="${DRY_RUN:-}"
-checks=(ci.yml contract.yml go-lint.yml go-security.yml web.yml npm-audit.yml acceptance.yml)
 
 notice() { printf '%s\n' "$*"; [ -z "${GITHUB_STEP_SUMMARY:-}" ] || printf '%s\n\n' "$*" >>"$GITHUB_STEP_SUMMARY"; }
 # code lists its arguments as Markdown code, comma-separated.
@@ -33,7 +37,7 @@ code() {
 
 git fetch --quiet --tags origin main
 current="$(git show origin/main:go.mod | awk -v m="$module" '$1 == m { print $2 }')"
-latest="$(gh api --paginate "repos/stokaro/ptah-operator/releases" \
+latest="$(GH_TOKEN="${RELEASES_TOKEN:-${GH_TOKEN:-}}" gh api --paginate "repos/stokaro/ptah-operator/releases" \
   --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name' |
   grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)"
 if [ -z "$current" ] || [ -z "$latest" ]; then
@@ -55,8 +59,18 @@ if git fetch --quiet origin "refs/heads/$branch"; then
   expected="$(git rev-parse FETCH_HEAD)"
   on_branch="$(git show FETCH_HEAD:go.mod | awk -v m="$module" '$1 == m { print $2 }')"
   if [ "$on_branch" = "$latest" ]; then
-    notice "$branch already moves to $latest${pr:+ in #$pr}: nothing to do."
-    exit 0
+    if [ -n "$pr" ]; then
+      notice "$branch already moves to $latest in #$pr: nothing to do."
+      exit 0
+    fi
+    # A closed pull request with this head is one someone declined; a branch
+    # no pull request ever had is a run that pushed and then failed to open
+    # one, which the rebuild below finishes.
+    if gh pr list --repo "$repository" --head "$branch" --state closed --json headRefOid --jq '.[].headRefOid' |
+      grep -q -x -F "$expected"; then
+      notice "$branch moves to $latest, and its pull request was closed: nothing to do until a newer release."
+      exit 0
+    fi
   fi
   others="$(git log --format='%ae' "origin/main..$expected" | grep -v -x -F "$bot_email" || true)"
   if [ -n "$others" ]; then
@@ -139,7 +153,7 @@ The workflow rebuilds this branch from main for a newer operator release only wh
 
 ## Verification
 
-A pull request opened with the workflow's token starts no workflow, so the workflow started these on the branch: $(code "${checks[@]}"). Their results are the checks of this pull request.
+The checks of this pull request are its verification. The move itself runs only the chart test, to write its goldens again.
 EOF
 
 if [ -n "$dry_run" ]; then
@@ -156,6 +170,3 @@ else
   gh pr create --repo "$repository" --base main --head "$branch" --title "$title" --body-file "$body_file"
   notice "opened a pull request that moves to $latest."
 fi
-for check in "${checks[@]}"; do
-  gh workflow run "$check" --repo "$repository" --ref "$branch"
-done

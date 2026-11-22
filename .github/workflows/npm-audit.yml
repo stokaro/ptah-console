@@ -1,9 +1,6 @@
 name: npm audit
 
 on:
-  # hack/operator-update.sh starts it on the pull request it opens, which
-  # its token cannot start through pull_request.
-  workflow_dispatch:
   push:
     branches: [main]
   # Every pull request, not only those that touch a manifest: the check is

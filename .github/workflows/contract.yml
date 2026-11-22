@@ -1,9 +1,6 @@
 name: Contract
 
 on:
-  # hack/operator-update.sh starts it on the pull request it opens, which
-  # its token cannot start through pull_request.
-  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
@@ -42,8 +39,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: make web-install
       # A pull request is compared with its base branch, a push with the
-      # commit it replaced, and a run started by hand with main.
+      # commit it replaced.
       - name: buf lint, buf breaking, generated code
         env:
-          BUF_BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event_name == 'workflow_dispatch' && 'origin/main' || github.event.before }}
+          BUF_BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
         run: make contract BUF_BASE="$BUF_BASE"

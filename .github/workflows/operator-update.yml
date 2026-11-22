@@ -4,9 +4,10 @@ name: Operator update
 # stokaro/ptah-operator. hack/operator-update.sh says when it rebuilds that
 # pull request and when it leaves it to a person.
 #
-# The token creates a pull request only with the repository setting "Allow
-# GitHub Actions to create and approve pull requests". Nothing here approves
-# one.
+# The ptah-automation App pushes the branch and opens the pull request, as it
+# does for stokaro/ptah's own automation, so the pull request runs its checks.
+# Its token can write contents and pull requests in this repository only, and
+# nothing here approves or merges a pull request.
 
 on:
   schedule:
@@ -26,12 +27,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      # Push the branch, open or edit the pull request and comment on it,
-      # and start the checks main requires on the branch.
-      contents: write
-      pull-requests: write
-      actions: write
+      contents: read
     steps:
+      - name: Mint a ptah-automation token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.CAPABILITY_MATRIX_APP_ID }}
+          private-key: ${{ secrets.CAPABILITY_MATRIX_APP_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -53,7 +58,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Move to the newest operator release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASES_TOKEN: ${{ github.token }}
         run: |
           gh auth setup-git
           hack/operator-update.sh
