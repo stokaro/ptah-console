@@ -20,12 +20,18 @@
       groupName: 'GitHub Actions',
     },
     {
-      // The console reads the operator's API types and plan reader, so the
-      // operator module and the Kubernetes libraries move together, at the
-      // versions the operator's own go.mod uses.
+      // The Kubernetes libraries move together. go get of a new operator
+      // raises them to at least the versions the operator's go.mod uses.
       matchManagers: ['gomod'],
-      matchPackageNames: ['github.com/stokaro/ptah-operator', 'k8s.io/**', 'sigs.k8s.io/**'],
-      groupName: 'operator and Kubernetes libraries',
+      matchPackageNames: ['k8s.io/**', 'sigs.k8s.io/**'],
+      groupName: 'Kubernetes libraries',
+    },
+    {
+      // The Operator update workflow keeps the one pull request that moves
+      // the operator, with the record, charts and goldens a move needs.
+      matchManagers: ['gomod'],
+      matchPackageNames: ['github.com/stokaro/ptah-operator'],
+      enabled: false,
     },
     {
       matchManagers: ['npm'],

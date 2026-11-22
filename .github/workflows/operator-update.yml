@@ -1,0 +1,59 @@
+name: Operator update
+
+# Keeps one pull request that moves the console to the newest released
+# stokaro/ptah-operator. hack/operator-update.sh says when it rebuilds that
+# pull request and when it leaves it to a person.
+#
+# The token creates a pull request only with the repository setting "Allow
+# GitHub Actions to create and approve pull requests". Nothing here approves
+# one.
+
+on:
+  schedule:
+    - cron: "37 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: operator-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Move to the newest operator release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # Push the branch, open or edit the pull request and comment on it,
+      # and start the checks main requires on the branch.
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # The tags say whether the record's first row is released.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            tools/buf/go.sum
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: web/package.json
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Move to the newest operator release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh auth setup-git
+          hack/operator-update.sh

@@ -72,6 +72,14 @@ Install the image by the digest you verified rather than by its tag.
    and the charts' version. After a release, the change that moves the
    operator therefore adds the next version's row and sets both charts to
    it, and keeps the released row as it was.
+
+   `go run ./hack/releasecheck -move` writes that row, both charts and the
+   table in docs/compatibility.md after `go get`. The Operator update
+   workflow runs the whole step every day and keeps one pull request,
+   `deps/ptah-operator`, on the newest operator release, so that pull
+   request may already be open with its CI result. It rebuilds the branch
+   for a newer release only while every commit on it is its own; after you
+   push a fix there, it comments on the pull request instead.
 2. Set the version: `version` and `appVersion` in
    `charts/ptah-console/Chart.yaml` and `charts/ptah-console-agent/Chart.yaml`,
    a row at the top of `support/compatibility.json` naming the operator
